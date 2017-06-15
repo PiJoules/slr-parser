@@ -5,13 +5,10 @@
  * Feed a string into the code stream.
  */
 void lang::Lexer::input(const std::string& code){
-    //code_stream.str("");
-    //code_stream.clear();
-    assert(code_stream);
-    std::cerr << "adding :" << code << std::endl;
+    if (eof()){
+        code_stream.clear();
+    }
     code_stream << std::string(code);
-    assert(code_stream);
-    eof();
 }
 
 /**
@@ -19,28 +16,22 @@ void lang::Lexer::input(const std::string& code){
  */
 bool lang::Lexer::eof(){
     if (!code_stream){
-        std::cerr << "code_stream is false" << std::endl;
         return true;
     }
     if (code_stream.eof()){
-        std::cerr << "code_stream reached eof" << std::endl;
         return true;
     }
-    std::cerr << "checking code_stream peeks eof" << std::endl;
     return code_stream.peek() == EOF;
-}
-
-lang::LexToken lang::Lexer::make_tok(const std::string value) const {
-    return {value, pos, lineno, colno};
 }
 
 /**
  * Scan a single character from the stream.
  */
 lang::LexToken lang::Lexer::scan_char(){
+    LexToken tok = {std::string(1, code_stream.get()), pos, lineno, colno};
     pos++;
     colno++;
-    return make_tok(std::string(1, code_stream.get()));
+    return tok;
 }
 
 static bool valid_name_char(char c){
@@ -52,12 +43,17 @@ static bool valid_name_char(char c){
  */
 lang::LexToken lang::Lexer::scan_name(){
     std::string name;
+    LexToken tok;
+    tok.pos = pos;
+    tok.colno = colno;
+    tok.lineno = lineno;
     do {
         name += code_stream.get();
         pos++;
         colno++;
     } while (valid_name_char(code_stream.peek()));
-    return make_tok(name);
+    tok.value = name;
+    return tok;
 }
 
 /**
@@ -65,12 +61,17 @@ lang::LexToken lang::Lexer::scan_name(){
  */
 lang::LexToken lang::Lexer::scan_int(){
     std::string num;
+    LexToken tok;
+    tok.pos = pos;
+    tok.colno = colno;
+    tok.lineno = lineno;
     do {
         num += code_stream.get();
         pos++;
         colno++;
     } while (isdigit(code_stream.peek()));
-    return make_tok(num);
+    tok.value = num;
+    return tok;
 }
 
 /**
@@ -96,7 +97,7 @@ lang::LexToken lang::Lexer::token(){
                     pos++;
                     if (lookahead == NEWLINE_C){
                         lineno++;
-                        colno = 0;
+                        colno = 1;
                     }
                     else {
                         colno++;

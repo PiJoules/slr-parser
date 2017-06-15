@@ -16,12 +16,15 @@ tests: $(OBJS) test_lexer
 %.o: %.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
+compile: $(OBJS)
+compile_exes: $(EXE_OUTPUTS)
+
 # Executable binaries from cpp files
 %.out: %.cpp
 	$(CPP) $(CPPFLAGS) $< $(OBJS) -o $@
 
-test_lexer: test_lexer.out
-	./$<
+test_lexer: compile_exes
+	./test_lexer.out
 
 clean:
 	rm -rf *.o *.out

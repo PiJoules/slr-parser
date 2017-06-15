@@ -6,13 +6,13 @@ void test_lexer_creation(){
     lang::LexToken tok = lex.token();
     assert(tok.value == "");
     assert(tok.lineno == 1);
-    assert(tok.colno == 0);
+    assert(tok.colno == 1);
 
     // Same output
     tok = lex.token();
     assert(tok.value == "");
     assert(tok.lineno == 1);
-    assert(tok.colno == 0);
+    assert(tok.colno == 1);
 }
 
 void test_lexer_input(){
@@ -56,16 +56,19 @@ void test_name(){
     lex.input("_x");
     auto tok = lex.token();
     assert(tok.value == "_x");
+    assert(tok.lineno == 1);
+    assert(tok.colno == 1);
 
     lex.input("_92");
     tok = lex.token();
-    std::cerr << "('" << tok.value << "'," << tok.lineno << "," << tok.colno << ")" << std::endl;
     assert(tok.value == "_92");
+    assert(tok.lineno == 1);
+    assert(tok.colno == 3);
 }
 
 int main(){
-    //test_lexer_creation();
-    //test_lexer_input();
+    test_lexer_creation();
+    test_lexer_input();
     test_name();
 
     return 0;

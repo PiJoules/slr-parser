@@ -33,10 +33,8 @@ namespace lang {
 
     class Lexer {
         private:
-            std::stringstream code_stream(std::ios_base::in);
-            int pos = 0, lineno = 1, colno = 0;
-
-            LexToken make_tok(const std::string) const;
+            std::stringstream code_stream;
+            int pos = 1, lineno = 1, colno = 1;
 
             // Lexer rules
             LexToken scan_char();
@@ -44,6 +42,7 @@ namespace lang {
             LexToken scan_int();
 
         public:
+            //Lexer(): code_stream(std::ios_base::in | std::ios_base::out | std::ios_base::ate){}
             void input(const std::string& code);
             LexToken token();
             bool eof();
