@@ -25,6 +25,7 @@ compile_exes: $(EXE_OUTPUTS)
 
 test_lexer: compile_exes
 	./test_lexer.out
+	valgrind ./test_lexer.out || echo 'Valgrind not available'
 
 clean:
 	rm -rf *.o *.out
