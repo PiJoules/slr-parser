@@ -2,13 +2,15 @@ CPP = g++
 STD = c++11
 CPPFLAGS = -Wall -Werror -std=$(STD)
 
-SOURCES = lexer.cpp
+SOURCES = lang.h \
+		  lexer.cpp \
+		  parser.cpp
 OBJS = $(SOURCES:.cpp=.o)
 
 EXE_FILES = test_lexer.cpp 
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-tests: $(OBJS) test_lexer
+tests: $(SOURCES) $(OBJS) $(EXE_FILES) test_lexer
 
 .PHONY: tests
 
@@ -20,10 +22,10 @@ compile: $(OBJS)
 compile_exes: $(EXE_OUTPUTS)
 
 # Executable binaries from cpp files
-%.out: %.cpp
-	$(CPP) $(CPPFLAGS) $< $(OBJS) -o $@
+%.out: %.cpp $(OBJS)
+	$(CPP) $(CPPFLAGS) $^ -o $@
 
-test_lexer: compile_exes
+test_lexer: test_lexer.out
 	./test_lexer.out
 	valgrind ./test_lexer.out || echo 'Valgrind not available'
 
