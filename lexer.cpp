@@ -222,9 +222,7 @@ lang::LexToken lang::Lexer::token(){
 
             // Make sure the indentations match any of the previous ones 
             if (!std::any_of(levels.begin(), levels.end(), [next_col](int lvl){ return lvl == next_col; })){
-                std::ostringstream err;
-                err << "Indentation for token " << next_tok.str() << " does not match any previous indentation.";
-                throw std::runtime_error(err.str());
+                throw IndentationError(next_tok.lineno);
             }
 
             found_dedent = true;

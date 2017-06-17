@@ -55,6 +55,22 @@ namespace lang {
         }
     };
 
+    // Custom exceptions 
+    class IndentationError: public std::runtime_error {
+        private:
+            int lineno_;
+
+        public:
+            IndentationError(int lineno): std::runtime_error("Indentation error"),
+                lineno_(lineno){}
+            virtual const char* what() const throw() {
+                std::ostringstream err;
+                err << std::runtime_error::what();
+                err << "Unexpected indentation on line " << lineno_ << ".";
+                return err.str().c_str();
+            }
+    };
+
     class Lexer {
         private:
             std::stringstream code_stream;

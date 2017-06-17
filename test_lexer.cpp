@@ -1,8 +1,15 @@
 #include "lang.h"
 #include <cassert>
 
+#define quote(x) #x  // Converts x to a quoted string
 #define assert_str_equal(s1, s2) __assert_str_equal(s1, s2, __LINE__, __FILE__)
 #define assert_int_equal(i1, i2) __assert_int_equal(i1, i2, __LINE__, __FILE__)
+#define assert_raises(expr, exception_t) \
+    try { \
+        expr; \
+        throw std::runtime_error("Expected exception_t to be throwin in expr (line __LINE__ in __FILE__)"); \
+    } \
+    catch (const exception_t& e){}
 
 void __assert_str_equal(const std::string& s1, const std::string& s2, 
                       int lineno, const std::string filename){
@@ -22,6 +29,9 @@ void __assert_int_equal(const int& i1, const int& i2,
     }
 }
 
+/**
+ * Test creating an empty lexer.
+ */
 void test_lexer_creation(){
     lang::Lexer lex;
     auto tok = lex.token();
@@ -38,6 +48,9 @@ void test_lexer_creation(){
     assert(tok.symbol == lang::eof_tok);
 }
 
+/**
+ * Test basic input
+ */
 void test_lexer_input(){
     std::string code("x + y\n4-3");
     lang::Lexer lex;
@@ -87,6 +100,9 @@ void test_lexer_input(){
     assert(tok.symbol == lang::int_tok);
 }
 
+/**
+ * Test reading names
+ */
 void test_name(){
     lang::Lexer lex;
     lex.input("_x");
@@ -110,6 +126,9 @@ void test_name(){
     assert(tok.symbol == lang::name_tok);
 }
 
+/**
+ * Test indentation
+ */
 void test_indentation(){
     lang::Lexer lex;
     lex.input(R"(x
@@ -226,11 +245,33 @@ void test_indentation(){
     assert(tok.symbol == lang::int_tok);
 }
 
+/**
+ * Test bad indentation throws an indentation error.
+ */ 
+void bad_indeation_code(){
+    lang::Lexer lex;
+    lex.input(R"(x
+  y
+ z
+)");
+    lex.token();  // x
+    lex.token();  // newline
+    lex.token();  // indent 
+    lex.token();  // y 
+    lex.token();  // newline 
+    lex.token();  // dedent (IndentationError thrown here)
+}
+
+void test_indentation_error(){
+    assert_raises(bad_indeation_code(), lang::IndentationError);
+}
+
 int main(){
     test_lexer_creation();
     test_lexer_input();
     test_name();
     test_indentation();
+    test_indentation_error();
 
     return 0;
 }
