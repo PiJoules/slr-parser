@@ -118,6 +118,12 @@ void lang::Lexer::load_next_tok(){
             case SUB_C:
                 next_tok = scan_char(sub_tok);
                 return;
+            case MUL_C:
+                next_tok = scan_char(mul_tok);
+                return;
+            case DIV_C:
+                next_tok = scan_char(div_tok);
+                return;
             case UNDERSCORE_C:
                 next_tok = scan_name();
                 return;
