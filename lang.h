@@ -51,6 +51,10 @@ namespace lang {
         expr_rule=-50,
     };
 
+    struct SymbolHasher {
+        std::size_t operator()(const enum Symbol&) const;
+    };
+
     bool is_token(const enum Symbol& symbol);
     bool is_rule(const enum Symbol& symbol);
 
@@ -144,8 +148,26 @@ namespace lang {
     struct ItemHasher {
         std::size_t operator()(const lr_item_t& lr_item) const;
     };
+    // TODO: Create an immutable container type (like tuples/frozensets in python)
+    // so that we don't have to take the hash of a mutable container set at compile time.
     typedef std::unordered_set<lr_item_t, ItemHasher> item_set_t;
+
+    struct ItemSetHasher {
+        std::size_t operator()(const item_set_t&) const;
+    };
+    typedef std::unordered_set<item_set_t, ItemSetHasher> dfa_t;
+
     void make_closure(item_set_t&, const std::vector<prod_rule_t>&);
+    item_set_t move_pos(const item_set_t&, const enum Symbol&, const std::vector<prod_rule_t>&);
+    void make_dfa(dfa_t& dfa, const std::vector<prod_rule_t>&);
+
+    typedef struct ParseInstr ParseInstr;
+    struct ParseInstr {
+        enum Action {SHIFT, REDUCE, GOTO};
+        int value;
+    };
+    typedef std::unordered_map<int, std::unordered_map<enum Symbol, ParseInstr, SymbolHasher>> parse_table_t;
+    parse_table_t make_parse_table(const dfa_t&, const std::vector<prod_rule_t>&);
 
     /******** Parser ********/ 
 

@@ -23,8 +23,8 @@ compile: $(OBJS)
 compile_exes: $(EXE_OUTPUTS)
 
 # Executable binaries from cpp files
-%.out: %.cpp $(OBJS)
-	$(CPP) $(CPPFLAGS) $^ -o $@
+%.out: %.cpp
+	$(CPP) $(CPPFLAGS) $< $(OBJS) -o $@
 
 test_lexer: test_lexer.out
 	./$<
