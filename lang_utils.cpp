@@ -87,4 +87,30 @@ void lang::dump_parse_table(
     for (std::size_t i = 0; i < prod_rules.size(); ++i){
         stream << "Rule " << i << ": " << str(prod_rules[i]) << std::endl;
     }
+    stream << std::endl;
+
+    // States 
+    for (std::size_t i = 0; i < table.size(); ++i){
+        stream << "state " << i << std::endl << std::endl;
+        const auto& action_map = table.at(i);
+        for (auto it = action_map.cbegin(); it != action_map.cend(); ++it){
+            const auto& symbol = it->first;
+            const auto& instr = it->second;
+            const auto& action = instr.action;
+
+            if (action == lang::ParseInstr::SHIFT || action == lang::ParseInstr::REDUCE){
+                int val = instr.value;
+                stream << "\t" << str(symbol) << "\t\t";
+
+                if (action == lang::ParseInstr::SHIFT){
+                    stream << "shift and go to state ";
+                }
+                else {
+                    stream << "reduce using rule ";
+                }
+                stream << val << std::endl;
+            }
+        }
+        stream << std::endl;
+    }
 }

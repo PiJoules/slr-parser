@@ -18,20 +18,20 @@ tests: $(SOURCES) $(OBJS) $(EXE_FILES) test_lexer test_table_generation
 %.o: %.cpp 
 	$(CPP) $(CPPFLAGS) -O2 -c $< -o $@
 
-compile: $(OBJS) $(EXE_OUTPUTS)
+compile: $(OBJS) clean_exes $(EXE_OUTPUTS)
 
 # Executable binaries from cpp files
 %.out: %.cpp
 	$(CPP) $(CPPFLAGS) $< $(OBJS) -o $@
 
-clean_test: $(SOURCES) $(OBJS) 
+clean_exes:
 	rm -rf *.out 
 
-test_lexer: clean_test test_lexer.out
+test_lexer: clean_exes test_lexer.out
 	./test_lexer.out
 	valgrind ./test_lexer.out || echo 'Valgrind not available'
 
-test_table_generation: clean_test test_table_generation.out
+test_table_generation: clean_exes test_table_generation.out
 	./test_table_generation.out
 	valgrind ./test_table_generation.out || echo 'Valgrind not available'
 
