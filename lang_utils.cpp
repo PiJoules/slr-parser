@@ -5,24 +5,51 @@
 /**
  * String conversion
  */
+std::string lang::str(const enum Symbol& symbol){
+    switch (symbol){
+        // Values
+        case int_tok: return "INT";
+        case name_tok: return "NAME";
+
+        // Binary ops
+        case add_tok: return "ADD";
+        case sub_tok: return "SUB";
+        case mul_tok: return "MUL";
+        case div_tok: return "DIV";
+
+        // Misc 
+        case newline_tok: return "NEWLINE";
+        case whitespace_tok: return "WS";
+        case indent_tok: return "INDENT";
+        case dedent_tok: return "DEDENT";
+        case eof_tok: return "EOF";
+        
+        // Parser rules
+        case module_rule: return "module";
+        case funcdef_rule: return "funcdef";
+        case expr_rule: return "expr";
+
+        default:
+            return std::to_string(static_cast<int>(symbol));
+    }
+}
+
 std::string lang::str(const lang::production_t& production){
     std::ostringstream s;
-    s << "[";
     std::size_t len = production.size();
     int end = static_cast<int>(len) - 1;
     for (int i = 0; i < end; ++i){
-        s << static_cast<int>(production[i]) << ", ";
+        s << str(production[i]) << " ";
     }
     if (len){
-        s << production.back();
+        s << str(production.back());
     }
-    s << "]";
     return s.str();
 }
 
 std::string lang::str(const prod_rule_t& prod_rule){
     std::ostringstream s;
-    s << static_cast<int>(prod_rule.first) << " : " << str(prod_rule.second);
+    s << str(prod_rule.first) << " -> " << str(prod_rule.second);
     return s.str();
 }
 
@@ -46,4 +73,18 @@ std::string lang::str(const lr_item_t& lr_item){
     }
 
     return s.str();
+}
+
+/**
+ * Pretty print the parse table similar to how ply prints it.
+ */
+void lang::dump_parse_table(
+        const parse_table_t& table, 
+        const std::vector<prod_rule_t>& prod_rules, 
+        std::ostream& stream){
+    // Grammar 
+    stream << "Grammar" << std::endl << std::endl;
+    for (std::size_t i = 0; i < prod_rules.size(); ++i){
+        stream << "Rule " << i << ": " << str(prod_rules[i]) << std::endl;
+    }
 }

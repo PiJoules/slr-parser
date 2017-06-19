@@ -26,11 +26,14 @@
 #define UNDERSCORE_C '_'
 
 namespace lang {
-    // All tokens will be positive. All production rules will be negative.
+    // All tokens will be positive or zero. All production rules will be negative.
+    //
+    // BE SURE TO ADD THE STRING REPRESENTATION OF EACH NEW TOKEN TO THE SWITCH
+    // STMT IN LANG_UTILS.CPP FOR DEBUGGING.
     enum Symbol {
         // Values 
-        int_tok=1,
-        name_tok=2,
+        int_tok=0,
+        name_tok=1,
         
         // Binary operations 
         add_tok=50,
@@ -163,11 +166,11 @@ namespace lang {
 
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
-        enum Action {SHIFT, REDUCE, GOTO};
+        enum Action {SHIFT, REDUCE, GOTO, ACCEPT} action;
         int value;
     };
     typedef std::unordered_map<int, std::unordered_map<enum Symbol, ParseInstr, SymbolHasher>> parse_table_t;
-    parse_table_t make_parse_table(const dfa_t&, const std::vector<prod_rule_t>&);
+    parse_table_t make_parse_table(const dfa_t&, const std::vector<prod_rule_t>&, const prod_rule_t&);
 
     /******** Parser ********/ 
 
@@ -196,9 +199,14 @@ namespace lang {
     /**
      * Debugging
      */
+    std::string str(const enum Symbol&);
     std::string str(const production_t& production);
     std::string str(const prod_rule_t& prod_rule);
     std::string str(const lr_item_t& lr_item);
+    void dump_parse_table(
+            const parse_table_t&, 
+            const std::vector<prod_rule_t>&, 
+            std::ostream& stream=std::cout);
 }
 
 #endif

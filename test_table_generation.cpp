@@ -73,6 +73,9 @@ void test_dfa_creation(){
     make_closure(item_set, prod_rules);
     lang::dfa_t dfa = {item_set};
     make_dfa(dfa, prod_rules);
+
+    const auto parse_table = lang::make_parse_table(dfa, prod_rules, prod_rules.front());
+    lang::dump_parse_table(parse_table, prod_rules);
 }
 
 int main(){

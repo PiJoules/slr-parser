@@ -12,11 +12,11 @@ std::size_t lang::SymbolHasher::operator()(const enum Symbol& symbol) const {
 }
 
 bool lang::is_token(const enum lang::Symbol& symbol){
-    return static_cast<int>(symbol) < 0;
+    return static_cast<int>(symbol) >= 0;
 }
 
 bool lang::is_rule(const enum lang::Symbol& symbol){
-    return static_cast<int>(symbol) > 0;
+    return !is_token(symbol);
 }
 
 /**
@@ -134,10 +134,64 @@ void lang::make_dfa(lang::dfa_t& dfa, const std::vector<lang::prod_rule_t>& prod
 /**
  * Create parse table from dfa.
  */ 
-lang::parse_table_t lang::make_parse_table(const lang::dfa_t&, const std::vector<lang::prod_rule_t>&){
+lang::parse_table_t lang::make_parse_table(
+        const lang::dfa_t& dfa, 
+        const std::vector<lang::prod_rule_t>& prod_rules,
+        const lang::prod_rule_t& top_prod_rule){
     parse_table_t parse_table;
+    parse_table.reserve(dfa.size());
 
-    // 
+    // Map the item_sets to their final indeces in the map 
+    std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map;
+    std::size_t i = 0;
+    for (const auto& item_set : dfa){
+        std::unordered_map<enum Symbol, ParseInstr, SymbolHasher> action_map;
+        parse_table[i] = action_map;
+        item_set_map[item_set] = i;
+        i++;
+    }
+
+    // Map the production rules to the order in which they appear
+    std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map;
+    for (i = 0; i < prod_rules.size(); ++i){
+        prod_rule_map[prod_rules[i]] = i;
+    }
+
+    i = 0;
+    for (const auto& item_set : dfa){
+        for (const auto& lr_item : item_set){
+            const auto& prod_rule = lr_item.first;
+            const auto& prod = prod_rule.second;
+            const std::size_t& pos = lr_item.second;
+            if (pos < prod.size()){
+                // If A -> x . a y and GOTO(I_i, a) == I_j, then ACTION[i, a] = Shift j 
+                // If we have a rule where the symbol following the parser position is 
+                // a terminal, shift to the jth state which is equivalent to GOTO(I_i, a).
+                const auto& next_symbol = prod[pos];
+                const auto I_j = move_pos(item_set, next_symbol, prod_rules);
+                int j = item_set_map[I_j];
+                if (is_token(next_symbol)){
+                    parse_table[i][next_symbol] = {lang::ParseInstr::Action::SHIFT, j};
+                }
+                else {
+                    parse_table[i][next_symbol] = {lang::ParseInstr::Action::GOTO, j};
+                }
+            }
+            else {
+                if (prod_rule == top_prod_rule){
+                    // Finished whole module; cannot reduce further
+                    parse_table[i][eof_tok] = {lang::ParseInstr::Action::ACCEPT, 0};
+                }
+                else {
+                    // End of rule; Reduce 
+                    const auto& last_symbol = prod.back();
+                    int rule_num = prod_rule_map[prod_rule];
+                    parse_table[i][last_symbol] = {lang::ParseInstr::Action::REDUCE, rule_num};
+                }
+            }
+        }
+        i++;
+    }
 
     return parse_table;
 }
