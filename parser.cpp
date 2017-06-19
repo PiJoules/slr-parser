@@ -65,7 +65,7 @@ std::size_t lang::ItemSetHasher::operator()(const lang::item_set_t& item_set) co
 /**
  * Initialize a closure from an item set and list of productions.
  */
-void lang::make_closure(lang::item_set_t& item_set, const std::vector<lang::prod_rule_t>& prod_rules){
+void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::prod_rule_t>& prod_rules){
     std::size_t last_size;
 
     do {
@@ -106,14 +106,14 @@ lang::item_set_t lang::move_pos(const lang::item_set_t& item_set,
             }
         }
     }
-    make_closure(moved_item_set, prod_rules);
+    init_closure(moved_item_set, prod_rules);
     return item_set_t(moved_item_set);
 }
 
 /**
  * Create the canonical collections of the DFA.
  */ 
-void lang::make_dfa(lang::dfa_t& dfa, const std::vector<lang::prod_rule_t>& prod_rules){
+void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::prod_rule_t>& prod_rules){
     std::size_t last_size;
     do {
         last_size = dfa.size();
@@ -131,30 +131,39 @@ void lang::make_dfa(lang::dfa_t& dfa, const std::vector<lang::prod_rule_t>& prod
     } while (dfa.size() != last_size);  // while dfa did not change
 }
 
+void lang::Parser::input(const std::string& code){
+    lexer.input(code);
+}
+
 /**
- * Create parse table from dfa.
- */ 
-lang::parse_table_t lang::make_parse_table(
-        const lang::dfa_t& dfa, 
-        const std::vector<lang::prod_rule_t>& prod_rules,
-        const lang::prod_rule_t& top_prod_rule){
-    parse_table_t parse_table;
-    parse_table.reserve(dfa.size());
+ * Initialize the parse table from the production rules.
+ */
+lang::Parser::Parser(const std::vector<prod_rule_t>& prod_rules):
+    prod_rules_(prod_rules){
+    const auto& entry = prod_rules_.front();
+    item_set_t item_set = {{entry, 0}};
+    init_closure(item_set, prod_rules_);
+    dfa_t dfa = {item_set};
+    init_dfa(dfa, prod_rules_);
+    init_parse_table(dfa);
+}
+
+void lang::Parser::init_parse_table(const dfa_t& dfa){
+    const auto& top_prod_rule = prod_rules_.front();
+    parse_table_.reserve(dfa.size());
 
     // Map the item_sets to their final indeces in the map 
-    std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map;
     std::size_t i = 0;
     for (const auto& item_set : dfa){
         std::unordered_map<enum Symbol, ParseInstr, SymbolHasher> action_map;
-        parse_table[i] = action_map;
-        item_set_map[item_set] = i;
+        parse_table_[i] = action_map;
+        item_set_map_[item_set] = i;
         i++;
     }
 
     // Map the production rules to the order in which they appear
-    std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map;
-    for (i = 0; i < prod_rules.size(); ++i){
-        prod_rule_map[prod_rules[i]] = i;
+    for (i = 0; i < prod_rules_.size(); ++i){
+        prod_rule_map_[prod_rules_[i]] = i;
     }
 
     i = 0;
@@ -168,149 +177,80 @@ lang::parse_table_t lang::make_parse_table(
                 // If we have a rule where the symbol following the parser position is 
                 // a terminal, shift to the jth state which is equivalent to GOTO(I_i, a).
                 const auto& next_symbol = prod[pos];
-                const auto I_j = move_pos(item_set, next_symbol, prod_rules);
-                int j = item_set_map[I_j];
+                const auto I_j = move_pos(item_set, next_symbol, prod_rules_);
+                int j = item_set_map_[I_j];
+
                 if (is_token(next_symbol)){
-                    parse_table[i][next_symbol] = {lang::ParseInstr::Action::SHIFT, j};
+                    parse_table_[i][next_symbol] = {lang::ParseInstr::Action::SHIFT, j};
                 }
                 else {
-                    parse_table[i][next_symbol] = {lang::ParseInstr::Action::GOTO, j};
+                    parse_table_[i][next_symbol] = {lang::ParseInstr::Action::GOTO, j};
                 }
             }
             else {
                 if (prod_rule == top_prod_rule){
                     // Finished whole module; cannot reduce further
-                    parse_table[i][eof_tok] = {lang::ParseInstr::Action::ACCEPT, 0};
+                    parse_table_[i][eof_tok] = {lang::ParseInstr::Action::ACCEPT, 0};
                 }
                 else {
                     // End of rule; Reduce 
                     const auto& last_symbol = prod.back();
-                    int rule_num = prod_rule_map[prod_rule];
-                    parse_table[i][last_symbol] = {lang::ParseInstr::Action::REDUCE, rule_num};
+                    int rule_num = prod_rule_map_[prod_rule];
+                    parse_table_[i][last_symbol] = {lang::ParseInstr::Action::REDUCE, rule_num};
                 }
             }
         }
         i++;
     }
-
-    return parse_table;
-}
-
-void lang::Parser::input(const std::string& code){
-    lexer.input(code);
 }
 
 /**
- * Returns true if the value of the next token from the lexer matches
- * what we expect.
+ * Pretty print the parse table similar to how ply prints it.
  */
-bool lang::Parser::check_terminal(const std::string& terminal) const {
-    return lexer.peek().value == terminal;
-}
+void lang::Parser::dump_grammar(std::ostream& stream) const {
+    item_set_t item_sets[item_set_map_.size()];
+    for (auto it = item_set_map_.cbegin(); it != item_set_map_.cend(); ++it){
+        item_sets[it->second] = it->first;
+    }
+        
+    // Grammar 
+    stream << "Grammar" << std::endl << std::endl;
+    for (std::size_t i = 0; i < prod_rules_.size(); ++i){
+        stream << "Rule " << i << ": " << str(prod_rules_[i]) << std::endl;
+    }
+    stream << std::endl;
 
-/**
- * Pop a token from the lexer.
- */
-void lang::Parser::accept_terminal(const std::string& terminal) {
-    assert(check_terminal(terminal));
-    lexer.token();
-}
+    // States 
+    for (std::size_t i = 0; i < parse_table_.size(); ++i){
+        stream << "state " << i << std::endl << std::endl;
 
+        // Print item sets
+        const auto& item_set = item_sets[i];
+        for (const auto& lr_item : item_set){
+            stream << "\t" << lang::str(lr_item) << std::endl;
+        }
+        stream << std::endl;
 
-/**
- * module : module_stmt_list
- */
-lang::LangNode lang::Parser::parse_module(){
-    Module mod(parse_module_stmt_list());
-    return mod;
-}
+        // Print parse instructions
+        const auto& action_map = parse_table_.at(i);
+        for (auto it = action_map.cbegin(); it != action_map.cend(); ++it){
+            const auto& symbol = it->first;
+            const auto& instr = it->second;
+            const auto& action = instr.action;
 
-/**
- * module_stmt_list : module_stmt 
- *                  | NEWLINE
- *                  | module_stmt module_stmt_list
- *                  | NEWLINE module_stmt_list
- *                  | empty
- */
-std::vector<lang::ModuleStmt> lang::Parser::parse_module_stmt_list(){
-    std::vector<ModuleStmt> stmt_lst;
+            if (action == lang::ParseInstr::SHIFT || action == lang::ParseInstr::REDUCE){
+                int val = instr.value;
+                stream << "\t" << str(symbol) << "\t\t";
 
-    //while (1){
-    //    if (check_module_stmt()){
-    //        stmt_lst.push_back(parse_module_stmt());
-    //    }
-    //    else if (check_terminal("\n")){
-    //        accept_terminal();
-    //    }
-    //    else {
-    //        std::ostringstream err;
-    //        err << "Unknown terminal '" << 
-    //        throw std::runtime_error();
-    //    }
-    //}
-
-    return stmt_lst;
-}
-
-/**
- * module_stmt : funcdef
- */ 
-
-
-/**
- * funcdef : DEF NAME LPAR RPAR COLON func_suite
- */ 
-
-/**
- * suite : NEWLINE INDENT func_stmts DEDENT
- */ 
-
-/**
- * func_stmts : func_stmt func_stmts
- *            | func_stmt
- */ 
-
-/**
- * func_stmt : simple_func_stmt NEWLINE
- *           | compuound_func_stmt
- */ 
-
-/**
- * simple_func_stmt : small_stmt NEWLINE
- */ 
-
-/**
- * small_stmt : expr_stmt
- */ 
-
-/**
- * expr_stmt : expr
- */ 
-
-/**
- * Priority highest to lowest
- * expr : expr ADD expr 
- *      | expr SUB expr 
- *      | NAME 
- *      | int
- */ 
-bool lang::Parser::check_expr() const {
-    return check_name() || check_int();
-}
-
-//lang::Value lang::Parser::parse_expr(){
-//    if (check_name()){
-//    }
-//    else if (check_int()){
-//    }
-//    else {
-//    }
-//}
-
-bool lang::Parser::check_name() const {
-    return lexer.peek().symbol == name_tok;
-}
-
-bool lang::Parser::check_int() const {
-    return lexer.peek().symbol == int_tok;
+                if (action == lang::ParseInstr::SHIFT){
+                    stream << "shift and go to state ";
+                }
+                else {
+                    stream << "reduce using rule ";
+                }
+                stream << val << std::endl;
+            }
+        }
+        stream << std::endl;
+    }
 }

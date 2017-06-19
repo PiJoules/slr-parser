@@ -160,9 +160,9 @@ namespace lang {
     };
     typedef std::unordered_set<item_set_t, ItemSetHasher> dfa_t;
 
-    void make_closure(item_set_t&, const std::vector<prod_rule_t>&);
+    void init_closure(item_set_t&, const std::vector<prod_rule_t>&);
     item_set_t move_pos(const item_set_t&, const enum Symbol&, const std::vector<prod_rule_t>&);
-    void make_dfa(dfa_t& dfa, const std::vector<prod_rule_t>&);
+    void init_dfa(dfa_t& dfa, const std::vector<prod_rule_t>&);
 
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
@@ -170,30 +170,25 @@ namespace lang {
         int value;
     };
     typedef std::unordered_map<int, std::unordered_map<enum Symbol, ParseInstr, SymbolHasher>> parse_table_t;
-    parse_table_t make_parse_table(const dfa_t&, const std::vector<prod_rule_t>&, const prod_rule_t&);
 
     /******** Parser ********/ 
+
+    extern const std::vector<prod_rule_t> LANG_RULES;
 
     class Parser {
         private:
             Lexer lexer;
+            const std::vector<prod_rule_t>& prod_rules_;
+            parse_table_t parse_table_;
+            std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;
+            std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;
+
+            void init_parse_table(const dfa_t&);
 
         public:
-            Parser();
+            Parser(const std::vector<prod_rule_t>& prod_rules);
             void input(const std::string&);
-
-            LangNode parse_module();
-            std::vector<ModuleStmt> parse_module_stmt_list();
-            LangNode parse_module_stmt();
-            Value parse_expr();
-
-            void accept_terminal(const std::string& terminal);
-
-            bool check_terminal(const std::string& terminal) const;
-            bool check_module_stmt() const;
-            bool check_expr() const;
-            bool check_name() const;
-            bool check_int() const;
+            void dump_grammar(std::ostream& stream=std::cout) const;
     };
 
     /**
@@ -203,10 +198,6 @@ namespace lang {
     std::string str(const production_t& production);
     std::string str(const prod_rule_t& prod_rule);
     std::string str(const lr_item_t& lr_item);
-    void dump_parse_table(
-            const parse_table_t&, 
-            const std::vector<prod_rule_t>&, 
-            std::ostream& stream=std::cout);
 }
 
 #endif
