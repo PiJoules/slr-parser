@@ -1,219 +1,127 @@
 #include "lang.h"
 
+#define NEWLINE_C '\n'
+
 /**
  * Feed a string into the code stream.
  */
 void lang::Lexer::input(const std::string& code){
-    if (eof()){
-        code_stream.clear();
-    }
-    code_stream << std::string(code);
+    lexcode_ += code;
     load_next_tok();
-}
-
-/**
- * Initialize a new token with the copied lexer position,
- * line, and column numbers. The value has to be filled in later;
- */
-lang::LexToken lang::Lexer::spawn_tok(enum Symbol symbol) const {
-    LexToken tok;
-    tok.symbol = symbol;
-    tok.pos = pos;
-    tok.lineno = lineno;
-    tok.colno = colno;
-    return tok;
-}
-
-/**
- * Get the character and advance the stream.
- */
-char lang::Lexer::getc(){
-    char c = code_stream.get();
-    pos++;
-    if (c == NEWLINE_C){
-        colno = 1;
-        lineno++;
-    }
-    else {
-        colno++;
-    }
-    return code_stream.get();
-}
-
-char lang::Lexer::peekc(){
-    return code_stream.peek();
 }
 
 /**
  * Checks if the stream has reached the end.
  */
-bool lang::Lexer::eof(){
-    if (!code_stream){
-        return true;
+bool lang::Lexer::empty() const {
+    return lexcode_.empty();
+}
+
+/**
+ * Constructor from map of string to regex string.
+ */
+lang::Lexer::Lexer(const std::unordered_map<std::string, std::string>& tokens){
+    tokens_.reserve(tokens.size());
+    for (auto it = tokens.cbegin(); it != tokens.cend(); ++it){
+        std::string key = it->first;
+        std::string value = it->second;
+        auto existing = tokens_.find(key);
+        if (existing == tokens_.end()){
+            std::regex r(value);
+            tokens_[key] = r;
+        }
+        else {
+            // Accidentally defined the token twice
+            std::ostringstream err;
+            err << "Token '" << key << "' already defined. Attempting to define again as '" << value << "'.";
+            throw std::runtime_error(err.str());
+        }
     }
-    if (code_stream.eof()){
-        return true;
-    }
-    return code_stream.peek() == EOF;
+}
+
+void lang::Lexer::advance(int count){
+    pos_ += count;
+    colno_ += count;
+}
+
+void lang::Lexer::advancenl(int count){
+    pos_ += count;
+    lineno_ += count;
+    colno_ = 1;
 }
 
 /**
- * Scan a single character from the stream as a token.
- */
-lang::LexToken lang::Lexer::scan_char(enum Symbol base){
-    LexToken tok = {
-        base,
-        std::string(1, code_stream.get()), 
-        pos, 
-        lineno, 
-        colno
-    };
-    pos++;
-    colno++;
-    return tok;
-}
-
-static bool valid_name_char(char c){
-    return isalnum(c) || c == UNDERSCORE_C;
-}
-
-/**
- * name ::= [a-zA-Z_] [a-zA-Z_]*
- */
-lang::LexToken lang::Lexer::scan_name(){
-    std::string name;
-    LexToken tok;
-    tok.pos = pos;
-    tok.colno = colno;
-    tok.lineno = lineno;
-    tok.symbol = name_tok;
-    do {
-        name += code_stream.get();
-        pos++;
-        colno++;
-    } while (valid_name_char(code_stream.peek()));
-    tok.value = name;
-    return tok;
-}
-
-/**
- * int ::= \d+
- */
-lang::LexToken lang::Lexer::scan_int(){
-    std::string num;
-    LexToken tok;
-    tok.pos = pos;
-    tok.colno = colno;
-    tok.lineno = lineno;
-    tok.symbol = int_tok;
-    do {
-        num += code_stream.get();
-        pos++;
-        colno++;
-    } while (isdigit(code_stream.peek()));
-    tok.value = num;
-    return tok;
-}
-
-/**
- * newline = \n+
- */ 
-lang::LexToken lang::Lexer::scan_newline(){
-    std::string newlines;
-    LexToken tok;
-    tok.pos = pos;
-    tok.colno = colno;
-    tok.lineno = lineno;
-    tok.symbol = newline_tok;
-    colno = 1;
-
-    // Exhaust any more newlines 
-    do {
-        newlines += code_stream.get();
-        pos++;
-        lineno++;
-    } while (code_stream.peek() == NEWLINE_C);
-    tok.value = newlines;
-
-    return tok;
-}
-
-/**
- * Scan a token from the stream.
+ * Initialize next_tok_.
  */
 void lang::Lexer::load_next_tok(){
-    while (!eof()){
-        char lookahead = code_stream.peek();
-        switch (lookahead){
-            case ADD_C:
-                next_tok = scan_char(add_tok);
-                return;
-            case SUB_C:
-                next_tok = scan_char(sub_tok);
-                return;
-            case MUL_C:
-                next_tok = scan_char(mul_tok);
-                return;
-            case DIV_C:
-                next_tok = scan_char(div_tok);
-                return;
-            case UNDERSCORE_C:
-                next_tok = scan_name();
-                return;
-            case NEWLINE_C:
-                next_tok = scan_newline();
-                return;
-            default:
-                if (isalpha(lookahead)){
-                    next_tok = scan_name();
-                    return;
-                }
-                else if (isdigit(lookahead)){
-                    next_tok = scan_int();
-                    return;
-                }
-                else if (isspace(lookahead) && lookahead != NEWLINE_C){
-                    code_stream.get();
+    next_tok_.pos = pos_;
+    next_tok_.lineno = lineno_;
+    next_tok_.colno = colno_;
 
-                    // Ignore all whitespace except newlines
-                    pos++;
-                    colno++;
-                }
-                else {
-                    std::ostringstream err;
-                    err << "Unknown character '" << lookahead << "' (" << static_cast<int>(lookahead) << ") at " << lineno << "," << colno + 1 << std::endl;
-                    throw std::runtime_error(err.str());
-                }
+    // Nothing else
+    if (empty()){
+        next_tok_.symbol = tokens::END;
+        next_tok_.value = "";
+        return;
+    }
+
+    std::string match;
+    std::smatch matches;
+    auto it = tokens_.cbegin();
+    for (; it != tokens_.cend(); ++it){
+        std::string symbol = it->first;
+        std::regex re = it->second;
+        if (std::regex_search(lexcode_, matches, re, std::regex_constants::match_continuous)){
+            // Found 
+            match = matches[0];
+            next_tok_.symbol = symbol;
+            next_tok_.value = match;
+            break;
         }
     }
 
-    next_tok = {
-        eof_tok,
-        "",
-        pos,
-        lineno,
-        colno
-    };
+    // Check if whitespace that was not caught as a token 
+    if (isspace(lexcode_.front())){
+        // Trim whitespace, advance position, then try to load again 
+        while (isspace(lexcode_.front())){
+            if (lexcode_.front() == NEWLINE_C){
+                advancenl();
+            }
+            else {
+                advance();
+            }
+            lexcode_.erase(0, 1);
+        }
+        load_next_tok();
+    }
+    else if (it == tokens_.cend()){
+        // None of the regex's matched
+        std::ostringstream err;
+        err << "Unexpected character '" << lexcode_.front() << "' did not match the start of any tokens.";
+        throw std::runtime_error(err.str());
+    }
+
+    // Advance the stream 
+    // Count newlines that may be in the match'd string
+    for (const char c : match){
+        if (c == NEWLINE_C){
+            advancenl();
+        }
+        else {
+            advance();
+        }
+    }
+
+    // Remove this part of string and update position
+    lexcode_.erase(0, match.size());
 }
 
-static lang::LexToken make_indent(int pos, int lineno, int colno){
-    return {
-        lang::indent_tok,
-        "",
-        pos,
-        lineno,
-        1
-    };
+lang::LexToken lang::Lexer::make_indent() const {
+    return {tokens::INDENT, "", pos_, lineno_, 1};
 }
 
-static lang::LexToken make_dedent(int pos, int lineno, int colno){
-    return {
-        lang::dedent_tok,
-        "",
-        pos,
-        lineno,
-        1
-    };
+lang::LexToken lang::Lexer::make_dedent() const {
+    return {tokens::DEDENT, "", pos_, lineno_, 1};
 }
 
 /**
@@ -230,21 +138,21 @@ static lang::LexToken make_dedent(int pos, int lineno, int colno){
 lang::LexToken lang::Lexer::token(){
     // Should not both be true at same time
     assert(!(found_dedent && found_indent));
-    LexToken tok = next_tok;
+    LexToken tok = next_tok_;
 
     if (found_indent){
         found_indent = false;
-        return make_indent(pos, lineno, colno);
+        return make_indent();
     }
     else if (found_dedent){
         found_dedent = false;
-        return make_dedent(pos, lineno, colno);
+        return make_dedent();
     }
 
     load_next_tok();
 
-    if (tok.symbol == newline_tok){
-        int next_col = next_tok.colno;
+    if (tok.symbol == tokens::NEWLINE){
+        int next_col = next_tok_.colno;
 
         // The next token to be returned may be an indent or dedent 
         int last_level = levels.back();
@@ -261,15 +169,11 @@ lang::LexToken lang::Lexer::token(){
 
             // Make sure the indentations match any of the previous ones 
             if (!std::any_of(levels.begin(), levels.end(), [next_col](int lvl){ return lvl == next_col; })){
-                throw IndentationError(next_tok.lineno);
+                throw IndentationError(next_tok_.lineno);
             }
 
             found_dedent = true;
         }
     }
     return tok;
-}
-
-lang::LexToken lang::Lexer::peek() const {
-    return next_tok;
 }

@@ -3,17 +3,19 @@ STD = c++11
 CPPFLAGS = -Wall -Werror -std=$(STD)
 
 SOURCES = lexer.cpp \
-		  parser.cpp \
 		  lang_utils.cpp \
-		  lang_rules.cpp
+#		  parser.cpp \
+#		  lang_utils.cpp \
+#		  lang_rules.cpp
 OBJS = $(SOURCES:.cpp=.o)
 
 EXE_FILES = test_lexer.cpp \
-			test_table_generation.cpp \
+			#test_table_generation.cpp \
 			dump_lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: $(SOURCES) $(OBJS) $(EXE_FILES) test_lexer test_table_generation
+test: $(SOURCES) $(OBJS) $(EXE_FILES) test_lexer 
+	#test_table_generation
 
 .PHONY: test
 
