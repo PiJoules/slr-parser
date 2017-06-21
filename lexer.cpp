@@ -12,6 +12,39 @@ void lang::Lexer::input(const std::string& code){
 }
 
 /**
+ * Initialize a new token with the copied lexer position,
+ * line, and column numbers. The value has to be filled in later;
+ */
+lang::LexToken lang::Lexer::spawn_tok(enum Symbol symbol) const {
+    LexToken tok;
+    tok.symbol = symbol;
+    tok.pos = pos;
+    tok.lineno = lineno;
+    tok.colno = colno;
+    return tok;
+}
+
+/**
+ * Get the character and advance the stream.
+ */
+char lang::Lexer::getc(){
+    char c = code_stream.get();
+    pos++;
+    if (c == NEWLINE_C){
+        colno = 1;
+        lineno++;
+    }
+    else {
+        colno++;
+    }
+    return code_stream.get();
+}
+
+char lang::Lexer::peekc(){
+    return code_stream.peek();
+}
+
+/**
  * Checks if the stream has reached the end.
  */
 bool lang::Lexer::eof(){

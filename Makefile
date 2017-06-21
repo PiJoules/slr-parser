@@ -1,4 +1,4 @@
-CPP = g++
+CPP = g++-4.9
 STD = c++11
 CPPFLAGS = -Wall -Werror -std=$(STD)
 

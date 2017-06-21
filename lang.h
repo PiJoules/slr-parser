@@ -30,29 +30,29 @@ namespace lang {
     //
     // BE SURE TO ADD THE STRING REPRESENTATION OF EACH NEW TOKEN TO THE SWITCH
     // STMT IN LANG_UTILS.CPP FOR DEBUGGING.
-    enum Symbol {
-        // Values 
-        int_tok=0,
-        name_tok=1,
-        
-        // Binary operations 
-        add_tok=50,
-        sub_tok=51,
-        mul_tok=52,
-        div_tok=53,
+    //enum Symbol {
+    //    // Values 
+    //    int_tok=0,
+    //    name_tok=1,
+    //    
+    //    // Binary operations 
+    //    add_tok=50,
+    //    sub_tok=51,
+    //    mul_tok=52,
+    //    div_tok=53,
 
-        // Misc 
-        newline_tok=200,
-        whitespace_tok=201,
-        indent_tok=202,
-        dedent_tok=203,
-        eof_tok=204,
+    //    // Misc 
+    //    newline_tok=200,
+    //    whitespace_tok=201,
+    //    indent_tok=202,
+    //    dedent_tok=203,
+    //    eof_tok=204,
 
-        // Parser rules 
-        module_rule=-1,
-        funcdef_rule=-2,
-        expr_rule=-50,
-    };
+    //    // Parser rules 
+    //    module_rule=-1,
+    //    funcdef_rule=-2,
+    //    expr_rule=-50,
+    //};
 
     struct SymbolHasher {
         std::size_t operator()(const enum Symbol&) const;
@@ -115,9 +115,12 @@ namespace lang {
                 input("");  // Initialize
             };
             void input(const std::string& code);
+            LexToken spawn_tok(enum Symbol) const;
             LexToken token();
             LexToken peek() const;
+            char peekc();
             bool eof();
+            char getc();
     };
 
     class LangNode {};
