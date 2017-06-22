@@ -80,25 +80,28 @@ void lang::Lexer::load_next_tok(){
         }
     }
 
-    // Check if whitespace that was not caught as a token 
-    if (isspace(lexcode_.front())){
-        // Trim whitespace, advance position, then try to load again 
-        while (isspace(lexcode_.front())){
-            if (lexcode_.front() == NEWLINE_C){
-                advancenl();
+    // No matches
+    if (it == tokens_.cend()){
+        if (isspace(lexcode_.front())){
+            // Check if whitespace that was not caught as a token 
+            // Trim whitespace, advance position, then try to load again 
+            while (isspace(lexcode_.front())){
+                if (lexcode_.front() == NEWLINE_C){
+                    advancenl();
+                }
+                else {
+                    advance();
+                }
+                lexcode_.erase(0, 1);
             }
-            else {
-                advance();
-            }
-            lexcode_.erase(0, 1);
+            load_next_tok();
         }
-        load_next_tok();
-    }
-    else if (it == tokens_.cend()){
-        // None of the regex's matched
-        std::ostringstream err;
-        err << "Unexpected character '" << lexcode_.front() << "' did not match the start of any tokens.";
-        throw std::runtime_error(err.str());
+        else {
+            // None of the regex's matched
+            std::ostringstream err;
+            err << "Unexpected character '" << lexcode_.front() << "' did not match the start of any tokens.";
+            throw std::runtime_error(err.str());
+        }
     }
 
     // Advance the stream 
@@ -176,4 +179,8 @@ lang::LexToken lang::Lexer::token(){
         }
     }
     return tok;
+}
+
+const std::unordered_map<std::string, std::regex>& lang::Lexer::tokens() const {
+    return tokens_;
 }

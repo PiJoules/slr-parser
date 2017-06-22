@@ -1,63 +1,88 @@
 #include "lang.h"
 #include <cassert>
 
-// Expected gotos
+static const std::unordered_map<std::string, std::string> test_tokens = {
+    // Values
+    {"INT", R"(\d+)"},
+    {"NAME", R"([a-zA-Z_][a-zA-Z0-9_]*)"},
+
+    // Binary operators
+    {"ADD", R"(\+)"},
+    {"SUB", R"(-)"},
+    {"MUL", R"(\*)"},
+    {"DIV", R"(\\)"},
+
+    // Misc
+    {lang::tokens::NEWLINE, R"(\n+)"},  // Capture newlines
+};
+
+static const std::vector<lang::prod_rule_t> lang_rules = {
+    {"module", {"expr"}},
+    {"expr", {"expr", "SUB", "expr"}},
+    {"expr", {"expr", "ADD", "expr"}},
+    {"expr", {"expr", "MUL", "expr"}},
+    {"expr", {"expr", "DIV", "expr"}},
+    {"expr", {"NAME"}},
+    {"expr", {"INT"}},
+};
+
 static const lang::item_set_t clos_expected = {
-    {{lang::module_rule, {lang::expr_rule}}, 0},
-    {{lang::expr_rule, {lang::expr_rule, lang::sub_tok, lang::expr_rule}}, 0},
-    {{lang::expr_rule, {lang::expr_rule, lang::add_tok, lang::expr_rule}}, 0},
-    {{lang::expr_rule, {lang::expr_rule, lang::mul_tok, lang::expr_rule}}, 0},
-    {{lang::expr_rule, {lang::expr_rule, lang::div_tok, lang::expr_rule}}, 0},
-    {{lang::expr_rule, {lang::name_tok}}, 0},
-    {{lang::expr_rule, {lang::int_tok}}, 0},
+    {{"module", {"expr"}}, 0},
+    {{"expr", {"expr", "SUB", "expr"}}, 0},
+    {{"expr", {"expr", "ADD", "expr"}}, 0},
+    {{"expr", {"expr", "MUL", "expr"}}, 0},
+    {{"expr", {"expr", "DIV", "expr"}}, 0},
+    {{"expr", {"NAME"}}, 0},
+    {{"expr", {"INT"}}, 0},
 };
 
 static const lang::item_set_t expr_expected = {
-    {{lang::module_rule, {lang::expr_rule}}, 1},
-    {{lang::expr_rule, {lang::expr_rule, lang::sub_tok, lang::expr_rule}}, 1},
-    {{lang::expr_rule, {lang::expr_rule, lang::add_tok, lang::expr_rule}}, 1},
-    {{lang::expr_rule, {lang::expr_rule, lang::mul_tok, lang::expr_rule}}, 1},
-    {{lang::expr_rule, {lang::expr_rule, lang::div_tok, lang::expr_rule}}, 1},
+    {{"module", {"expr"}}, 1},
+    {{"expr", {"expr", "SUB", "expr"}}, 1},
+    {{"expr", {"expr", "ADD", "expr"}}, 1},
+    {{"expr", {"expr", "MUL", "expr"}}, 1},
+    {{"expr", {"expr", "DIV", "expr"}}, 1},
 };
 
 static const lang::item_set_t name_expected = {
-    {{lang::expr_rule, {lang::name_tok}}, 1},
+    {{"expr", {"NAME"}}, 1},
 };
 
 static const lang::item_set_t int_expected = {
-    {{lang::expr_rule, {lang::int_tok}}, 1},
+    {{"expr", {"INT"}}, 1},
 };
 
 void test_closure(){
-    const auto& entry = lang::LANG_RULES.front();
+    const auto& entry = lang_rules.front();
     lang::item_set_t item_set = {{entry, 0}};
-    lang::init_closure(item_set, lang::LANG_RULES);
+    lang::init_closure(item_set, lang_rules);
 
     // Check the contents 
     // Should really be the same as the existing rules but with positions of 0
     assert(item_set == clos_expected);
     
     // item_set should not change 
-    lang::init_closure(item_set, lang::LANG_RULES);
+    lang::init_closure(item_set, lang_rules);
     assert(item_set == clos_expected);
 }
 
 void test_move_pos(){
     // GOTO expressios
-    lang::item_set_t expr_item_set = lang::move_pos(clos_expected, lang::expr_rule, lang::LANG_RULES);
+    lang::item_set_t expr_item_set = lang::move_pos(clos_expected, "expr", lang_rules);
     assert(expr_item_set == expr_expected);
     
     // GOTO name
-    lang::item_set_t name_item_set = lang::move_pos(clos_expected, lang::name_tok, lang::LANG_RULES);
+    lang::item_set_t name_item_set = lang::move_pos(clos_expected, "NAME", lang_rules);
     assert(name_item_set == name_expected);
     
     // GOTO int
-    lang::item_set_t int_item_set = lang::move_pos(clos_expected, lang::int_tok, lang::LANG_RULES);
+    lang::item_set_t int_item_set = lang::move_pos(clos_expected, "INT", lang_rules);
     assert(int_item_set == int_expected);
 }
 
 void test_parser_creation(){
-    lang::Parser parser(lang::LANG_RULES);
+    lang::Lexer lexer(test_tokens);
+    lang::Parser parser(lexer, lang_rules);
 }
 
 int main(){

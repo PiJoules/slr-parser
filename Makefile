@@ -4,18 +4,16 @@ CPPFLAGS = -Wall -Werror -std=$(STD)
 
 SOURCES = lexer.cpp \
 		  lang_utils.cpp \
-#		  parser.cpp \
-#		  lang_utils.cpp \
-#		  lang_rules.cpp
+		  parser.cpp \
+		  lang_rules.cpp
 OBJS = $(SOURCES:.cpp=.o)
 
 EXE_FILES = test_lexer.cpp \
-			#test_table_generation.cpp \
+			test_table_generation.cpp \
 			dump_lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: $(SOURCES) $(OBJS) $(EXE_FILES) test_lexer 
-	#test_table_generation
+test: compile test_lexer test_table_generation
 
 .PHONY: test
 
@@ -30,7 +28,7 @@ compile: $(OBJS) clean_exes $(EXE_OUTPUTS)
 	$(CPP) $(CPPFLAGS) $< $(OBJS) -o $@
 
 clean_exes:
-	rm -rf *.out 
+	rm -rf $(EXE_OUTPUTS)
 
 test_lexer: clean_exes test_lexer.out
 	./test_lexer.out

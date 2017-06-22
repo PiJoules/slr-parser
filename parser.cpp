@@ -1,38 +1,19 @@
 #include "lang.h"
 
-
-// Production rules to be set at compile time
-static const std::vector<lang::prod_rule_t> prod_rules = {
-    {lang::expr_rule, {lang::name_tok}},
-    {lang::expr_rule, {lang::int_tok}},
-};
-
-std::size_t lang::SymbolHasher::operator()(const enum Symbol& symbol) const {
-    return static_cast<std::size_t>(symbol);
-}
-
-bool lang::is_token(const enum lang::Symbol& symbol){
-    return static_cast<int>(symbol) >= 0;
-}
-
-bool lang::is_rule(const enum lang::Symbol& symbol){
-    return !is_token(symbol);
-}
-
 /**
  * Borrowed from python3.6's tuple hash
  */
 std::size_t lang::ProdRuleHasher::operator()(const prod_rule_t& prod_rule) const {
-    auto rule = prod_rule.first;
-    auto prod = prod_rule.second;
-    SymbolHasher hasher;
-    std::size_t rule_hash = hasher(rule);
+    std::string rule = prod_rule.first;
+    production_t prod = prod_rule.second;
+    std::hash<std::string> str_hasher;
+    std::size_t rule_hash = str_hasher(rule);
 
     std::size_t hash_mult = _HASH_MULTIPLIER;
     std::size_t prod_hash = 0x345678;
     std::size_t len = prod.size();
-    for (const auto& r : prod){
-        prod_hash = (prod_hash ^ hasher(r)) * hash_mult;
+    for (std::string& r : prod){
+        prod_hash = (prod_hash ^ str_hasher(r)) * hash_mult;
         hash_mult += 82520 + len + len;
     }
     prod_hash += 97531;
@@ -74,7 +55,7 @@ void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::prod
             std::size_t pos = item.second;  // dot position
             lang::production_t prod = item.first.second;  // production list
             if (pos < prod.size()){
-                enum lang::Symbol next_symbol = prod[pos];
+                std::string next_symbol = prod[pos];
                 
                 // Find all productions that start with the next_symbol
                 // TODO: See if we can optomize this later
@@ -92,7 +73,7 @@ void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::prod
  * Move the parser position over by 1.
  */ 
 lang::item_set_t lang::move_pos(const lang::item_set_t& item_set, 
-                                const enum lang::Symbol& symbol,
+                                const std::string& symbol,
                                 const std::vector<lang::prod_rule_t>& prod_rules){
     item_set_t moved_item_set;
     for (const auto lr_item : item_set){
@@ -138,14 +119,20 @@ void lang::Parser::input(const std::string& code){
 /**
  * Initialize the parse table from the production rules.
  */
-lang::Parser::Parser(const std::vector<prod_rule_t>& prod_rules):
-    prod_rules_(prod_rules){
+lang::Parser::Parser(Lexer lexer, const std::vector<prod_rule_t>& prod_rules):
+    lexer(lexer),
+    prod_rules_(prod_rules)
+{
     const auto& entry = prod_rules_.front();
     item_set_t item_set = {{entry, 0}};
     init_closure(item_set, prod_rules_);
     dfa_t dfa = {item_set};
     init_dfa(dfa, prod_rules_);
     init_parse_table(dfa);
+}
+
+bool lang::Parser::is_terminal(const std::string& symbol) const {
+    return lexer.tokens().find(symbol) != lexer.tokens().end();
 }
 
 void lang::Parser::init_parse_table(const dfa_t& dfa){
@@ -155,7 +142,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
     // Map the item_sets to their final indeces in the map 
     std::size_t i = 0;
     for (const auto& item_set : dfa){
-        std::unordered_map<enum Symbol, ParseInstr, SymbolHasher> action_map;
+        std::unordered_map<std::string, ParseInstr> action_map;
         parse_table_[i] = action_map;
         item_set_map_[item_set] = i;
         i++;
@@ -180,7 +167,8 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 const auto I_j = move_pos(item_set, next_symbol, prod_rules_);
                 int j = item_set_map_[I_j];
 
-                if (is_token(next_symbol)){
+                if (is_terminal(next_symbol)){
+                    // next_symbol is a token
                     parse_table_[i][next_symbol] = {lang::ParseInstr::Action::SHIFT, j};
                 }
                 else {
@@ -190,13 +178,23 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
             else {
                 if (prod_rule == top_prod_rule){
                     // Finished whole module; cannot reduce further
-                    parse_table_[i][eof_tok] = {lang::ParseInstr::Action::ACCEPT, 0};
+                    parse_table_[i][tokens::END] = {lang::ParseInstr::Action::ACCEPT, 0};
                 }
                 else {
                     // End of rule; Reduce 
-                    const auto& last_symbol = prod.back();
+                    // If A -> a ., then ACTION[i, b] = Reduce A -> a for all terminals 
+                    // in B -> A . b where b is a terminal
                     int rule_num = prod_rule_map_[prod_rule];
-                    parse_table_[i][last_symbol] = {lang::ParseInstr::Action::REDUCE, rule_num};
+                    const std::string& rule = prod_rule.first;
+                    for (const prod_rule_t& pr : prod_rules_){
+                        const production_t& other_prod = pr.second;
+                        // Only need to iterate up to the second to last symbol 
+                        for (std::size_t j = 0; j < other_prod.size()-1; ++j){
+                            if (other_prod[j] == rule && is_terminal(other_prod[j+1])){
+                                parse_table_[i][other_prod[j+1]] = {lang::ParseInstr::Action::REDUCE, rule_num};
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -240,7 +238,7 @@ void lang::Parser::dump_grammar(std::ostream& stream) const {
 
             if (action == lang::ParseInstr::SHIFT || action == lang::ParseInstr::REDUCE){
                 int val = instr.value;
-                stream << "\t" << str(symbol) << "\t\t";
+                stream << "\t" << symbol << "\t\t";
 
                 if (action == lang::ParseInstr::SHIFT){
                     stream << "shift and go to state ";
