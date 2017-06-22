@@ -104,6 +104,18 @@ namespace lang {
     };
     typedef std::unordered_map<int, std::unordered_map<std::string, ParseInstr>> parse_table_t;
 
+    enum Associativity {
+        LEFT_ASSOC,
+        RIGHT_ASSOC,
+        // Ply also implements nonassociativity, but ignoring that for now
+    };
+    typedef std::vector<std::pair<enum Associativity, std::vector<std::string>>> precedence_t;
+    typedef struct {
+        ParseInstr instr1;  // Default chosen instruction will be whatever appeared first in the rules
+        ParseInstr instr2;
+        std::string lookahead;
+    } ParserConflict;
+
     ///******** Parser ********/ 
 
     extern const std::vector<prod_rule_t> LANG_RULES;
@@ -116,12 +128,16 @@ namespace lang {
             parse_table_t parse_table_;
             std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;
             std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;
+            std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;
+            std::vector<ParserConflict> conflicts_;
 
             void init_parse_table(const dfa_t&);
             bool is_terminal(const std::string&) const;
+            void init_precedence(const precedence_t&);
 
         public:
-            Parser(Lexer, const std::vector<prod_rule_t>& prod_rules);
+            Parser(Lexer, const std::vector<prod_rule_t>& prod_rules,
+                   const precedence_t& precedence={{}});
             void input(const std::string&);
             void dump_grammar(std::ostream& stream=std::cout) const;
     };
@@ -133,6 +149,9 @@ namespace lang {
     std::string str(const production_t& production);
     std::string str(const prod_rule_t& prod_rule);
     std::string str(const lr_item_t& lr_item);
+    std::string str(const item_set_t& item_set);
+    std::string str(const ParseInstr::Action&);
+    std::string str(const ParseInstr&);
 }
 
 #endif

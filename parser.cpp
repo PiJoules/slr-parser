@@ -116,13 +116,28 @@ void lang::Parser::input(const std::string& code){
     lexer.input(code);
 }
 
+void lang::Parser::init_precedence(const precedence_t& precedence){
+    precedence_map_.reserve(precedence.size());
+    for (std::size_t i = 0; i < precedence.size(); ++i){
+        const auto& entry = precedence[i];
+        enum Associativity assoc = entry.first;
+        const auto& tokens = entry.second;
+        for (const std::string& tok : tokens){
+            precedence_map_[tok] = {i, assoc};
+        }
+    }
+}
+
 /**
  * Initialize the parse table from the production rules.
  */
-lang::Parser::Parser(Lexer lexer, const std::vector<prod_rule_t>& prod_rules):
+lang::Parser::Parser(Lexer lexer, const std::vector<prod_rule_t>& prod_rules, 
+                     const precedence_t& precedence):
     lexer(lexer),
     prod_rules_(prod_rules)
 {
+    init_precedence(precedence);
+
     const auto& entry = prod_rules_.front();
     item_set_t item_set = {{entry, 0}};
     init_closure(item_set, prod_rules_);
@@ -159,6 +174,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
             const auto& prod_rule = lr_item.first;
             const auto& prod = prod_rule.second;
             const std::size_t& pos = lr_item.second;
+            auto& action_table = parse_table_[i];
             if (pos < prod.size()){
                 // If A -> x . a y and GOTO(I_i, a) == I_j, then ACTION[i, a] = Shift j 
                 // If we have a rule where the symbol following the parser position is 
@@ -168,17 +184,28 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 int j = item_set_map_[I_j];
 
                 if (is_terminal(next_symbol)){
-                    // next_symbol is a token
-                    parse_table_[i][next_symbol] = {lang::ParseInstr::Action::SHIFT, j};
+                    // next_symbol is a token 
+                    auto existing_it = action_table.find(next_symbol);
+                    ParseInstr instr = {lang::ParseInstr::Action::SHIFT, j};
+                    if (existing_it != action_table.cend()){
+                        // Shift reduce conflict. Check for precedence.
+                        conflicts_.push_back({
+                            instr,
+                            existing_it->second,
+                            next_symbol,
+                        });
+                    }
+                    // Override existing with shift
+                    action_table[next_symbol] = instr;
                 }
                 else {
-                    parse_table_[i][next_symbol] = {lang::ParseInstr::Action::GOTO, j};
+                    action_table[next_symbol] = {lang::ParseInstr::Action::GOTO, j};
                 }
             }
             else {
                 if (prod_rule == top_prod_rule){
                     // Finished whole module; cannot reduce further
-                    parse_table_[i][tokens::END] = {lang::ParseInstr::Action::ACCEPT, 0};
+                    action_table[tokens::END] = {lang::ParseInstr::Action::ACCEPT, 0};
                 }
                 else {
                     // End of rule; Reduce 
@@ -190,8 +217,23 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                         const production_t& other_prod = pr.second;
                         // Only need to iterate up to the second to last symbol 
                         for (std::size_t j = 0; j < other_prod.size()-1; ++j){
-                            if (other_prod[j] == rule && is_terminal(other_prod[j+1])){
-                                parse_table_[i][other_prod[j+1]] = {lang::ParseInstr::Action::REDUCE, rule_num};
+                            const std::string& current_prod = other_prod[j];
+                            const std::string& next_prod = other_prod[j+1];
+                            if (current_prod == rule && is_terminal(next_prod)){
+                                auto existing_it = action_table.find(next_prod);
+                                ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
+                                if (existing_it != action_table.cend()){
+                                    // Reduce reduce conflict
+                                    conflicts_.push_back({
+                                        existing_it->second,
+                                        instr,
+                                        next_prod,
+                                    });
+                                }
+                                else {
+                                    // Precedence will go to the existing one
+                                    action_table[next_prod] = instr;
+                                }
                             }
                         }
                     }
@@ -250,5 +292,18 @@ void lang::Parser::dump_grammar(std::ostream& stream) const {
             }
         }
         stream << std::endl;
+    }
+    stream << std::endl;
+
+    // Conflicts  
+    stream << "Conflicts" << std::endl << std::endl;
+    for (const ParserConflict& conflict : conflicts_){
+        const ParseInstr& chosen = conflict.instr1;
+        const ParseInstr& other = conflict.instr2;
+        const std::string& lookahead = conflict.lookahead;
+
+        const ParseInstr::Action& act1 = chosen.action;
+        const ParseInstr::Action& act2 = other.action;
+        stream << str(act1) << "/" << str(act2) << " conflict for lookahead '" << lookahead << "'. Resolved as " << str(chosen);
     }
 }
