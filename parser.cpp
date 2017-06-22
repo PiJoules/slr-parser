@@ -150,6 +150,10 @@ bool lang::Parser::is_terminal(const std::string& symbol) const {
     return lexer.tokens().find(symbol) != lexer.tokens().end();
 }
 
+const std::vector<lang::ParserConflict>& lang::Parser::conflicts() const {
+    return conflicts_;
+}
+
 void lang::Parser::init_parse_table(const dfa_t& dfa){
     const auto& top_prod_rule = prod_rules_.front();
     parse_table_.reserve(dfa.size());
@@ -186,17 +190,15 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 if (is_terminal(next_symbol)){
                     // next_symbol is a token 
                     auto existing_it = action_table.find(next_symbol);
-                    ParseInstr instr = {lang::ParseInstr::Action::SHIFT, j};
+                    ParseInstr shift_instr = {lang::ParseInstr::Action::SHIFT, j};
                     if (existing_it != action_table.cend()){
-                        // Shift reduce conflict. Check for precedence.
-                        conflicts_.push_back({
-                            instr,
-                            existing_it->second,
-                            next_symbol,
-                        });
+                        // Possible action conlfict. Check for precedence 
+                        check_precedence(existing_it->second, shift_instr, next_symbol, action_table);
                     }
-                    // Override existing with shift
-                    action_table[next_symbol] = instr;
+                    else {
+                        // No conflict. Fill with shift
+                        action_table[next_symbol] = shift_instr;
+                    }
                 }
                 else {
                     action_table[next_symbol] = {lang::ParseInstr::Action::GOTO, j};
@@ -223,15 +225,11 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                                 auto existing_it = action_table.find(next_prod);
                                 ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
                                 if (existing_it != action_table.cend()){
-                                    // Reduce reduce conflict
-                                    conflicts_.push_back({
-                                        existing_it->second,
-                                        instr,
-                                        next_prod,
-                                    });
+                                    // Possible conflict. Check for precedence.
+                                    check_precedence(existing_it->second, instr, next_prod, action_table);
                                 }
                                 else {
-                                    // Precedence will go to the existing one
+                                    // No conflict. Fill with reduce.
                                     action_table[next_prod] = instr;
                                 }
                             }
@@ -241,6 +239,61 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
             }
         }
         i++;
+    }
+}
+
+std::string lang::Parser::key_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
+    std::string key_term;
+    if (instr.action == ParseInstr::REDUCE){
+        std::size_t rule_num = instr.value;
+        const production_t& reduce_prod = prod_rules_[rule_num].second;
+        key_term = rightmost_terminal(reduce_prod);
+    }
+    else {
+        key_term = lookahead;
+    }
+    return key_term;
+}
+
+void lang::Parser::check_precedence(
+        const ParseInstr& existing_instr,
+        const ParseInstr& new_instr,
+        const std::string& lookahead,
+        std::unordered_map<std::string, ParseInstr>& action_table){
+    // Possible action conlfict. Check for precedence 
+    // Tterminal key for existing instr
+    const std::string key_existing = key_for_instr(existing_instr, lookahead);
+
+    // Terminal key for new instr 
+    const std::string key_new = key_for_instr(new_instr, lookahead);
+
+    if (precedence_map_.find(key_existing) != precedence_map_.cend() &&
+        precedence_map_.find(key_new) != precedence_map_.cend()){
+        // Both have precedence rules. No conflict
+        const auto& prec_existing = precedence_map_[key_existing];
+        const auto& prec_new = precedence_map_[key_new];
+        if (prec_new.first > prec_existing.first){
+            // Take the new action over current
+            action_table[key_new] = new_instr;
+        }
+        else if (prec_new.first < prec_existing.first){
+            // Take existing over new. Don't need to do anything.
+        }
+        else {
+            // Same precedence 
+            // Default to a shift if one exists. Otherwise, just keep the current one.
+            if (new_instr.action == ParseInstr::SHIFT){
+                action_table[lookahead] = new_instr;
+            }
+        }
+    }
+    else {
+        // Conflict
+        conflicts_.push_back({
+            existing_instr,
+            new_instr,
+            lookahead,
+        });
     }
 }
 
@@ -296,7 +349,7 @@ void lang::Parser::dump_grammar(std::ostream& stream) const {
     stream << std::endl;
 
     // Conflicts  
-    stream << "Conflicts" << std::endl << std::endl;
+    stream << "Conflicts (" << conflicts_.size() << ")" << std::endl << std::endl;
     for (const ParserConflict& conflict : conflicts_){
         const ParseInstr& chosen = conflict.instr1;
         const ParseInstr& other = conflict.instr2;
@@ -304,6 +357,38 @@ void lang::Parser::dump_grammar(std::ostream& stream) const {
 
         const ParseInstr::Action& act1 = chosen.action;
         const ParseInstr::Action& act2 = other.action;
-        stream << str(act1) << "/" << str(act2) << " conflict for lookahead '" << lookahead << "'. Resolved as " << str(chosen);
+        stream << str(act1) << "/" << str(act2) << " conflict (defaulting to " << str(act1)
+               << ")" << std::endl;
+        stream << "- " << conflict_str(chosen, lookahead) << std::endl;
+        stream << "- " << conflict_str(other, lookahead) << std::endl;
     }
+}
+
+std::string lang::Parser::conflict_str(const ParseInstr& instr, const std::string lookahead) const {
+    std::ostringstream stream;
+    production_t prod;
+    switch (instr.action){
+        case ParseInstr::SHIFT: 
+            stream << "shift and go to state " << instr.value << " on lookahead " << lookahead;
+            break;
+        case ParseInstr::REDUCE: 
+            prod = prod_rules_[instr.value].second;
+            stream << "reduce using rule " << instr.value << " on terminal " << rightmost_terminal(prod);
+            break;
+        case ParseInstr::GOTO: 
+            stream << "go to state " << instr.value;
+            break;
+        case ParseInstr::ACCEPT: 
+            stream << "accept";
+    }
+    return stream.str();
+}
+
+std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
+    for (auto it = prod.crbegin(); it != prod.crend(); ++it){
+        if (is_terminal(*it)){
+            return *it;
+        }
+    }
+    return "";
 }

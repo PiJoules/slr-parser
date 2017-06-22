@@ -73,22 +73,3 @@ std::string lang::str(const ParseInstr::Action& action){
         default: return "";
     }
 }
-
-std::string lang::str(const ParseInstr& instr){
-    std::ostringstream stream;
-    switch (instr.action){
-        case ParseInstr::SHIFT: 
-            stream << "shift and go to state ";
-            break;
-        case ParseInstr::REDUCE: 
-            stream << "reduce using rule ";
-            break;
-        case ParseInstr::GOTO: 
-            stream << "go to state ";
-            break;
-        case ParseInstr::ACCEPT: 
-            stream << "accept ";
-    }
-    stream << instr.value << std::endl;
-    return stream.str();
-}

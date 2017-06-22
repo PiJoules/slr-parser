@@ -25,3 +25,10 @@ const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
     {"expr", {"NAME"}},
     {"expr", {"INT"}},
 };
+
+/**************** Associativity ***************/ 
+
+const lang::precedence_t lang::LANG_PRECEDENCE = {
+    {lang::RIGHT_ASSOC, {"ADD", "SUB"}},
+    {lang::LEFT_ASSOC, {"MUL", "DIV"}},
+};

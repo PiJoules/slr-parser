@@ -120,6 +120,7 @@ namespace lang {
 
     extern const std::vector<prod_rule_t> LANG_RULES;
     extern const std::unordered_map<std::string, std::string> LANG_TOKENS;
+    extern const precedence_t LANG_PRECEDENCE;
 
     class Parser {
         private:
@@ -134,12 +135,19 @@ namespace lang {
             void init_parse_table(const dfa_t&);
             bool is_terminal(const std::string&) const;
             void init_precedence(const precedence_t&);
+            std::string key_for_instr(const ParseInstr&, const std::string&) const;
+            void check_precedence(const ParseInstr&, const ParseInstr&, const std::string&,
+                    std::unordered_map<std::string, ParseInstr>&);
+
+            std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
+            std::string rightmost_terminal(const production_t&) const;
 
         public:
             Parser(Lexer, const std::vector<prod_rule_t>& prod_rules,
                    const precedence_t& precedence={{}});
             void input(const std::string&);
             void dump_grammar(std::ostream& stream=std::cout) const;
+            const std::vector<ParserConflict>& conflicts() const;
     };
 
     /**
@@ -151,7 +159,6 @@ namespace lang {
     std::string str(const lr_item_t& lr_item);
     std::string str(const item_set_t& item_set);
     std::string str(const ParseInstr::Action&);
-    std::string str(const ParseInstr&);
 }
 
 #endif
