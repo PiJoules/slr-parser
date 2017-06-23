@@ -71,9 +71,16 @@ namespace lang {
             void advancenl(int count=1);
     };
 
-    // Shift-reduce parsing
+    /********** Shift reduce parsing *************/
+
     typedef std::vector<std::string> production_t;
-    typedef std::pair<std::string, production_t> prod_rule_t;
+    typedef void (*parse_func_t)(void*, const std::vector<void*>&);
+    typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
+
+    prod_rule_t make_pr(
+            const std::string&, 
+            const std::vector<std::string>&, 
+            const parse_func_t& func = nullptr);
 
     struct ProdRuleHasher {
         std::size_t operator()(const prod_rule_t& prod_rule) const;
@@ -124,7 +131,7 @@ namespace lang {
 
     class Parser {
         private:
-            Lexer lexer;
+            Lexer lexer_;
             const std::vector<prod_rule_t>& prod_rules_;
             parse_table_t parse_table_;
             std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;
@@ -148,6 +155,42 @@ namespace lang {
             void input(const std::string&);
             void dump_grammar(std::ostream& stream=std::cout) const;
             const std::vector<ParserConflict>& conflicts() const;
+            void parse();
+            void reduce(const prod_rule_t&, 
+                    std::vector<std::string>&,
+                    std::vector<LexToken>&,
+                    const enum Associativity&);
+    };
+
+    /****** Nodes ********/ 
+    class Node {
+        public:
+            // The string representation of this node
+            virtual std::string str() const;
+    };
+
+    class ModuleStmt: public Node {
+        public:
+            std::string str() const {
+                return "";
+            }
+    };
+
+    class Module: public Node {
+        private:
+            const std::vector<ModuleStmt> body_;
+
+        public:
+            Module(const std::vector<ModuleStmt>& body): body_(body){}
+            const std::vector<ModuleStmt>& body() const { return body_; }
+
+            std::string str() const {
+                std::ostringstream stream;
+                for (const ModuleStmt& stmt : body_){
+                    stream << stmt.str() << std::endl;
+                }
+                return stream.str();
+            }
     };
 
     /**

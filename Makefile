@@ -10,7 +10,8 @@ OBJS = $(SOURCES:.cpp=.o)
 
 EXE_FILES = test_lexer.cpp \
 			test_table_generation.cpp \
-			dump_lang.cpp
+			dump_lang.cpp \
+			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
 test: compile test_lexer test_table_generation
@@ -36,7 +37,13 @@ test_lexer: clean_exes test_lexer.out
 
 test_table_generation: clean_exes test_table_generation.out
 	./test_table_generation.out
-	valgrind ./test_table_generation.out || echo 'Valgrind not available'
+	valgrind ./test_table_generation.out || echo 'Valgrind not available' 
+
+clean_dump_lang:
+	rm -rf dump_lang.out
+
+dump_lang: $(OBJS) clean_dump_lang dump_lang.out
+	./dump_lang.out
 
 clean:
 	rm -rf *.o *.out

@@ -10,6 +10,13 @@ const char* lang::IndentationError::what() const throw() {
     return err.str().c_str();
 }
 
+lang::prod_rule_t lang::make_pr(
+        const std::string& rule, 
+        const std::vector<std::string>& prod, 
+        const parse_func_t& func){
+    return std::make_tuple(rule, prod, func);
+}
+
 /********** Debugging utilities **********/ 
 
 /**
@@ -38,7 +45,7 @@ std::string lang::str(const lang::production_t& production){
 
 std::string lang::str(const prod_rule_t& prod_rule){
     std::ostringstream s;
-    s << prod_rule.first << " -> " << str(prod_rule.second);
+    s << std::get<0>(prod_rule) << " -> " << str(std::get<1>(prod_rule));
     return s.str();
 }
 
@@ -46,19 +53,19 @@ std::string lang::str(const lr_item_t& lr_item){
     auto prod_rule = lr_item.first;
     auto pos = lr_item.second;
     std::ostringstream s;
-    s << prod_rule.first << " : ";
+    s << std::get<0>(prod_rule) << " : ";
 
     // Before dot
     for (int i = 0; i < pos; ++i){
-        s << prod_rule.second[i] << " ";
+        s << std::get<1>(prod_rule)[i] << " ";
     }
 
     s << ". ";
 
     // After dot 
-    int len = static_cast<int>(prod_rule.second.size());
+    int len = static_cast<int>(std::get<1>(prod_rule).size());
     for (int i = pos; i < len; ++i){
-        s << prod_rule.second[i] << " ";
+        s << std::get<1>(prod_rule)[i] << " ";
     }
 
     return s.str();

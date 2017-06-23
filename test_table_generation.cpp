@@ -17,13 +17,13 @@ static const std::unordered_map<std::string, std::string> test_tokens = {
 };
 
 static const std::vector<lang::prod_rule_t> test_rules = {
-    {"module", {"expr"}},
-    {"expr", {"expr", "SUB", "expr"}},
-    {"expr", {"expr", "ADD", "expr"}},
-    {"expr", {"expr", "MUL", "expr"}},
-    {"expr", {"expr", "DIV", "expr"}},
-    {"expr", {"NAME"}},
-    {"expr", {"INT"}},
+    lang::make_pr("module", {"expr"}),
+    lang::make_pr("expr", {"expr", "SUB", "expr"}),
+    lang::make_pr("expr", {"expr", "ADD", "expr"}),
+    lang::make_pr("expr", {"expr", "MUL", "expr"}),
+    lang::make_pr("expr", {"expr", "DIV", "expr"}),
+    lang::make_pr("expr", {"NAME"}),
+    lang::make_pr("expr", {"INT"}),
 };
 
 static const lang::precedence_t test_precedence = {
@@ -32,29 +32,29 @@ static const lang::precedence_t test_precedence = {
 };
 
 static const lang::item_set_t clos_expected = {
-    {{"module", {"expr"}}, 0},
-    {{"expr", {"expr", "SUB", "expr"}}, 0},
-    {{"expr", {"expr", "ADD", "expr"}}, 0},
-    {{"expr", {"expr", "MUL", "expr"}}, 0},
-    {{"expr", {"expr", "DIV", "expr"}}, 0},
-    {{"expr", {"NAME"}}, 0},
-    {{"expr", {"INT"}}, 0},
+    {lang::make_pr("module", {"expr"}), 0},
+    {lang::make_pr("expr", {"expr", "SUB", "expr"}), 0},
+    {lang::make_pr("expr", {"expr", "ADD", "expr"}), 0},
+    {lang::make_pr("expr", {"expr", "MUL", "expr"}), 0},
+    {lang::make_pr("expr", {"expr", "DIV", "expr"}), 0},
+    {lang::make_pr("expr", {"NAME"}), 0},
+    {lang::make_pr("expr", {"INT"}), 0},
 };
 
 static const lang::item_set_t expr_expected = {
-    {{"module", {"expr"}}, 1},
-    {{"expr", {"expr", "SUB", "expr"}}, 1},
-    {{"expr", {"expr", "ADD", "expr"}}, 1},
-    {{"expr", {"expr", "MUL", "expr"}}, 1},
-    {{"expr", {"expr", "DIV", "expr"}}, 1},
+    {lang::make_pr("module", {"expr"}), 1},
+    {lang::make_pr("expr", {"expr", "SUB", "expr"}), 1},
+    {lang::make_pr("expr", {"expr", "ADD", "expr"}), 1},
+    {lang::make_pr("expr", {"expr", "MUL", "expr"}), 1},
+    {lang::make_pr("expr", {"expr", "DIV", "expr"}), 1},
 };
 
 static const lang::item_set_t name_expected = {
-    {{"expr", {"NAME"}}, 1},
+    {lang::make_pr("expr", {"NAME"}), 1},
 };
 
 static const lang::item_set_t int_expected = {
-    {{"expr", {"INT"}}, 1},
+    {lang::make_pr("expr", {"INT"}), 1},
 };
 
 void test_closure(){
