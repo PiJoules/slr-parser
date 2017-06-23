@@ -31,38 +31,38 @@ const std::unordered_map<std::string, std::string> lang::LANG_TOKENS = {
 
 const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
     // Entry point
-    lang::make_pr("module", {"module_stmt_list"}, nullptr),
-    //{"module_stmt_list", {"module_stmt"}},
-    //{"module_stmt_list", {"module_stmt_list", "module_stmt"}},
-    //{"module_stmt", {"func_def"}},
-    //{"module_stmt", {"NEWLINE"}},
+    lang::make_pr("module", {"module_stmt_list"}),
+    lang::make_pr("module_stmt_list", {"module_stmt"}),
+    lang::make_pr("module_stmt_list", {"module_stmt_list", "module_stmt"}),
+    lang::make_pr("module_stmt", {"func_def"}),
+    lang::make_pr("module_stmt", {"NEWLINE"}),
 
     // Functions 
-    //{"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}},
-    //{"func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}},
-    //{"func_stmts", {"func_stmt"}},
-    //{"func_stmts", {"func_stmts", "func_stmt"}},
-    //{"func_stmt", {"simple_func_stmt", "NEWLINE"}},
-    ////{"func_stmt", {"compound_func_stmt", lang::tokens::NEWLINE}},
-    //{"simple_func_stmt", {"expr_stmt"}},
+    lang::make_pr("func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}),
+    lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}),
+    lang::make_pr("func_stmts", {"func_stmt"}),
+    lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}),
+    lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}),
+    //lang::make_pr({"func_stmt", {"compound_func_stmt", lang::tokens::NEWLINE}),
+    lang::make_pr("simple_func_stmt", {"expr_stmt"}),
 
-    //// Simple statements - one line 
-    //{"expr_stmt", {"expr"}},
+    // Simple statements - one line 
+    lang::make_pr("expr_stmt", {"expr"}),
 
-    //// Binary Expressions
-    //{"expr", {"expr", "SUB", "expr"}},
-    //{"expr", {"expr", "ADD", "expr"}},
-    //{"expr", {"expr", "MUL", "expr"}},
-    //{"expr", {"expr", "DIV", "expr"}},
+    // Binary Expressions
+    lang::make_pr("expr", {"expr", "SUB", "expr"}),
+    lang::make_pr("expr", {"expr", "ADD", "expr"}),
+    lang::make_pr("expr", {"expr", "MUL", "expr"}),
+    lang::make_pr("expr", {"expr", "DIV", "expr"}),
 
-    //// Atoms
-    //{"expr", {"NAME"}},
-    //{"expr", {"INT"}},
+    // Atoms
+    lang::make_pr("expr", {"NAME"}),
+    lang::make_pr("expr", {"INT"}),
 };
 
 /**************** Associativity ***************/ 
 
 const lang::precedence_t lang::LANG_PRECEDENCE = {
-    {lang::RIGHT_ASSOC, {"ADD", "SUB"}},
-    {lang::LEFT_ASSOC, {"MUL", "DIV"}},
+    {lang::LEFT_ASSOC, {"ADD", "SUB"}},
+    {lang::RIGHT_ASSOC, {"MUL", "DIV"}},
 };

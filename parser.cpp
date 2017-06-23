@@ -281,9 +281,35 @@ void lang::Parser::check_precedence(
         }
         else {
             // Same precedence 
-            // Default to a shift if one exists. Otherwise, just keep the current one.
-            if (new_instr.action == ParseInstr::SHIFT){
-                action_table[lookahead] = new_instr;
+            // Take account into associativity if either are shift
+            if (new_instr.action == ParseInstr::SHIFT || existing_instr.action == ParseInstr::SHIFT){
+                // Find the shift instr
+                ParseInstr shift_instr, reduce_instr;
+                if (new_instr.action == ParseInstr::SHIFT){
+                    shift_instr = new_instr;
+                    reduce_instr = existing_instr;
+                }
+                else {
+                    shift_instr = existing_instr;
+                    reduce_instr = new_instr;
+                }
+
+                // Assign based on associativity
+                // If left assoc, reduce. If right assoc, shift.
+                if (prec_new.second == LEFT_ASSOC){
+                    action_table[lookahead] = reduce_instr;
+                }
+                else {
+                    action_table[lookahead] = shift_instr;
+                }
+            }
+            else {
+                // Both are reduce. Cannot resolve this, so add it as a conflict.
+                conflicts_.push_back({
+                    existing_instr,
+                    new_instr,
+                    lookahead,
+                });
             }
         }
     }
@@ -400,28 +426,31 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
 void lang::Parser::reduce(
         const prod_rule_t& prod_rule, 
         std::vector<std::string>& symbol_stack,
-        std::vector<LexToken>& token_stack,
-        const enum Associativity& assoc){
-    //const std::string& rule = std::get<0>(prod_rule);
-    //const production_t& prod = std::get<1>(prod_rule);
+        std::vector<LexToken>& token_stack){
+    const std::string& rule = std::get<0>(prod_rule);
+    const production_t& prod = std::get<1>(prod_rule);
+    const parse_func_t func = std::get<2>(prod_rule);
 
-    if (assoc == LEFT_ASSOC){
-        // Reduce from left to right 
-        
+    assert(symbol_stack.size() == prod.size());
+    assert(token_stack.size() == prod.size());
+
+    if (func){
+        func(token_stack);
     }
-    else {
-        // Reduce from right to left
-    }
+
+    symbol_stack.clear();
+    symbol_stack.push_back(rule);
+    token_stack.erase(token_stack.cbegin()+1, token_stack.cend());
 }
 
 /**
  * The actual parsing.
  */
 void lang::Parser::parse(){
-    std::vector<std::string> symbol_stack = {tokens::END};
+    std::vector<std::string> symbol_stack = {};
     std::vector<LexToken> token_stack = {};
     std::size_t state = prod_rule_map_[prod_rules_.front()];
-    while (!symbol_stack.empty()){
+    while (1){
         const LexToken& lookahead = lexer_.token();
 
         if (parse_table_[state].find(lookahead.symbol) == parse_table_[state].cend()){
@@ -439,14 +468,13 @@ void lang::Parser::parse(){
                 state = next_instr.value;
                 break;
             case ParseInstr::REDUCE:
-                //reduce();
+                reduce(prod_rules_[next_instr.value], symbol_stack, token_stack);
                 break;
             case ParseInstr::ACCEPT:
                 // Reached end. Stack should be empty and loop is exited.
-                symbol_stack.pop_back();
                 assert(symbol_stack.empty());
                 assert(token_stack.empty());
-                break;
+                return;
             case ParseInstr::GOTO:
                 // Should not reach
                 break;

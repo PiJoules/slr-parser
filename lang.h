@@ -74,7 +74,7 @@ namespace lang {
     /********** Shift reduce parsing *************/
 
     typedef std::vector<std::string> production_t;
-    typedef void (*parse_func_t)(void*, const std::vector<void*>&);
+    typedef void (*parse_func_t)(std::vector<void*>&);
     typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
 
     prod_rule_t make_pr(
@@ -158,8 +158,7 @@ namespace lang {
             void parse();
             void reduce(const prod_rule_t&, 
                     std::vector<std::string>&,
-                    std::vector<LexToken>&,
-                    const enum Associativity&);
+                    std::vector<LexToken>&);
     };
 
     /****** Nodes ********/ 
