@@ -11,9 +11,6 @@ static const std::unordered_map<std::string, std::string> test_tokens = {
     {"SUB", R"(-)"},
     {"MUL", R"(\*)"},
     {"DIV", R"(\\)"},
-
-    // Misc
-    {lang::tokens::NEWLINE, R"(\n+)"},  // Capture newlines
 };
 
 static const std::vector<lang::prod_rule_t> test_rules = {
@@ -90,11 +87,23 @@ void test_parse_precedence(){
 
     // Should have conflicts 
     lang::Parser parser(lexer, test_rules);
-    assert(!parser.conflicts().empty());
 
-    // Should not have conflicts 
-    lang::Parser parser2(lexer, test_rules, test_precedence);
-    assert(parser2.conflicts().empty());
+    std::unordered_set<std::string> expected = {"INT", "NAME"};
+    assert(parser.firsts("expr") == expected);
+    assert(parser.firsts("module") == expected);
+
+    //expected = {"ADD", "SUB", "MUL", "DIV"};
+    //assert(parser.follow("expr") == expected);
+    //assert(parser.follow("module") == expected);
+
+    //if (parser.conflicts().empty()){
+    //    parser.dump_grammar();
+    //}
+    //assert(!parser.conflicts().empty());
+
+    //// Should not have conflicts 
+    //lang::Parser parser2(lexer, test_rules, test_precedence);
+    //assert(parser2.conflicts().empty());
 }
 
 int main(){

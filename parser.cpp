@@ -133,6 +133,8 @@ lang::Parser::Parser(Lexer& lexer, const std::vector<prod_rule_t>& prod_rules,
     prod_rules_(prod_rules)
 {
     init_precedence(precedence);
+    init_firsts();
+    init_follow();
 
     const auto& entry = prod_rules_.front();
     top_item_set_ = {{entry, 0}};
@@ -185,10 +187,16 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 int j = item_set_map_.at(I_j);
 
                 if (is_terminal(next_symbol)){
+
+                    std::cerr << "Checking shift for " << next_symbol << " in state " << i << std::endl;
+
                     // next_symbol is a token 
                     auto existing_it = action_table.find(next_symbol);
                     ParseInstr shift_instr = {lang::ParseInstr::Action::SHIFT, j};
                     if (existing_it != action_table.cend()){
+
+                        std::cerr << "Checking conflict between " << action_table[next_symbol].action << " and " << shift_instr.action << " for " << next_symbol << " in state " << i << std::endl;
+
                         // Possible action conlfict. Check for precedence 
                         check_precedence(existing_it->second, shift_instr, next_symbol, action_table);
                     }
@@ -212,30 +220,47 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     // in B -> A . b where b is a terminal
                     int rule_num = prod_rule_map_.at(prod_rule);
                     const std::string& rule = std::get<0>(prod_rule);
+                    ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
+                    
+                    for (const std::string& follow : follow_map_[rule]){
 
-                    // Search all other rules
-                    for (const prod_rule_t& pr : prod_rules_){
-                        const production_t& other_prod = std::get<1>(pr);
+                        std::cerr << "Checking reduce for " << follow << " in state " << i << std::endl;
 
-                        // Search for the symbol behind the dot
-                        // Only need to iterate up to the second to last symbol 
-                        for (std::size_t j = 0; j < other_prod.size()-1; ++j){
-                            const std::string& current_prod = other_prod[j];
-                            const std::string& next_prod = other_prod[j+1];
-                            if (current_prod == rule && is_terminal(next_prod)){
-                                auto existing_it = action_table.find(next_prod);
-                                ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
-                                if (existing_it != action_table.cend()){
-                                    // Possible conflict. Check for precedence.
-                                    check_precedence(existing_it->second, instr, next_prod, action_table);
-                                }
-                                else {
-                                    // No conflict. Fill with reduce.
-                                    action_table[next_prod] = instr;
-                                }
-                            }
+                        if (action_table.find(follow) != action_table.cend()){
+
+                            std::cerr << "Checking conflict between " << action_table[follow].action << " and " << instr.action << " for " << follow << " in state " << i << std::endl;
+
+                            // Possible conflict 
+                            check_precedence(action_table[follow], instr, follow, action_table);
+                        }
+                        else {
+                            action_table[follow] = instr;
                         }
                     }
+
+                    // Search all other rules
+                    //for (const prod_rule_t& pr : prod_rules_){
+                    //    const production_t& other_prod = std::get<1>(pr);
+
+                    //    // Search for the symbol behind the dot
+                    //    // Only need to iterate up to the second to last symbol 
+                    //    for (std::size_t j = 0; j < other_prod.size()-1; ++j){
+                    //        const std::string& current_prod = other_prod[j];
+                    //        const std::string& next_prod = other_prod[j+1];
+                    //        if (current_prod == rule && is_terminal(next_prod)){
+                    //            auto existing_it = action_table.find(next_prod);
+                    //            ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
+                    //            if (existing_it != action_table.cend()){
+                    //                // Possible conflict. Check for precedence.
+                    //                check_precedence(existing_it->second, instr, next_prod, action_table);
+                    //            }
+                    //            else {
+                    //                // No conflict. Fill with reduce.
+                    //                action_table[next_prod] = instr;
+                    //            }
+                    //        }
+                    //    }
+                    //}
                 }
             }
         }
@@ -270,6 +295,9 @@ void lang::Parser::check_precedence(
 
     if (precedence_map_.find(key_existing) != precedence_map_.cend() &&
         precedence_map_.find(key_new) != precedence_map_.cend()){
+
+        std::cerr << "checking precedence between " << key_existing << " and " << key_new << std::endl;
+
         // Both have precedence rules. No conflict
         const auto& prec_existing = precedence_map_[key_existing];
         const auto& prec_new = precedence_map_[key_new];
@@ -464,7 +492,6 @@ void lang::Parser::parse(const std::string& code){
     std::cerr << "Entry point:" << std::endl;
     std::cerr << str(prod_rules_.front()) << std::endl;
 
-    //std::size_t state = prod_rule_map_[prod_rules_.front()];
     std::size_t state = item_set_map_.at(top_item_set_);
 
     std::cerr << "Starting in state " << state << std::endl;
@@ -504,4 +531,71 @@ void lang::Parser::parse(const std::string& code){
                 break;
         }
     }
+}
+
+/**
+ * Firsts table
+ */  
+void lang::Parser::init_firsts(){
+    for (const auto& prod_rule : prod_rules_){
+        const std::string& rule = std::get<0>(prod_rule);
+        const production_t& prod = std::get<1>(prod_rule);
+        const std::string& first_symbol = prod.front();
+
+        if (is_terminal(first_symbol)){
+            firsts_map_[rule].insert(first_symbol);
+        }
+        else {
+            std::unordered_set<std::string>& other_symbols = firsts_map_[first_symbol];
+            firsts_map_[rule].insert(other_symbols.cbegin(), other_symbols.cend());
+        }
+    }
+}
+
+/**
+ * Follow table
+ */ 
+void lang::Parser::init_follow(){
+    const std::string& entry_rule = std::get<0>(prod_rules_.front());
+    for (const auto& prod_rule : prod_rules_){
+        const std::string& rule = std::get<0>(prod_rule);
+        const production_t& prod = std::get<1>(prod_rule);
+
+        if (rule == entry_rule){
+            follow_map_[rule].insert(tokens::END);
+        }
+
+        for (std::size_t i = 0; i < prod_rules_.size(); ++i){
+            const std::string& other_rule = std::get<0>(prod_rules_[i]);
+
+            // If this rule is in the production 
+            auto other_rule_it = std::find(prod.cbegin(), prod.cend(), other_rule);
+            if (other_rule_it != prod.cend()){
+                std::size_t non_term_idx = other_rule_it - prod.cend();
+
+                std::unordered_set<std::string>& follow_symbols = follow_map_[other_rule];
+                if (non_term_idx == prod.size() - 1){
+                    // This rule is the last symbol in this production 
+                    follow_symbols.insert(
+                            follow_map_[entry_rule].cbegin(),
+                            follow_map_[entry_rule].cend());
+                }
+                else {
+                    // Extend the next   
+                    const std::string& next_rule = std::get<0>(prod_rules_[(i + 1) % prod_rules_.size()]);
+                    follow_symbols.insert(
+                            firsts_map_[next_rule].cbegin(),
+                            firsts_map_[next_rule].cend());
+                }
+            }
+        }
+    }
+}
+
+const std::unordered_set<std::string>& lang::Parser::firsts(const std::string& rule) const {
+    return firsts_map_.at(rule);
+}
+
+const std::unordered_set<std::string>& lang::Parser::follow(const std::string& rule) const {
+    return follow_map_.at(rule);
 }

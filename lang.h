@@ -180,6 +180,8 @@ namespace lang {
             std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
             std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;  // map of symbol to pair of the precedence value and associativity
             std::vector<ParserConflict> conflicts_;
+            std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;
+            std::unordered_map<std::string, std::unordered_set<std::string>> follow_map_;
 
             void init_parse_table(const dfa_t&);
             bool is_terminal(const std::string&) const;
@@ -190,6 +192,8 @@ namespace lang {
 
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const production_t&) const;
+            void init_follow();
+            void init_firsts();
 
         public:
             Parser(Lexer&, const std::vector<prod_rule_t>& prod_rules,
@@ -201,6 +205,8 @@ namespace lang {
             void reduce(const prod_rule_t&, 
                     std::vector<std::string>&,
                     std::vector<Node>&);
+            const std::unordered_set<std::string>& firsts(const std::string&) const;
+            const std::unordered_set<std::string>& follow(const std::string&) const;
     };
 
     /**
