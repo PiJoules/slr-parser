@@ -112,10 +112,6 @@ void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::prod_rule_t>& prod
     } while (dfa.size() != last_size);  // while dfa did not change
 }
 
-void lang::Parser::input(const std::string& code){
-    lexer_.input(code);
-}
-
 void lang::Parser::init_precedence(const precedence_t& precedence){
     precedence_map_.reserve(precedence.size());
     for (std::size_t i = 0; i < precedence.size(); ++i){
@@ -131,7 +127,7 @@ void lang::Parser::init_precedence(const precedence_t& precedence){
 /**
  * Initialize the parse table from the production rules.
  */
-lang::Parser::Parser(Lexer lexer, const std::vector<prod_rule_t>& prod_rules, 
+lang::Parser::Parser(Lexer& lexer, const std::vector<prod_rule_t>& prod_rules, 
                      const precedence_t& precedence):
     lexer_(lexer),
     prod_rules_(prod_rules)
@@ -139,9 +135,9 @@ lang::Parser::Parser(Lexer lexer, const std::vector<prod_rule_t>& prod_rules,
     init_precedence(precedence);
 
     const auto& entry = prod_rules_.front();
-    item_set_t item_set = {{entry, 0}};
-    init_closure(item_set, prod_rules_);
-    dfa_t dfa = {item_set};
+    top_item_set_ = {{entry, 0}};
+    init_closure(top_item_set_, prod_rules_);
+    dfa_t dfa = {top_item_set_};
     init_dfa(dfa, prod_rules_);
     init_parse_table(dfa);
 }
@@ -157,6 +153,7 @@ const std::vector<lang::ParserConflict>& lang::Parser::conflicts() const {
 void lang::Parser::init_parse_table(const dfa_t& dfa){
     const auto& top_prod_rule = prod_rules_.front();
     parse_table_.reserve(dfa.size());
+    item_set_map_.reserve(dfa.size());
 
     // Map the item_sets to their final indeces in the map 
     std::size_t i = 0;
@@ -164,7 +161,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
         std::unordered_map<std::string, ParseInstr> action_map;
         parse_table_[i] = action_map;
         item_set_map_[item_set] = i;
-        i++;
+        ++i;
     }
 
     // Map the production rules to the order in which they appear
@@ -185,7 +182,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 // a terminal, shift to the jth state which is equivalent to GOTO(I_i, a).
                 const auto& next_symbol = prod[pos];
                 const auto I_j = move_pos(item_set, next_symbol, prod_rules_);
-                int j = item_set_map_[I_j];
+                int j = item_set_map_.at(I_j);
 
                 if (is_terminal(next_symbol)){
                     // next_symbol is a token 
@@ -213,10 +210,14 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     // End of rule; Reduce 
                     // If A -> a ., then ACTION[i, b] = Reduce A -> a for all terminals 
                     // in B -> A . b where b is a terminal
-                    int rule_num = prod_rule_map_[prod_rule];
+                    int rule_num = prod_rule_map_.at(prod_rule);
                     const std::string& rule = std::get<0>(prod_rule);
+
+                    // Search all other rules
                     for (const prod_rule_t& pr : prod_rules_){
                         const production_t& other_prod = std::get<1>(pr);
+
+                        // Search for the symbol behind the dot
                         // Only need to iterate up to the second to last symbol 
                         for (std::size_t j = 0; j < other_prod.size()-1; ++j){
                             const std::string& current_prod = other_prod[j];
@@ -238,7 +239,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 }
             }
         }
-        i++;
+        ++i;
     }
 }
 
@@ -323,15 +324,48 @@ void lang::Parser::check_precedence(
     }
 }
 
-/**
- * Pretty print the parse table similar to how ply prints it.
- */
-void lang::Parser::dump_grammar(std::ostream& stream) const {
+void lang::Parser::dump_state(std::size_t state, std::ostream& stream) const {
     item_set_t item_sets[item_set_map_.size()];
     for (auto it = item_set_map_.cbegin(); it != item_set_map_.cend(); ++it){
         item_sets[it->second] = it->first;
     }
         
+    stream << "state " << state << std::endl << std::endl;
+
+    // Print item sets
+    const auto& item_set = item_sets[state];
+    for (const auto& lr_item : item_set){
+        stream << "\t" << lang::str(lr_item) << std::endl;
+    }
+    stream << std::endl;
+
+    // Print parse instructions
+    const auto& action_map = parse_table_.at(state);
+    for (auto it = action_map.cbegin(); it != action_map.cend(); ++it){
+        const auto& symbol = it->first;
+        const auto& instr = it->second;
+        const auto& action = instr.action;
+
+        if (action == lang::ParseInstr::SHIFT || action == lang::ParseInstr::REDUCE){
+            int val = instr.value;
+            stream << "\t" << symbol << "\t\t";
+
+            if (action == lang::ParseInstr::SHIFT){
+                stream << "shift and go to state ";
+            }
+            else {
+                stream << "reduce using rule ";
+            }
+            stream << val << std::endl;
+        }
+    }
+    stream << std::endl;
+}
+
+/**
+ * Pretty print the parse table similar to how ply prints it.
+ */
+void lang::Parser::dump_grammar(std::ostream& stream) const {
     // Grammar 
     stream << "Grammar" << std::endl << std::endl;
     for (std::size_t i = 0; i < prod_rules_.size(); ++i){
@@ -341,36 +375,7 @@ void lang::Parser::dump_grammar(std::ostream& stream) const {
 
     // States 
     for (std::size_t i = 0; i < parse_table_.size(); ++i){
-        stream << "state " << i << std::endl << std::endl;
-
-        // Print item sets
-        const auto& item_set = item_sets[i];
-        for (const auto& lr_item : item_set){
-            stream << "\t" << lang::str(lr_item) << std::endl;
-        }
-        stream << std::endl;
-
-        // Print parse instructions
-        const auto& action_map = parse_table_.at(i);
-        for (auto it = action_map.cbegin(); it != action_map.cend(); ++it){
-            const auto& symbol = it->first;
-            const auto& instr = it->second;
-            const auto& action = instr.action;
-
-            if (action == lang::ParseInstr::SHIFT || action == lang::ParseInstr::REDUCE){
-                int val = instr.value;
-                stream << "\t" << symbol << "\t\t";
-
-                if (action == lang::ParseInstr::SHIFT){
-                    stream << "shift and go to state ";
-                }
-                else {
-                    stream << "reduce using rule ";
-                }
-                stream << val << std::endl;
-            }
-        }
-        stream << std::endl;
+        dump_state(i, stream);
     }
     stream << std::endl;
 
@@ -426,7 +431,7 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
 void lang::Parser::reduce(
         const prod_rule_t& prod_rule, 
         std::vector<std::string>& symbol_stack,
-        std::vector<LexToken>& token_stack){
+        std::vector<Node>& token_stack){
     const std::string& rule = std::get<0>(prod_rule);
     const production_t& prod = std::get<1>(prod_rule);
     const parse_func_t func = std::get<2>(prod_rule);
@@ -438,6 +443,8 @@ void lang::Parser::reduce(
         func(token_stack);
     }
 
+    std::cerr << "Reduced using " << str(prod) << std::endl;
+
     symbol_stack.clear();
     symbol_stack.push_back(rule);
     token_stack.erase(token_stack.cbegin()+1, token_stack.cend());
@@ -446,26 +453,43 @@ void lang::Parser::reduce(
 /**
  * The actual parsing.
  */
-void lang::Parser::parse(){
-    std::vector<std::string> symbol_stack = {};
-    std::vector<LexToken> token_stack = {};
-    std::size_t state = prod_rule_map_[prod_rules_.front()];
-    while (1){
-        const LexToken& lookahead = lexer_.token();
+void lang::Parser::parse(const std::string& code){
+    // Input the string
+    lexer_.input(code);
 
-        if (parse_table_[state].find(lookahead.symbol) == parse_table_[state].cend()){
+    std::vector<std::string> symbol_stack;
+    std::vector<Node> token_stack;
+
+    assert(prod_rule_map_.find(prod_rules_.front()) != prod_rule_map_.end());
+    std::cerr << "Entry point:" << std::endl;
+    std::cerr << str(prod_rules_.front()) << std::endl;
+
+    //std::size_t state = prod_rule_map_[prod_rules_.front()];
+    std::size_t state = item_set_map_.at(top_item_set_);
+
+    std::cerr << "Starting in state " << state << std::endl;
+
+    while (1){
+        const LexTokenWrapper lookahead(lexer_.token());
+
+        if (parse_table_[state].find(lookahead.token().symbol) == parse_table_[state].cend()){
             // Parse error
             std::ostringstream err;
-            err << "Unable to handle lookahead '" << lookahead.symbol << "' in state " << state;
+            err << "Unable to handle lookahead '" << lookahead.token().symbol << "' in state " << state
+                << std::endl << std::endl;
+            dump_state(state, err);
             throw std::runtime_error(err.str());
         }
 
-        const ParseInstr& next_instr = parse_table_[state][lookahead.symbol];
+        const ParseInstr& next_instr = parse_table_[state][lookahead.token().symbol];
         switch (next_instr.action){
             case ParseInstr::SHIFT:
-                symbol_stack.push_back(lookahead.symbol);
+                symbol_stack.push_back(lookahead.token().symbol);
                 token_stack.push_back(lookahead);
                 state = next_instr.value;
+
+                std::cerr << "Shifted " << lookahead.token().symbol << " and goto state " << state << std::endl;
+
                 break;
             case ParseInstr::REDUCE:
                 reduce(prod_rules_[next_instr.value], symbol_stack, token_stack);

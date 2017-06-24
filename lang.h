@@ -71,10 +71,51 @@ namespace lang {
             void advancenl(int count=1);
     };
 
+    /****** Nodes ********/ 
+    class Node {
+        public:
+            // The string representation of this node 
+            // I would make it pure virtual, but that would require parser.cpp always
+            // having to be compiled with lang_nodes.cpp in the Makefile.
+            virtual std::string str() const { return ""; };
+    };
+
+    class LexTokenWrapper: public Node {
+        private:
+            const LexToken token_;
+
+        public:
+            LexTokenWrapper(const LexToken&);
+            LexToken token() const;
+            std::string str() const;
+    };
+
+    class ModuleStmt: public Node {
+        public:
+            std::string str() const { return ""; }
+    };
+
+    //class Module: public Node {
+    //    private:
+    //        const std::vector<ModuleStmt> body_;
+
+    //    public:
+    //        Module(const std::vector<ModuleStmt>& body): body_(body){}
+    //        const std::vector<ModuleStmt>& body() const { return body_; }
+
+    //        std::string str() const {
+    //            std::ostringstream stream;
+    //            for (const ModuleStmt& stmt : body_){
+    //                stream << stmt.str() << std::endl;
+    //            }
+    //            return stream.str();
+    //        }
+    //};
+
     /********** Shift reduce parsing *************/
 
     typedef std::vector<std::string> production_t;
-    typedef void (*parse_func_t)(std::vector<void*>&);
+    typedef void (*parse_func_t)(std::vector<Node>&);
     typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
 
     prod_rule_t make_pr(
@@ -132,11 +173,12 @@ namespace lang {
     class Parser {
         private:
             Lexer lexer_;
-            const std::vector<prod_rule_t>& prod_rules_;
-            parse_table_t parse_table_;
-            std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;
-            std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;
-            std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;
+            item_set_t top_item_set_;
+            const std::vector<prod_rule_t>& prod_rules_;  // list of produciton rules
+            parse_table_t parse_table_;  // map of states to map of strings to parse instructions
+            std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
+            std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
+            std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;  // map of symbol to pair of the precedence value and associativity
             std::vector<ParserConflict> conflicts_;
 
             void init_parse_table(const dfa_t&);
@@ -150,46 +192,15 @@ namespace lang {
             std::string rightmost_terminal(const production_t&) const;
 
         public:
-            Parser(Lexer, const std::vector<prod_rule_t>& prod_rules,
+            Parser(Lexer&, const std::vector<prod_rule_t>& prod_rules,
                    const precedence_t& precedence={{}});
-            void input(const std::string&);
-            void dump_grammar(std::ostream& stream=std::cout) const;
+            void dump_grammar(std::ostream& stream=std::cerr) const;
+            void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
-            void parse();
+            void parse(const std::string&);
             void reduce(const prod_rule_t&, 
                     std::vector<std::string>&,
-                    std::vector<LexToken>&);
-    };
-
-    /****** Nodes ********/ 
-    class Node {
-        public:
-            // The string representation of this node
-            virtual std::string str() const;
-    };
-
-    class ModuleStmt: public Node {
-        public:
-            std::string str() const {
-                return "";
-            }
-    };
-
-    class Module: public Node {
-        private:
-            const std::vector<ModuleStmt> body_;
-
-        public:
-            Module(const std::vector<ModuleStmt>& body): body_(body){}
-            const std::vector<ModuleStmt>& body() const { return body_; }
-
-            std::string str() const {
-                std::ostringstream stream;
-                for (const ModuleStmt& stmt : body_){
-                    stream << stmt.str() << std::endl;
-                }
-                return stream.str();
-            }
+                    std::vector<Node>&);
     };
 
     /**
