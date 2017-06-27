@@ -133,8 +133,6 @@ lang::Parser::Parser(Lexer& lexer, const std::vector<prod_rule_t>& prod_rules,
     prod_rules_(prod_rules)
 {
     init_precedence(precedence);
-    init_firsts();
-    init_follow();
 
     const auto& entry = prod_rules_.front();
     top_item_set_ = {{entry, 0}};
@@ -187,16 +185,10 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 int j = item_set_map_.at(I_j);
 
                 if (is_terminal(next_symbol)){
-
-                    std::cerr << "Checking shift for " << next_symbol << " in state " << i << std::endl;
-
                     // next_symbol is a token 
                     auto existing_it = action_table.find(next_symbol);
                     ParseInstr shift_instr = {lang::ParseInstr::Action::SHIFT, j};
                     if (existing_it != action_table.cend()){
-
-                        std::cerr << "Checking conflict between " << action_table[next_symbol].action << " and " << shift_instr.action << " for " << next_symbol << " in state " << i << std::endl;
-
                         // Possible action conlfict. Check for precedence 
                         check_precedence(existing_it->second, shift_instr, next_symbol, action_table);
                     }
@@ -222,14 +214,8 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     const std::string& rule = std::get<0>(prod_rule);
                     ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
                     
-                    for (const std::string& follow : follow_map_[rule]){
-
-                        std::cerr << "Checking reduce for " << follow << " in state " << i << std::endl;
-
+                    for (const std::string& follow : follows_map_[rule]){
                         if (action_table.find(follow) != action_table.cend()){
-
-                            std::cerr << "Checking conflict between " << action_table[follow].action << " and " << instr.action << " for " << follow << " in state " << i << std::endl;
-
                             // Possible conflict 
                             check_precedence(action_table[follow], instr, follow, action_table);
                         }
@@ -295,9 +281,6 @@ void lang::Parser::check_precedence(
 
     if (precedence_map_.find(key_existing) != precedence_map_.cend() &&
         precedence_map_.find(key_new) != precedence_map_.cend()){
-
-        std::cerr << "checking precedence between " << key_existing << " and " << key_new << std::endl;
-
         // Both have precedence rules. No conflict
         const auto& prec_existing = precedence_map_[key_existing];
         const auto& prec_new = precedence_map_[key_new];
@@ -470,9 +453,6 @@ void lang::Parser::reduce(
     if (func){
         func(token_stack);
     }
-
-    std::cerr << "Reduced using " << str(prod) << std::endl;
-
     symbol_stack.clear();
     symbol_stack.push_back(rule);
     token_stack.erase(token_stack.cbegin()+1, token_stack.cend());
@@ -489,12 +469,7 @@ void lang::Parser::parse(const std::string& code){
     std::vector<Node> token_stack;
 
     assert(prod_rule_map_.find(prod_rules_.front()) != prod_rule_map_.end());
-    std::cerr << "Entry point:" << std::endl;
-    std::cerr << str(prod_rules_.front()) << std::endl;
-
     std::size_t state = item_set_map_.at(top_item_set_);
-
-    std::cerr << "Starting in state " << state << std::endl;
 
     while (1){
         const LexTokenWrapper lookahead(lexer_.token());
@@ -515,8 +490,6 @@ void lang::Parser::parse(const std::string& code){
                 token_stack.push_back(lookahead);
                 state = next_instr.value;
 
-                std::cerr << "Shifted " << lookahead.token().symbol << " and goto state " << state << std::endl;
-
                 break;
             case ParseInstr::REDUCE:
                 reduce(prod_rules_[next_instr.value], symbol_stack, token_stack);
@@ -533,69 +506,78 @@ void lang::Parser::parse(const std::string& code){
     }
 }
 
-/**
- * Firsts table
- */  
-void lang::Parser::init_firsts(){
-    for (const auto& prod_rule : prod_rules_){
-        const std::string& rule = std::get<0>(prod_rule);
-        const production_t& prod = std::get<1>(prod_rule);
-        const std::string& first_symbol = prod.front();
+std::unordered_set<std::string> lang::Parser::firsts(const std::string& symbol){
+    if (firsts_map_.find(symbol) != firsts_map_.end()){
+        return firsts_map_[symbol];
+    }
 
-        if (is_terminal(first_symbol)){
-            firsts_map_[rule].insert(first_symbol);
+    if (is_terminal(symbol) || symbol == nonterminals::EPSILON){
+        firsts_map_[symbol] = {symbol};
+        return firsts_map_[symbol];
+    }
+    else {
+        if (firsts_stack_.find(symbol) == firsts_stack_.end()){
+            firsts_stack_.insert(symbol);
+            firsts_map_[symbol] = make_nonterminal_firsts(symbol);
+            firsts_stack_.erase(symbol);
+            return firsts_map_[symbol];
         }
         else {
-            std::unordered_set<std::string>& other_symbols = firsts_map_[first_symbol];
-            firsts_map_[rule].insert(other_symbols.cbegin(), other_symbols.cend());
+            std::unordered_set<std::string> s;
+            return s;
         }
     }
 }
 
+std::unordered_set<std::string> lang::Parser::follow(const std::string& rule){
+    return follows_map_.at(rule);
+}
+
 /**
- * Follow table
- */ 
-void lang::Parser::init_follow(){
-    const std::string& entry_rule = std::get<0>(prod_rules_.front());
+ * Method for initially creating the firsts set for a nonterminal before memoizing.
+ */
+std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std::string& symbol){
+    std::unordered_set<std::string> firsts_set;
+
     for (const auto& prod_rule : prod_rules_){
         const std::string& rule = std::get<0>(prod_rule);
         const production_t& prod = std::get<1>(prod_rule);
+        if (rule == symbol){
+            // For each production mapped to rule X 
+            // put firsts(Y1) - {e} into firsts(X)
+            std::unordered_set<std::string> diff(firsts(prod[0]));
+            if (diff.find(nonterminals::EPSILON) != diff.end()){
+                diff.erase(nonterminals::EPSILON);
+            }
+            firsts_set.insert(diff.begin(), diff.end());
 
-        if (rule == entry_rule){
-            follow_map_[rule].insert(tokens::END);
-        }
-
-        for (std::size_t i = 0; i < prod_rules_.size(); ++i){
-            const std::string& other_rule = std::get<0>(prod_rules_[i]);
-
-            // If this rule is in the production 
-            auto other_rule_it = std::find(prod.cbegin(), prod.cend(), other_rule);
-            if (other_rule_it != prod.cend()){
-                std::size_t non_term_idx = other_rule_it - prod.cend();
-
-                std::unordered_set<std::string>& follow_symbols = follow_map_[other_rule];
-                if (non_term_idx == prod.size() - 1){
-                    // This rule is the last symbol in this production 
-                    follow_symbols.insert(
-                            follow_map_[entry_rule].cbegin(),
-                            follow_map_[entry_rule].cend());
+            // Check for epsilon in each symbol in the prod 
+            bool all_have_empty = true;
+            for (std::size_t i = 0; i < prod.size()-1; ++i){
+                const std::unordered_set<std::string>& current_set = firsts(prod[i]);
+                if (current_set.find(nonterminals::EPSILON) != current_set.end()){
+                    const std::unordered_set<std::string>& next_set = firsts(prod[i+1]);
+                    firsts_set.insert(next_set.begin(), next_set.end());
                 }
                 else {
-                    // Extend the next   
-                    const std::string& next_rule = std::get<0>(prod_rules_[(i + 1) % prod_rules_.size()]);
-                    follow_symbols.insert(
-                            firsts_map_[next_rule].cbegin(),
-                            firsts_map_[next_rule].cend());
+                    all_have_empty = false;
                 }
+            }
+            // Check for last one having epsilon
+            const std::unordered_set<std::string>& last_set = firsts(prod.back());
+            if (all_have_empty && last_set.find(nonterminals::EPSILON) != last_set.end()){
+                firsts_set.insert(nonterminals::EPSILON);
             }
         }
     }
+
+    return firsts_set;
 }
 
-const std::unordered_set<std::string>& lang::Parser::firsts(const std::string& rule) const {
-    return firsts_map_.at(rule);
+const std::unordered_set<std::string>& lang::Parser::firsts_stack() const {
+    return firsts_stack_;
 }
 
-const std::unordered_set<std::string>& lang::Parser::follow(const std::string& rule) const {
-    return follow_map_.at(rule);
+const std::unordered_set<std::string>& lang::Parser::follows_stack() const {
+    return follows_stack_;
 }

@@ -11,14 +11,15 @@ OBJS = $(SOURCES:.cpp=.o)
 
 TEST_FILES = test_lexer.cpp \
 			 test_table_generation.cpp \
-			 test_parser.cpp
+			 #test_parser.cpp
 
 EXE_FILES = $(TEST_FILES) \
-			dump_lang.cpp \
+			#dump_lang.cpp \
 			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: compile test_lexer test_table_generation test_parser
+test: compile test_lexer test_table_generation 
+	#test_parser
 
 .PHONY: test
 

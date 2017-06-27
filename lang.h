@@ -26,6 +26,9 @@ namespace lang {
         const std::string DEDENT = "DEDENT";
         const std::string END = "END";
     }
+    namespace nonterminals {
+        const std::string EPSILON = "EMPTY";
+    }
 
     typedef struct LexToken LexToken;
     struct LexToken {
@@ -173,6 +176,15 @@ namespace lang {
     class Parser {
         private:
             Lexer lexer_;
+
+            // For Creating first/follow sets 
+            std::unordered_set<std::string> nonterminals_;
+            std::string start_nonterminal_;
+            std::unordered_set<std::string> firsts_stack_;  // for keeping track of recursive calls 
+            std::unordered_set<std::string> follows_stack_;
+            std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;  // memoization
+            std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
+
             item_set_t top_item_set_;
             const std::vector<prod_rule_t>& prod_rules_;  // list of produciton rules
             parse_table_t parse_table_;  // map of states to map of strings to parse instructions
@@ -180,20 +192,21 @@ namespace lang {
             std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
             std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;  // map of symbol to pair of the precedence value and associativity
             std::vector<ParserConflict> conflicts_;
-            std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;
-            std::unordered_map<std::string, std::unordered_set<std::string>> follow_map_;
 
+            /******* Methods ********/
             void init_parse_table(const dfa_t&);
             bool is_terminal(const std::string&) const;
             void init_precedence(const precedence_t&);
             std::string key_for_instr(const ParseInstr&, const std::string&) const;
             void check_precedence(const ParseInstr&, const ParseInstr&, const std::string&,
                     std::unordered_map<std::string, ParseInstr>&);
-
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const production_t&) const;
+
+            // For creating firsts/follows sets
             void init_follow();
             void init_firsts();
+            std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
 
         public:
             Parser(Lexer&, const std::vector<prod_rule_t>& prod_rules,
@@ -205,8 +218,14 @@ namespace lang {
             void reduce(const prod_rule_t&, 
                     std::vector<std::string>&,
                     std::vector<Node>&);
-            const std::unordered_set<std::string>& firsts(const std::string&) const;
-            const std::unordered_set<std::string>& follow(const std::string&) const;
+            
+            // Firsts/follows methods 
+            std::unordered_set<std::string> firsts(const std::string&);
+            std::unordered_set<std::string> follow(const std::string&);
+            const std::unordered_set<std::string>& firsts() const;
+            const std::unordered_set<std::string>& follows() const;
+            const std::unordered_set<std::string>& firsts_stack() const;
+            const std::unordered_set<std::string>& follows_stack() const;
     };
 
     /**

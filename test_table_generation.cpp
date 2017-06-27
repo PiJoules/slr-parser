@@ -54,6 +54,75 @@ static const lang::item_set_t int_expected = {
     {lang::make_pr("expr", {"INT"}), 1},
 };
 
+void test_rules1(){
+    const std::unordered_map<std::string, std::string> tokens = {
+        {"a", "a"},
+        {"b", "b"},
+        {"c", "c"},
+        {"d", "d"},
+        {"o", "o"},
+        {"z", "z"},
+    };
+
+    const std::vector<lang::prod_rule_t> rules = {
+        lang::make_pr("S", {"B", "b"}),
+        lang::make_pr("S", {"C", "d"}),
+        lang::make_pr("B", {"a", "B"}),
+        lang::make_pr("B", {"o"}),
+        lang::make_pr("B", {"D", "a"}),
+        lang::make_pr("D", {"z"}),
+        lang::make_pr("C", {"c", "C"}),
+        lang::make_pr("C", {"o"}),
+    };
+
+    lang::Lexer lexer(tokens);
+    lang::Parser parser(lexer, rules);
+
+    // firsts 
+    std::unordered_set<std::string> expected = {"a", "o", "z", "c"};
+    assert(parser.firsts("S") == expected);
+    expected = {"a", "o", "z"};
+    assert(parser.firsts("B") == expected);
+    expected = {"z"};
+    assert(parser.firsts("D") == expected);
+    expected = {"o", "c"};
+    assert(parser.firsts("C") == expected);
+
+    // empty stacks 
+    assert(parser.firsts_stack().empty());
+}
+
+void test_rules2(){
+    const std::unordered_map<std::string, std::string> tokens = {
+        {"LPAR", R"(\()"},
+        {"RPAR", R"(\))"},
+        {"n", "n"},
+        {"PLUS", R"(\+)"},
+    };
+
+    const std::vector<lang::prod_rule_t> rules = {
+        lang::make_pr("S", {"E"}),
+        lang::make_pr("E", {"T"}),
+        lang::make_pr("E", {"LPAR", "E", "RPAR"}),
+        lang::make_pr("T", {"n"}),
+        lang::make_pr("T", {"PLUS", "T"}),
+        lang::make_pr("T", {"T", "PLUS", "T"}),
+    };
+
+    lang::Lexer lexer(tokens);
+    lang::Parser parser(lexer, rules);
+
+    // firsts 
+    std::unordered_set<std::string> expected = {"n", "PLUS", "LPAR"};
+    assert(parser.firsts("S") == expected);
+    assert(parser.firsts("E") == expected);
+    expected = {"n", "PLUS"};
+    assert(parser.firsts("T") == expected);
+
+    // empty stacks 
+    assert(parser.firsts_stack().empty());
+}
+
 void test_closure(){
     const auto& entry = test_rules.front();
     lang::item_set_t item_set = {{entry, 0}};
@@ -107,9 +176,11 @@ void test_parse_precedence(){
 }
 
 int main(){
+    test_rules1();
+    test_rules2();
     test_closure();
     test_move_pos();
-    test_parse_precedence();
+    //test_parse_precedence();
 
     return 0;
 }
