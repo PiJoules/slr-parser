@@ -88,8 +88,19 @@ void test_rules1(){
     expected = {"o", "c"};
     assert(parser.firsts("C") == expected);
 
+    // follows 
+    expected = {lang::tokens::END};
+    assert(parser.follows("S") == expected);
+    expected = {"b"};
+    assert(parser.follows("B") == expected);
+    expected = {"d"};
+    assert(parser.follows("C") == expected);
+    expected = {"a"};
+    assert(parser.follows("D") == expected);
+
     // empty stacks 
     assert(parser.firsts_stack().empty());
+    assert(parser.follows_stack().empty());
 }
 
 void test_rules2(){
@@ -118,6 +129,73 @@ void test_rules2(){
     assert(parser.firsts("E") == expected);
     expected = {"n", "PLUS"};
     assert(parser.firsts("T") == expected);
+
+    // empty stacks 
+    assert(parser.firsts_stack().empty());
+}
+
+void test_rules3(){
+    const std::unordered_map<std::string, std::string> tokens = {
+        {"LPAR", R"(\()"},
+        {"RPAR", R"(\))"},
+        {"ID", "id"},
+        {"PLUS", R"(\+)"},
+        {"MULT", R"(\*)"},
+    };
+
+    const std::vector<lang::prod_rule_t> rules = {
+        lang::make_pr("E", {"E", "PLUS", "T"}),
+        lang::make_pr("E", {"T"}),
+        lang::make_pr("T", {"T", "MULT", "F"}),
+        lang::make_pr("T", {"F"}),
+        lang::make_pr("F", {"LPAR", "E", "RPAR"}),
+        lang::make_pr("F", {"ID"}),
+    };
+
+    lang::Lexer lexer(tokens);
+    lang::Parser parser(lexer, rules);
+
+    // firsts 
+    std::unordered_set<std::string> expected = {"ID", "LPAR"};
+    assert(parser.firsts("E") == expected);
+    assert(parser.firsts("T") == expected);
+    assert(parser.firsts("F") == expected);
+
+    // empty stacks 
+    assert(parser.firsts_stack().empty());
+}
+
+void test_rules4(){
+    lang::Lexer lexer(test_tokens);
+    lang::Parser parser(lexer, test_rules);
+
+    // firsts
+    std::unordered_set<std::string> expected = {"NAME", "INT"};
+    assert(parser.firsts("expr") == expected);
+    assert(parser.firsts("module") == expected);
+
+    // empty stacks 
+    assert(parser.firsts_stack().empty());
+}
+
+void test_rules5(){
+    const std::unordered_map<std::string, std::string> tokens = {
+        {"a", "a"},
+    };
+
+    const std::vector<lang::prod_rule_t> rules = {
+        lang::make_pr("S", {"X"}),
+        lang::make_pr("X", {"a"}),
+        lang::make_pr("X", {lang::nonterminals::EPSILON}),
+    };
+
+    lang::Lexer lexer(tokens);
+    lang::Parser parser(lexer, rules);
+
+    // firsts 
+    std::unordered_set<std::string> expected = {"a", lang::nonterminals::EPSILON};
+    assert(parser.firsts("S") == expected);
+    assert(parser.firsts("X") == expected);
 
     // empty stacks 
     assert(parser.firsts_stack().empty());
@@ -178,6 +256,10 @@ void test_parse_precedence(){
 int main(){
     test_rules1();
     test_rules2();
+    test_rules3();
+    test_rules4();
+    test_rules5();
+
     test_closure();
     test_move_pos();
     //test_parse_precedence();

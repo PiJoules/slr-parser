@@ -132,6 +132,7 @@ lang::Parser::Parser(Lexer& lexer, const std::vector<prod_rule_t>& prod_rules,
     lexer_(lexer),
     prod_rules_(prod_rules)
 {
+    start_nonterminal_ = std::get<0>(prod_rules_.front());
     init_precedence(precedence);
 
     const auto& entry = prod_rules_.front();
@@ -214,7 +215,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     const std::string& rule = std::get<0>(prod_rule);
                     ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
                     
-                    for (const std::string& follow : follows_map_[rule]){
+                    for (const std::string& follow : follows(rule)){
                         if (action_table.find(follow) != action_table.cend()){
                             // Possible conflict 
                             check_precedence(action_table[follow], instr, follow, action_table);
@@ -529,8 +530,67 @@ std::unordered_set<std::string> lang::Parser::firsts(const std::string& symbol){
     }
 }
 
-std::unordered_set<std::string> lang::Parser::follow(const std::string& rule){
-    return follows_map_.at(rule);
+std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol){
+    // If the symbol is already in the follows map, return it
+    if (follows_map_.find(symbol) != follows_map_.end()){
+        return follows_map_[symbol];
+    }
+
+    // Return nothing if we have already seen this symbol in a recursive call
+    if (follows_stack_.find(symbol) != follows_stack_.end()){
+        std::unordered_set<std::string> s;
+        return s;
+    }
+
+    // Add for the first time
+    follows_stack_.insert(symbol);
+
+    // Initialize the set with the symbol if it is the starting nonterminal
+    std::unordered_set<std::string> follows_set;
+    if (symbol == start_nonterminal_){
+        follows_set.insert(tokens::END);
+    }
+
+    // Find the productions with this symbol on the RHS 
+    for (const auto& prod_rule : prod_rules_){
+        // For each rule and production
+        const std::string& rule = std::get<0>(prod_rule);
+        const production_t& prod = std::get<1>(prod_rule);
+
+        // Check for other symbols that follow this one in a production
+        for (std::size_t i = 0; i < prod.size()-1; ++i){
+            if (prod[i] == symbol){
+                const std::unordered_set<std::string> next_set = firsts(prod[i+1]);
+                std::unordered_set<std::string> next_without_eps(next_set);
+                if (next_without_eps.find(nonterminals::EPSILON) != next_without_eps.end()){
+                    next_without_eps.erase(nonterminals::EPSILON);
+                }
+
+                // Add to the follows set 
+                // follows_set |= self.firsts(prod[i+1]) - {EPSILON}
+                follows_set.insert(next_without_eps.begin(), next_without_eps.end());
+
+                // Add follows of this rule if the firsts contains epsilon
+                // if EPSILON in self.firsts(prod[i+1)
+                if (next_set.find(nonterminals::EPSILON) != next_set.end()){
+                    // follows_set |= self.follows(rule)
+                    std::unordered_set<std::string> rule_follows = follows(rule);
+                    follows_set.insert(rule_follows.begin(), rule_follows.end());
+                }
+            }
+        }
+        if (prod.back() == symbol){
+            // Add the follows(rule) if this symbol is the last one in the production
+            std::unordered_set<std::string> rule_follows = follows(rule);
+            follows_set.insert(rule_follows.begin(), rule_follows.end());
+        }
+    }
+
+    // Memoize and remove from stack 
+    follows_map_[symbol] = follows_set;
+    follows_stack_.erase(symbol);
+
+    return follows_set;
 }
 
 /**
@@ -554,9 +614,12 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
             // Check for epsilon in each symbol in the prod 
             bool all_have_empty = true;
             for (std::size_t i = 0; i < prod.size()-1; ++i){
-                const std::unordered_set<std::string>& current_set = firsts(prod[i]);
+                const std::unordered_set<std::string> current_set = firsts(prod[i]);
                 if (current_set.find(nonterminals::EPSILON) != current_set.end()){
-                    const std::unordered_set<std::string>& next_set = firsts(prod[i+1]);
+                    std::unordered_set<std::string> next_set = firsts(prod[i+1]);
+                    if (next_set.find(nonterminals::EPSILON) != next_set.end()){
+                        next_set.erase(nonterminals::EPSILON);
+                    }
                     firsts_set.insert(next_set.begin(), next_set.end());
                 }
                 else {
@@ -564,7 +627,7 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
                 }
             }
             // Check for last one having epsilon
-            const std::unordered_set<std::string>& last_set = firsts(prod.back());
+            const std::unordered_set<std::string> last_set = firsts(prod.back());
             if (all_have_empty && last_set.find(nonterminals::EPSILON) != last_set.end()){
                 firsts_set.insert(nonterminals::EPSILON);
             }

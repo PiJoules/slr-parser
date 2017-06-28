@@ -204,8 +204,6 @@ namespace lang {
             std::string rightmost_terminal(const production_t&) const;
 
             // For creating firsts/follows sets
-            void init_follow();
-            void init_firsts();
             std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
 
         public:
@@ -221,7 +219,7 @@ namespace lang {
             
             // Firsts/follows methods 
             std::unordered_set<std::string> firsts(const std::string&);
-            std::unordered_set<std::string> follow(const std::string&);
+            std::unordered_set<std::string> follows(const std::string&);
             const std::unordered_set<std::string>& firsts() const;
             const std::unordered_set<std::string>& follows() const;
             const std::unordered_set<std::string>& firsts_stack() const;
