@@ -221,7 +221,8 @@ namespace lang {
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
             void parse(const std::string&);
-            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<Node>&);
+            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<Node>&,
+                        std::vector<std::size_t>&);
             
             // Firsts/follows methods 
             std::unordered_set<std::string> firsts(const std::string&);

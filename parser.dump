@@ -79,6 +79,7 @@ state 4
 	expr : . expr SUB expr 
 	expr : expr DIV . expr 
 
+	expr		goto state 2
 	INT		shift and go to state 22
 	NAME		shift and go to state 25
 
@@ -92,6 +93,7 @@ state 5
 	expr : . expr SUB expr 
 	expr : expr ADD . expr 
 
+	expr		goto state 19
 	INT		shift and go to state 22
 	NAME		shift and go to state 25
 
@@ -106,6 +108,7 @@ state 6
 	expr : expr MUL . expr 
 
 	INT		shift and go to state 22
+	expr		goto state 1
 	NAME		shift and go to state 25
 
 state 7
@@ -118,6 +121,7 @@ state 7
 	expr : . expr ADD expr 
 	expr : expr SUB . expr 
 
+	expr		goto state 0
 	INT		shift and go to state 22
 	NAME		shift and go to state 25
 
@@ -147,7 +151,11 @@ state 10
 	expr : . expr ADD expr 
 	expr : . expr MUL expr 
 
+	func_stmt		goto state 30
 	NAME		shift and go to state 25
+	expr_stmt		goto state 27
+	simple_func_stmt		goto state 29
+	expr		goto state 28
 	DEDENT		shift and go to state 31
 	INT		shift and go to state 22
 
@@ -168,6 +176,9 @@ state 12
 	module_stmt : . func_def 
 	module : . module_stmt_list 
 
+	module_stmt		goto state 15
+	func_def		goto state 13
+	module_stmt_list		goto state 16
 	NEWLINE		shift and go to state 20
 	DEF		shift and go to state 14
 
@@ -201,6 +212,9 @@ state 16
 	module : module_stmt_list . 
 	module_stmt_list : module_stmt_list . module_stmt 
 
+	module_stmt		goto state 11
+	END		accept 0
+	func_def		goto state 13
 	NEWLINE		shift and go to state 20
 	DEF		shift and go to state 14
 
@@ -209,6 +223,7 @@ state 17
 	func_suite : . NEWLINE INDENT func_stmts DEDENT 
 	func_def : DEF NAME LPAR RPAR COLON . func_suite 
 
+	func_suite		goto state 23
 	NEWLINE		shift and go to state 21
 
 state 18
@@ -278,7 +293,12 @@ state 24
 	expr : . expr ADD expr 
 	expr : . expr MUL expr 
 
+	simple_func_stmt		goto state 29
+	expr		goto state 28
+	func_stmt		goto state 26
 	INT		shift and go to state 22
+	expr_stmt		goto state 27
+	func_stmts		goto state 10
 	NAME		shift and go to state 25
 
 state 25

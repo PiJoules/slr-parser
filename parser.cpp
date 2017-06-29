@@ -291,18 +291,24 @@ void lang::Parser::dump_state(std::size_t state, std::ostream& stream) const {
         const auto& instr = it->second;
         const auto& action = instr.action;
 
-        if (action == lang::ParseInstr::SHIFT || action == lang::ParseInstr::REDUCE){
-            int val = instr.value;
-            stream << "\t" << symbol << "\t\t";
+        int val = instr.value;
+        stream << "\t" << symbol << "\t\t";
 
-            if (action == lang::ParseInstr::SHIFT){
+        switch (action){
+            case ParseInstr::SHIFT:
                 stream << "shift and go to state ";
-            }
-            else {
+                break;
+            case ParseInstr::REDUCE:
                 stream << "reduce using rule ";
-            }
-            stream << val << std::endl;
+                break;
+            case ParseInstr::GOTO:
+                stream << "goto state ";
+                break;
+            case ParseInstr::ACCEPT:
+                stream << "accept ";
+                break;
         }
+        stream << val << std::endl;
     }
     stream << std::endl;
 }
@@ -376,21 +382,14 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
 void lang::Parser::reduce(
         const prod_rule_t& prod_rule, 
         std::vector<LexToken>& symbol_stack,
-        std::vector<Node>& node_stack){
+        std::vector<Node>& node_stack,
+        std::vector<std::size_t>& state_stack){
     const std::string& rule = std::get<0>(prod_rule);
     const production_t& prod = std::get<1>(prod_rule);
     const parse_func_t func = std::get<2>(prod_rule);
 
-    //std::cerr << "symbol_stack: " << symbol_stack.size() << "," << prod.size() << std::endl;
-    //std::cerr << "node_stack: " << node_stack.size() << "," << prod.size() << std::endl;
-    //for (const auto& symbol : symbol_stack){
-    //    std::cerr << symbol.symbol << ", ";
-    //}
-    //std::cerr << std::endl;
     // Note: the symbol stack and production may not be the same length, but the 
     // symbol stack and node stack will always be the same size
-    //assert(symbol_stack.size() == prod.size());
-    //assert(node_stack.size() == prod.size());
     assert(node_stack.size() == symbol_stack.size());
 
     if (func){
@@ -400,11 +399,12 @@ void lang::Parser::reduce(
         func(node_stack);
     }
     
+    // Pop based on the number of symbols in the production
     for (std::size_t i = 0; i < prod.size(); ++i){
+        state_stack.pop_back();
         symbol_stack.pop_back();
         node_stack.pop_back();
     }
-    //symbol_stack.clear();
     
     LexToken rule_token = {rule,"",0,0,0};
     symbol_stack.push_back(rule_token);
@@ -412,7 +412,6 @@ void lang::Parser::reduce(
     // TODO: The last should be the result of the func
     LexTokenWrapper wrapper(rule_token);
     node_stack.push_back(wrapper);
-    //node_stack.erase(node_stack.cbegin()+1, node_stack.cend());
 }
 
 const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const LexToken& lookahead){
@@ -435,60 +434,45 @@ void lang::Parser::parse(const std::string& code){
     // Input the string
     lexer_.input(code);
 
-    std::stack<std::size_t> state_stack;
-    state_stack.push(item_set_map_.at(top_item_set_));
+    std::vector<std::size_t> state_stack;
+    state_stack.push_back(item_set_map_.at(top_item_set_));
 
     std::vector<LexToken> symbol_stack;
     std::vector<Node> node_stack;
 
     LexToken lookahead = lexer_.token();
     while (1){
-        std::size_t state = state_stack.top();
-        //state_stack.pop();
-
-        std::cerr << "state " << state << std::endl;
+        std::size_t state = state_stack.back();
 
         LexTokenWrapper token_wrapper(lookahead);
-        const ParseInstr& next_instr = get_instr(state, lookahead);
+        const ParseInstr& instr = get_instr(state, lookahead);
+        ParseInstr next_instr;
 
-        switch (next_instr.action){
+        switch (instr.action){
             case ParseInstr::SHIFT:
                 // Add the next state to its stack and the lookahead to the tokens stack
-
-                std::cerr << "shift to " << next_instr.value << std::endl;
-
-                state_stack.push(next_instr.value);
+                state_stack.push_back(instr.value);
                 symbol_stack.push_back(lookahead);
                 node_stack.push_back(token_wrapper);
-
                 lookahead = lexer_.token();
                 break;
             case ParseInstr::REDUCE:
                 // Pop from the states stack and replace the rules in the tokens stack 
                 // with the reduce rule
-
-                std::cerr << "reduce by rule " << next_instr.value << std::endl;
-
-                state_stack.pop();
-                reduce(prod_rules_[next_instr.value], symbol_stack, node_stack);
+                reduce(prod_rules_[instr.value], symbol_stack, node_stack, state_stack);
 
                 // Next instruction will be GOTO
-                //lookahead = symbol_stack.back();
-                state_stack.push(get_instr(state_stack.top(), symbol_stack.back()).value);
-
+                next_instr = get_instr(state_stack.back(), symbol_stack.back());
+                assert(next_instr.action == ParseInstr::GOTO);
+                state_stack.push_back(next_instr.value);
                 break;
             case ParseInstr::ACCEPT:
-                std::cerr << "accept" << std::endl;
-
                 // Reached end
                 assert(symbol_stack.size() == 1);
                 assert(node_stack.size() == 1);
                 return;
             case ParseInstr::GOTO:
-                //std::cerr << "goto " << next_instr.value << std::endl;
-
-                //state_stack.push(next_instr.value);
-                //lookahead = lexer_.token();
+                // Should not actually end up here since gotos are handled in reduce
                 break;
         }
     }

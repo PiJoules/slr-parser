@@ -44,7 +44,7 @@ test_table_generation: clean_exes test_table_generation.out
 	./test_table_generation.out
 	valgrind ./test_table_generation.out || echo 'Valgrind not available' 
 
-test_parser: clean_exes test_parser.out
+test_parser: $(OBJS) clean_exes test_parser.out
 	./test_parser.out
 	valgrind ./test_parser.out || echo 'Valgrind not available'
 
