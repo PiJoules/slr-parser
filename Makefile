@@ -6,20 +6,20 @@ SOURCES = lexer.cpp \
 		  lang_utils.cpp \
 		  parser.cpp \
 		  lang_rules.cpp \
-		  lang_nodes.cpp
+		  lang_nodes.cpp \
+		  lang_hashes.cpp
 OBJS = $(SOURCES:.cpp=.o)
 
 TEST_FILES = test_lexer.cpp \
 			 test_table_generation.cpp \
-			 #test_parser.cpp
+			 test_parser.cpp
 
 EXE_FILES = $(TEST_FILES) \
 			#dump_lang.cpp \
 			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: compile test_lexer test_table_generation 
-	#test_parser
+test: compile test_lexer test_table_generation test_parser
 
 .PHONY: test
 
@@ -44,9 +44,9 @@ test_table_generation: clean_exes test_table_generation.out
 	./test_table_generation.out
 	valgrind ./test_table_generation.out || echo 'Valgrind not available' 
 
-test_parser: clean_exes test_lexer.out
-	./test_lexer.out
-	valgrind ./test_lexer.out || echo 'Valgrind not available'
+test_parser: clean_exes test_parser.out
+	./test_parser.out
+	valgrind ./test_parser.out || echo 'Valgrind not available'
 
 clean_dump_lang:
 	rm -rf dump_lang.out

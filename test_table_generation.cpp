@@ -130,8 +130,17 @@ void test_rules2(){
     expected = {"n", "PLUS"};
     assert(parser.firsts("T") == expected);
 
+    // follows 
+    expected = {lang::tokens::END};
+    assert(parser.follows("S") == expected);
+    expected = {"RPAR", lang::tokens::END};
+    assert(parser.follows("E") == expected);
+    expected = {"PLUS", "RPAR", lang::tokens::END};
+    assert(parser.follows("T") == expected);
+
     // empty stacks 
     assert(parser.firsts_stack().empty());
+    assert(parser.follows_stack().empty());
 }
 
 void test_rules3(){
@@ -161,8 +170,16 @@ void test_rules3(){
     assert(parser.firsts("T") == expected);
     assert(parser.firsts("F") == expected);
 
+    // follows 
+    expected = {lang::tokens::END, "PLUS", "RPAR"};
+    assert(parser.follows("E") == expected);
+    expected = {lang::tokens::END, "PLUS", "RPAR", "MULT"};
+    assert(parser.follows("T") == expected);
+    assert(parser.follows("F") == expected);
+
     // empty stacks 
     assert(parser.firsts_stack().empty());
+    assert(parser.follows_stack().empty());
 }
 
 void test_rules4(){
@@ -174,8 +191,15 @@ void test_rules4(){
     assert(parser.firsts("expr") == expected);
     assert(parser.firsts("module") == expected);
 
+    // follows 
+    expected = {lang::tokens::END, "ADD", "SUB", "MUL", "DIV"};
+    assert(parser.follows("expr") == expected);
+    expected = {lang::tokens::END};
+    assert(parser.follows("module") == expected);
+
     // empty stacks 
     assert(parser.firsts_stack().empty());
+    assert(parser.follows_stack().empty());
 }
 
 void test_rules5(){
@@ -197,8 +221,14 @@ void test_rules5(){
     assert(parser.firsts("S") == expected);
     assert(parser.firsts("X") == expected);
 
+    // follows 
+    expected = {lang::tokens::END};
+    assert(parser.follows("S") == expected);
+    assert(parser.follows("X") == expected);
+
     // empty stacks 
     assert(parser.firsts_stack().empty());
+    assert(parser.follows_stack().empty());
 }
 
 void test_closure(){
@@ -234,23 +264,11 @@ void test_parse_precedence(){
 
     // Should have conflicts 
     lang::Parser parser(lexer, test_rules);
+    assert(!parser.conflicts().empty());
 
-    std::unordered_set<std::string> expected = {"INT", "NAME"};
-    assert(parser.firsts("expr") == expected);
-    assert(parser.firsts("module") == expected);
-
-    //expected = {"ADD", "SUB", "MUL", "DIV"};
-    //assert(parser.follow("expr") == expected);
-    //assert(parser.follow("module") == expected);
-
-    //if (parser.conflicts().empty()){
-    //    parser.dump_grammar();
-    //}
-    //assert(!parser.conflicts().empty());
-
-    //// Should not have conflicts 
-    //lang::Parser parser2(lexer, test_rules, test_precedence);
-    //assert(parser2.conflicts().empty());
+    // Should not have conflicts 
+    lang::Parser parser2(lexer, test_rules, test_precedence);
+    assert(parser2.conflicts().empty());
 }
 
 int main(){
@@ -262,7 +280,7 @@ int main(){
 
     test_closure();
     test_move_pos();
-    //test_parse_precedence();
+    test_parse_precedence();
 
     return 0;
 }

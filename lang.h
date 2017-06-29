@@ -85,10 +85,14 @@ namespace lang {
 
     class LexTokenWrapper: public Node {
         private:
-            const LexToken token_;
+            LexToken token_;
 
         public:
             LexTokenWrapper(const LexToken&);
+            LexTokenWrapper& operator=(const LexToken& other){
+                token_ = other;
+                return *this;
+            }
             LexToken token() const;
             std::string str() const;
     };
@@ -213,9 +217,7 @@ namespace lang {
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
             void parse(const std::string&);
-            void reduce(const prod_rule_t&, 
-                    std::vector<std::string>&,
-                    std::vector<Node>&);
+            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<Node>&);
             
             // Firsts/follows methods 
             std::unordered_set<std::string> firsts(const std::string&);

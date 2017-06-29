@@ -1,49 +1,6 @@
 #include "lang.h"
 
 /**
- * Borrowed from python3.6's tuple hash
- */
-std::size_t lang::ProdRuleHasher::operator()(const prod_rule_t& prod_rule) const {
-    std::string rule = std::get<0>(prod_rule);
-    production_t prod = std::get<1>(prod_rule);
-    std::hash<std::string> str_hasher;
-    std::size_t rule_hash = str_hasher(rule);
-
-    std::size_t hash_mult = _HASH_MULTIPLIER;
-    std::size_t prod_hash = 0x345678;
-    std::size_t len = prod.size();
-    for (std::string& r : prod){
-        prod_hash = (prod_hash ^ str_hasher(r)) * hash_mult;
-        hash_mult += 82520 + len + len;
-    }
-    prod_hash += 97531;
-    return prod_hash ^ rule_hash;
-}
-
-std::size_t lang::ItemHasher::operator()(const lang::lr_item_t& lr_item) const {
-    ProdRuleHasher hasher;
-    return hasher(lr_item.first) ^ static_cast<std::size_t>(lr_item.second);
-}
-
-/**
- * Borrowed from python3.6's frozenset hash
- */ 
-static std::size_t _shuffle_bits(std::size_t h){
-    return ((h ^ 89869747UL) ^ (h << 16)) * 3644798167UL;
-}
-
-std::size_t lang::ItemSetHasher::operator()(const lang::item_set_t& item_set) const {
-    std::size_t hash = 0;
-    ItemHasher item_hasher;
-    for (const auto& lr_item : item_set){
-        hash ^= _shuffle_bits(item_hasher(lr_item));  // entry hashes
-    }
-    hash ^= item_set.size() * 1927868237UL;  // # of active entrues
-    hash = hash * 69069U + 907133923UL;
-    return hash;
-};
-
-/**
  * Initialize a closure from an item set and list of productions.
  */
 void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::prod_rule_t>& prod_rules){
@@ -224,30 +181,6 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                             action_table[follow] = instr;
                         }
                     }
-
-                    // Search all other rules
-                    //for (const prod_rule_t& pr : prod_rules_){
-                    //    const production_t& other_prod = std::get<1>(pr);
-
-                    //    // Search for the symbol behind the dot
-                    //    // Only need to iterate up to the second to last symbol 
-                    //    for (std::size_t j = 0; j < other_prod.size()-1; ++j){
-                    //        const std::string& current_prod = other_prod[j];
-                    //        const std::string& next_prod = other_prod[j+1];
-                    //        if (current_prod == rule && is_terminal(next_prod)){
-                    //            auto existing_it = action_table.find(next_prod);
-                    //            ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
-                    //            if (existing_it != action_table.cend()){
-                    //                // Possible conflict. Check for precedence.
-                    //                check_precedence(existing_it->second, instr, next_prod, action_table);
-                    //            }
-                    //            else {
-                    //                // No conflict. Fill with reduce.
-                    //                action_table[next_prod] = instr;
-                    //            }
-                    //        }
-                    //    }
-                    //}
                 }
             }
         }
@@ -442,21 +375,23 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
  */
 void lang::Parser::reduce(
         const prod_rule_t& prod_rule, 
-        std::vector<std::string>& symbol_stack,
-        std::vector<Node>& token_stack){
+        std::vector<LexToken>& symbol_stack,
+        std::vector<Node>& node_stack){
     const std::string& rule = std::get<0>(prod_rule);
     const production_t& prod = std::get<1>(prod_rule);
     const parse_func_t func = std::get<2>(prod_rule);
 
     assert(symbol_stack.size() == prod.size());
-    assert(token_stack.size() == prod.size());
+    assert(node_stack.size() == prod.size());
 
     if (func){
-        func(token_stack);
+        func(node_stack);
     }
     symbol_stack.clear();
-    symbol_stack.push_back(rule);
-    token_stack.erase(token_stack.cbegin()+1, token_stack.cend());
+
+    LexToken rule_token = {rule,"",0,0,0};
+    symbol_stack.push_back(rule_token);
+    node_stack.erase(node_stack.cbegin()+1, node_stack.cend());
 }
 
 /**
@@ -466,42 +401,55 @@ void lang::Parser::parse(const std::string& code){
     // Input the string
     lexer_.input(code);
 
-    std::vector<std::string> symbol_stack;
-    std::vector<Node> token_stack;
+    std::stack<std::size_t> state_stack;
+    state_stack.push(item_set_map_.at(top_item_set_));
 
-    assert(prod_rule_map_.find(prod_rules_.front()) != prod_rule_map_.end());
-    std::size_t state = item_set_map_.at(top_item_set_);
+    std::vector<LexToken> symbol_stack;
+    std::vector<Node> node_stack;
 
+    LexToken lookahead = lexer_.token();
     while (1){
-        const LexTokenWrapper lookahead(lexer_.token());
+        std::size_t state = state_stack.top();
+        state_stack.pop();
 
-        if (parse_table_[state].find(lookahead.token().symbol) == parse_table_[state].cend()){
+        std::cerr << "state " << state << std::endl;
+
+        if (parse_table_[state].find(lookahead.symbol) == parse_table_[state].cend()){
             // Parse error
             std::ostringstream err;
-            err << "Unable to handle lookahead '" << lookahead.token().symbol << "' in state " << state
+            err << "Unable to handle lookahead '" << lookahead.symbol << "' in state " << state 
+                << ". Line " << lookahead.lineno << ", col " << lookahead.colno << "."
                 << std::endl << std::endl;
             dump_state(state, err);
             throw std::runtime_error(err.str());
         }
 
-        const ParseInstr& next_instr = parse_table_[state][lookahead.token().symbol];
+        LexTokenWrapper token_wrapper(lookahead);
+        const ParseInstr& next_instr = parse_table_[state][lookahead.symbol];
         switch (next_instr.action){
             case ParseInstr::SHIFT:
-                symbol_stack.push_back(lookahead.token().symbol);
-                token_stack.push_back(lookahead);
-                state = next_instr.value;
+                state_stack.push(next_instr.value);
+                symbol_stack.push_back(lookahead);
 
+                node_stack.push_back(token_wrapper);
+
+                lookahead = lexer_.token();
                 break;
             case ParseInstr::REDUCE:
-                reduce(prod_rules_[next_instr.value], symbol_stack, token_stack);
+                reduce(prod_rules_[next_instr.value], symbol_stack, node_stack);
+
+                // Next instruction will be GOTO
+                lookahead = symbol_stack.back();
+                state_stack.push(state_stack.top());  // duplicate top
                 break;
             case ParseInstr::ACCEPT:
-                // Reached end. Stack should be empty and loop is exited.
-                assert(symbol_stack.empty());
-                assert(token_stack.empty());
+                // Reached end
+                assert(symbol_stack.size() == 1);
+                assert(node_stack.size() == 1);
                 return;
             case ParseInstr::GOTO:
-                // Should not reach
+                state_stack.push(next_instr.value);
+                lookahead = lexer_.token();
                 break;
         }
     }
