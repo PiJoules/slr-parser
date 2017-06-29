@@ -65,8 +65,9 @@ state 3
 
 	func_stmt : simple_func_stmt NEWLINE . 
 
-	INT		reduce using rule 9
 	NAME		reduce using rule 9
+	INT		reduce using rule 9
+	DEDENT		reduce using rule 9
 
 state 4
 
@@ -124,6 +125,7 @@ state 8
 
 	func_def : DEF NAME LPAR RPAR . COLON func_suite 
 
+	COLON		shift and go to state 17
 
 state 9
 
@@ -146,6 +148,7 @@ state 10
 	expr : . expr MUL expr 
 
 	NAME		shift and go to state 25
+	DEDENT		shift and go to state 31
 	INT		shift and go to state 22
 
 state 11
@@ -240,6 +243,7 @@ state 21
 
 	func_suite : NEWLINE . INDENT func_stmts DEDENT 
 
+	INDENT		shift and go to state 24
 
 state 22
 
@@ -291,8 +295,9 @@ state 26
 
 	func_stmts : func_stmt . 
 
-	NAME		reduce using rule 7
+	DEDENT		reduce using rule 7
 	INT		reduce using rule 7
+	NAME		reduce using rule 7
 
 state 27
 
@@ -324,8 +329,9 @@ state 30
 
 	func_stmts : func_stmts func_stmt . 
 
-	NAME		reduce using rule 8
+	DEDENT		reduce using rule 8
 	INT		reduce using rule 8
+	NAME		reduce using rule 8
 
 state 31
 

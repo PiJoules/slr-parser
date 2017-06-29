@@ -29,19 +29,19 @@ void __assert_int_equal(const int& i1, const int& i2,
     }
 }
 
-static const std::unordered_map<std::string, std::string> test_tokens = {
+static const lang::tokens_map_t test_tokens = {
     // Values
-    {"INT", R"(\d+)"},
-    {"NAME", R"([a-zA-Z_][a-zA-Z0-9_]*)"},
+    {"INT", {R"(\d+)", nullptr}},
+    {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", nullptr}},
 
     // Binary operators
-    {"ADD", R"(\+)"},
-    {"SUB", R"(-)"},
-    {"MUL", R"(\*)"},
-    {"DIV", R"(\\)"},
+    {"ADD", {R"(\+)", nullptr}},
+    {"SUB", {R"(-)", nullptr}},
+    {"MUL", {R"(\*)", nullptr}},
+    {"DIV", {R"(\\)", nullptr}},
 
     // Misc
-    {lang::tokens::NEWLINE, R"(\n+)"},  // Capture newlines
+    {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},  // Capture newlines
 };
 
 /**

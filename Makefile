@@ -1,6 +1,6 @@
 CPP = g++-4.9
 STD = c++11
-CPPFLAGS = -Wall -Werror -std=$(STD)
+CPPFLAGS = -Wall -Werror -std=$(STD) -Wfatal-errors
 
 SOURCES = lexer.cpp \
 		  lang_utils.cpp \
@@ -15,7 +15,7 @@ TEST_FILES = test_lexer.cpp \
 			 test_parser.cpp
 
 EXE_FILES = $(TEST_FILES) \
-			#dump_lang.cpp \
+			dump_lang.cpp \
 			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 

@@ -1,16 +1,16 @@
 #include "lang.h"
 #include <cassert>
 
-static const std::unordered_map<std::string, std::string> test_tokens = {
+static const lang::tokens_map_t test_tokens = {
     // Values
-    {"INT", R"(\d+)"},
-    {"NAME", R"([a-zA-Z_][a-zA-Z0-9_]*)"},
+    {"INT", {R"(\d+)", nullptr}},
+    {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", nullptr}},
 
     // Binary operators
-    {"ADD", R"(\+)"},
-    {"SUB", R"(-)"},
-    {"MUL", R"(\*)"},
-    {"DIV", R"(\\)"},
+    {"ADD", {R"(\+)", nullptr}},
+    {"SUB", {R"(-)", nullptr}},
+    {"MUL", {R"(\*)", nullptr}},
+    {"DIV", {R"(\\)", nullptr}},
 };
 
 static const std::vector<lang::prod_rule_t> test_rules = {
@@ -55,13 +55,13 @@ static const lang::item_set_t int_expected = {
 };
 
 void test_rules1(){
-    const std::unordered_map<std::string, std::string> tokens = {
-        {"a", "a"},
-        {"b", "b"},
-        {"c", "c"},
-        {"d", "d"},
-        {"o", "o"},
-        {"z", "z"},
+    const lang::tokens_map_t tokens = {
+        {"a", {"a", nullptr}},
+        {"b", {"b", nullptr}},
+        {"c", {"c", nullptr}},
+        {"d", {"d", nullptr}},
+        {"o", {"o", nullptr}},
+        {"z", {"z", nullptr}},
     };
 
     const std::vector<lang::prod_rule_t> rules = {
@@ -104,11 +104,11 @@ void test_rules1(){
 }
 
 void test_rules2(){
-    const std::unordered_map<std::string, std::string> tokens = {
-        {"LPAR", R"(\()"},
-        {"RPAR", R"(\))"},
-        {"n", "n"},
-        {"PLUS", R"(\+)"},
+    const lang::tokens_map_t tokens = {
+        {"LPAR", {R"(\()", nullptr}},
+        {"RPAR", {R"(\))", nullptr}},
+        {"n", {"n", nullptr}},
+        {"PLUS", {R"(\+)", nullptr}},
     };
 
     const std::vector<lang::prod_rule_t> rules = {
@@ -144,12 +144,12 @@ void test_rules2(){
 }
 
 void test_rules3(){
-    const std::unordered_map<std::string, std::string> tokens = {
-        {"LPAR", R"(\()"},
-        {"RPAR", R"(\))"},
-        {"ID", "id"},
-        {"PLUS", R"(\+)"},
-        {"MULT", R"(\*)"},
+    const lang::tokens_map_t tokens = {
+        {"LPAR", {R"(\()", nullptr}},
+        {"RPAR", {R"(\))", nullptr}},
+        {"PLUS", {R"(\+)", nullptr}},
+        {"MULT", {R"(\*)", nullptr}},
+        {"ID", {"id", nullptr}},
     };
 
     const std::vector<lang::prod_rule_t> rules = {
@@ -203,8 +203,8 @@ void test_rules4(){
 }
 
 void test_rules5(){
-    const std::unordered_map<std::string, std::string> tokens = {
-        {"a", "a"},
+    const lang::tokens_map_t tokens = {
+        {"a", {"a", nullptr}},
     };
 
     const std::vector<lang::prod_rule_t> rules = {
@@ -225,6 +225,80 @@ void test_rules5(){
     expected = {lang::tokens::END};
     assert(parser.follows("S") == expected);
     assert(parser.follows("X") == expected);
+
+    // empty stacks 
+    assert(parser.firsts_stack().empty());
+    assert(parser.follows_stack().empty());
+}
+
+static std::unordered_map<std::string, std::string> RESERVED_NAMES = {
+    {"def", "DEF"},
+    {"TOKEN", "TOKEN"},
+};
+
+static lang::LexToken reserved(lang::Lexer* lexer, lang::LexToken tok){
+    if (RESERVED_NAMES.find(tok.value) == RESERVED_NAMES.end()){
+        return tok;
+    }
+    tok.symbol = RESERVED_NAMES[tok.value];
+    return tok;
+}
+
+void test_rules6(){
+
+    const lang::tokens_map_t tokens = {
+        // Values
+        {"INT", {R"(\d+)", nullptr}},
+        {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", reserved}},
+
+        // Binary operators
+        {"ADD", {R"(\+)", nullptr}},
+        {"SUB", {R"(-)", nullptr}},
+        {"MUL", {R"(\*)", nullptr}},
+        {"DIV", {R"(\\)", nullptr}},
+
+        // Containers 
+        {"LPAR", {R"(\()", nullptr}},
+        {"RPAR", {R"(\))", nullptr}},
+
+        // Misc 
+        {"DEF", {R"(def)", nullptr}},
+        {"NEWLINE", {R"(\n+)", nullptr}},
+        {"TOKEN", {"TOKEN", nullptr}},
+    };
+
+    const std::vector<lang::prod_rule_t> rules = {
+        // Entry point
+        lang::make_pr("module", {"module_stmt_list"}),
+        lang::make_pr("module_stmt_list", {"module_stmt"}),
+        lang::make_pr("module_stmt_list", {"module_stmt_list", "module_stmt"}),
+        lang::make_pr("module_stmt", {"func_def"}),
+        lang::make_pr("module_stmt", {"NEWLINE"}),
+
+        // Functions 
+        lang::make_pr("func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}),
+        lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}),
+        lang::make_pr("func_stmts", {"func_stmt"}),
+        lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}),
+        lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}),
+        lang::make_pr("simple_func_stmt", {"TOKEN"}),
+    };
+
+    lang::Lexer lexer(tokens);
+    lang::Parser parser(lexer, rules);
+
+    // firsts 
+    std::unordered_set<std::string> expected = {"DEF", "NEWLINE"};
+    assert(parser.firsts("module_stmt") == expected);
+    assert(parser.firsts("module_stmt_list") == expected);
+    assert(parser.firsts("module") == expected);
+
+    // follows 
+    expected = {lang::tokens::END};
+    assert(parser.follows("module") == expected);
+    expected = {lang::tokens::END, "DEF", "NEWLINE"};
+    assert(parser.follows("module_stmt") == expected);
+    assert(parser.follows("module_stmt_list") == expected);
 
     // empty stacks 
     assert(parser.firsts_stack().empty());
@@ -277,6 +351,7 @@ int main(){
     test_rules3();
     test_rules4();
     test_rules5();
+    test_rules6();
 
     test_closure();
     test_move_pos();

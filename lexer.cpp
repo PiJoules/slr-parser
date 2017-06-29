@@ -20,20 +20,20 @@ bool lang::Lexer::empty() const {
 /**
  * Constructor from map of string to regex string.
  */
-lang::Lexer::Lexer(const std::unordered_map<std::string, std::string>& tokens){
+lang::Lexer::Lexer(const tokens_map_t& tokens){
     tokens_.reserve(tokens.size());
     for (auto it = tokens.cbegin(); it != tokens.cend(); ++it){
         std::string key = it->first;
-        std::string value = it->second;
+        auto value = it->second;
         auto existing = tokens_.find(key);
         if (existing == tokens_.end()){
-            std::regex r(value);
-            tokens_[key] = r;
+            std::regex r(value.first);
+            tokens_[key] = {r, value.second};
         }
         else {
             // Accidentally defined the token twice
             std::ostringstream err;
-            err << "Token '" << key << "' already defined. Attempting to define again as '" << value << "'.";
+            err << "Token '" << key << "' already defined. Attempting to define again as '" << value.first << "'.";
             throw std::runtime_error(err.str());
         }
     }
@@ -70,12 +70,18 @@ void lang::Lexer::load_next_tok(){
     auto it = tokens_.cbegin();
     for (; it != tokens_.cend(); ++it){
         std::string symbol = it->first;
-        std::regex re = it->second;
+        std::regex re = it->second.first;
+        tok_callback_t callback = it->second.second;
         if (std::regex_search(lexcode_, matches, re, std::regex_constants::match_continuous)){
             // Found 
             match = matches[0];
             next_tok_.symbol = symbol;
             next_tok_.value = match;
+
+            if (callback){
+                next_tok_ = callback(this, next_tok_);
+            }
+
             break;
         }
     }
@@ -181,6 +187,6 @@ lang::LexToken lang::Lexer::token(){
     return tok;
 }
 
-const std::unordered_map<std::string, std::regex>& lang::Lexer::tokens() const {
+const std::unordered_map<std::string, std::pair<std::regex, lang::tok_callback_t>>& lang::Lexer::tokens() const {
     return tokens_;
 }

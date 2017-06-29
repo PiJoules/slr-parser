@@ -2,24 +2,40 @@
 
 /****************** Lexer tokens *****************/
 
-const std::unordered_map<std::string, std::string> lang::LANG_TOKENS = {
+std::unordered_map<std::string, std::string> RESERVED_NAMES = {
+    {"def", "DEF"},
+};
+
+lang::LexToken reserved_name(lang::Lexer* lexer, lang::LexToken tok){
+    assert(lexer);
+    if (RESERVED_NAMES.find(tok.value) == RESERVED_NAMES.end()){
+        return tok;
+    }
+    tok.symbol = RESERVED_NAMES[tok.value];
+    return tok;
+}
+
+const lang::tokens_map_t lang::LANG_TOKENS = {
     // Values
-    {"INT", R"(\d+)"},
-    {"NAME", R"([a-zA-Z_][a-zA-Z0-9_]*)"},
+    {"INT", {R"(\d+)", nullptr}},
+    {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", reserved_name}},
 
     // Binary operators
-    {"ADD", R"(\+)"},
-    {"SUB", R"(-)"},
-    {"MUL", R"(\*)"},
-    {"DIV", R"(\\)"},
+    {"ADD", {R"(\+)", nullptr}},
+    {"SUB", {R"(-)", nullptr}},
+    {"MUL", {R"(\*)", nullptr}},
+    {"DIV", {R"(\\)", nullptr}},
 
     // Containers 
-    {"LPAR", R"(\()"},
-    {"RPAR", R"(\))"},
+    {"LPAR", {R"(\()", nullptr}},
+    {"RPAR", {R"(\))", nullptr}},
 
     // Misc 
-    {"DEF", R"(def)"},
-    {"NEWLINE", R"(\n+)"},
+    {"DEF", {R"(def)", nullptr}},
+    {"NEWLINE", {R"(\n+)", nullptr}},
+    {"COLON", {R"(\:)", nullptr}},
+    {lang::tokens::INDENT, {lang::tokens::INDENT, nullptr}},
+    {lang::tokens::DEDENT, {lang::tokens::DEDENT, nullptr}},
 };
 
 /********** Parser rules ***************/ 

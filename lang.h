@@ -21,7 +21,7 @@
 
 namespace lang {
     namespace tokens {
-        const std::string NEWLINE = "\n";
+        const std::string NEWLINE = "NEWLINE";
         const std::string INDENT = "INDENT";
         const std::string DEDENT = "DEDENT";
         const std::string END = "END";
@@ -48,13 +48,16 @@ namespace lang {
             virtual const char* what() const throw();
     };
 
-    typedef std::unordered_map<std::string, std::string> tokens_map_t;
+    class Lexer;
+
+    typedef LexToken (*tok_callback_t)(Lexer*, LexToken);
+    typedef std::unordered_map<std::string, std::pair<std::string, tok_callback_t>> tokens_map_t;
 
     class Lexer {
         private:
             std::string lexcode_;
             int pos_ = 1, lineno_ = 1, colno_ = 1;
-            std::unordered_map<std::string, std::regex> tokens_;
+            std::unordered_map<std::string, std::pair<std::regex, tok_callback_t>> tokens_;
 
             // Indentation tracking
             std::vector<int> levels = {1};
@@ -68,7 +71,7 @@ namespace lang {
             Lexer(const tokens_map_t&);
             void input(const std::string& code);
             LexToken token();
-            const std::unordered_map<std::string, std::regex>& tokens() const;
+            const std::unordered_map<std::string, std::pair<std::regex, tok_callback_t>>& tokens() const;
             bool empty() const;
             void advance(int count=1);
             void advancenl(int count=1);
@@ -174,7 +177,7 @@ namespace lang {
     ///******** Parser ********/ 
 
     extern const std::vector<prod_rule_t> LANG_RULES;
-    extern const std::unordered_map<std::string, std::string> LANG_TOKENS;
+    extern const tokens_map_t LANG_TOKENS;
     extern const precedence_t LANG_PRECEDENCE;
 
     class Parser {
@@ -206,6 +209,7 @@ namespace lang {
                     std::unordered_map<std::string, ParseInstr>&);
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const production_t&) const;
+            const ParseInstr& get_instr(std::size_t, const LexToken&);
 
             // For creating firsts/follows sets
             std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
