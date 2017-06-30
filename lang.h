@@ -105,22 +105,22 @@ namespace lang {
             std::string str() const { return ""; }
     };
 
-    //class Module: public Node {
-    //    private:
-    //        const std::vector<ModuleStmt> body_;
+    class Module: public Node {
+        private:
+            const std::vector<ModuleStmt> body_;
 
-    //    public:
-    //        Module(const std::vector<ModuleStmt>& body): body_(body){}
-    //        const std::vector<ModuleStmt>& body() const { return body_; }
+        public:
+            Module(const std::vector<ModuleStmt>& body): body_(body){}
+            const std::vector<ModuleStmt>& body() const { return body_; }
 
-    //        std::string str() const {
-    //            std::ostringstream stream;
-    //            for (const ModuleStmt& stmt : body_){
-    //                stream << stmt.str() << std::endl;
-    //            }
-    //            return stream.str();
-    //        }
-    //};
+            std::string str() const {
+                std::ostringstream stream;
+                for (const ModuleStmt& stmt : body_){
+                    stream << stmt.str() << std::endl;
+                }
+                return stream.str();
+            }
+    };
 
     /********** Shift reduce parsing *************/
 

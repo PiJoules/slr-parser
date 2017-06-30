@@ -393,25 +393,31 @@ void lang::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 
     if (func){
-        // TODO: This should be a slice of the node stack 
-        // The func should also return a new node now to replace 
-        // this slice'd part
-        func(node_stack);
+        std::vector<Node> slice(node_stack.begin() + node_stack.size() - prod.size(), node_stack.end());
+        func(slice);
+
+        // Replace the end of the vector with the slice
+        node_stack.erase(node_stack.begin() + node_stack.size() - prod.size() + 1, node_stack.end());
+        node_stack.push_back(slice.front());
     }
     
     // Pop based on the number of symbols in the production
     for (std::size_t i = 0; i < prod.size(); ++i){
         state_stack.pop_back();
         symbol_stack.pop_back();
-        node_stack.pop_back();
     }
     
     LexToken rule_token = {rule,"",0,0,0};
     symbol_stack.push_back(rule_token);
 
-    // TODO: The last should be the result of the func
-    LexTokenWrapper wrapper(rule_token);
-    node_stack.push_back(wrapper);
+    if (!func) {
+        // Otherwise, add the wrapper for the rule token
+        node_stack.erase(node_stack.begin() + node_stack.size() - prod.size(), node_stack.end());
+        LexTokenWrapper wrapper(rule_token);
+        node_stack.push_back(wrapper);
+    }
+
+    assert(node_stack.size() == symbol_stack.size());
 }
 
 const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const LexToken& lookahead){
