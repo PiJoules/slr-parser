@@ -83,7 +83,15 @@ namespace lang {
             // The string representation of this node 
             // I would make it pure virtual, but that would require parser.cpp always
             // having to be compiled with lang_nodes.cpp in the Makefile.
-            virtual std::string str() const { return ""; };
+            virtual std::vector<std::string> lines() const {
+                std::vector<std::string> v;
+                return v;
+            };
+
+            // The lines joined by newlines
+            std::string str() const;
+
+            virtual ~Node(){}
     };
 
     class LexTokenWrapper: public Node {
@@ -97,35 +105,32 @@ namespace lang {
                 return *this;
             }
             LexToken token() const;
-            std::string str() const;
+            virtual std::vector<std::string> lines() const;
+            ~LexTokenWrapper();
     };
 
     class ModuleStmt: public Node {
         public:
-            std::string str() const { return ""; }
+            std::vector<std::string> lines() const;
+            ~ModuleStmt();
     };
 
     class Module: public Node {
         private:
-            const std::vector<ModuleStmt> body_;
+            const std::vector<ModuleStmt*> body_;
 
         public:
-            Module(const std::vector<ModuleStmt>& body): body_(body){}
-            const std::vector<ModuleStmt>& body() const { return body_; }
+            Module(const std::vector<ModuleStmt*>& body): body_(body){}
+            const std::vector<ModuleStmt*>& body() const { return body_; }
+            std::vector<std::string> lines() const;
 
-            std::string str() const {
-                std::ostringstream stream;
-                for (const ModuleStmt& stmt : body_){
-                    stream << stmt.str() << std::endl;
-                }
-                return stream.str();
-            }
+            ~Module();
     };
 
     /********** Shift reduce parsing *************/
 
     typedef std::vector<std::string> production_t;
-    typedef void (*parse_func_t)(std::vector<Node>&);
+    typedef void (*parse_func_t)(std::vector<Node*>&);
     typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
 
     prod_rule_t make_pr(
@@ -220,8 +225,8 @@ namespace lang {
             void dump_grammar(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
-            void parse(const std::string&);
-            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<Node>&,
+            Node* parse(const std::string&);
+            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<Node*>&,
                         std::vector<std::size_t>&);
             
             // Firsts/follows methods 

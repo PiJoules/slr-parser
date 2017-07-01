@@ -42,8 +42,9 @@ def func():
 
     lang::Lexer lexer(lang::LANG_TOKENS);
     lang::Parser parser(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
-    parser.parse(code);
+    lang::Module* module_node = reinterpret_cast<lang::Module*>(parser.parse(code));
     assert(lexer.empty());
+    delete module_node;
 }
 
 int main(){

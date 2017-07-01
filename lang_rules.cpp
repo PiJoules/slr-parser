@@ -40,10 +40,21 @@ const lang::tokens_map_t lang::LANG_TOKENS = {
 
 /********** Parser rules ***************/ 
 
+template<typename Target>
+struct NodeCast {
+    Target* operator()(lang::Node* node) const {
+        return reinterpret_cast<Target*>(node);
+    }
+};
+
 // module : module_stmt_list
-//void parse_module(void* result, const std::vector<void*>& args){
-//    lang::Module* mod = static_cast<lang::Module*>(result);
-//}
+void parse_module(std::vector<lang::Node*>& args){
+    std::vector<lang::ModuleStmt*> module_stmt_args;
+    module_stmt_args.resize(args.size()-1);
+    std::transform(args.begin()+1, args.end(), module_stmt_args.begin(), NodeCast<lang::ModuleStmt>());
+
+    args[0] = new lang::Module(module_stmt_args);
+}
 
 const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
     // Entry point
