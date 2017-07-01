@@ -49,11 +49,22 @@ struct NodeCast {
 
 // module : module_stmt_list
 void parse_module(std::vector<lang::Node*>& args){
-    std::vector<lang::ModuleStmt*> module_stmt_args;
-    module_stmt_args.resize(args.size()-1);
-    std::transform(args.begin()+1, args.end(), module_stmt_args.begin(), NodeCast<lang::ModuleStmt>());
+    //std::vector<lang::ModuleStmt*> module_stmt_args;
+    //module_stmt_args.resize(args.size()-1);
+    //std::transform(args.begin()+1, args.end(), module_stmt_args.begin(), NodeCast<lang::ModuleStmt>());
+    std::vector<lang::ModuleStmt*>* stmt_list = reinterpret_cast<std::vector<lang::ModuleStmt*>>(args[1]);
 
-    args[0] = new lang::Module(module_stmt_args);
+    delete args[0];
+    args[0] = new lang::Module(stmt_list);
+}
+
+// module_stmt_list : module_stmt 
+void parse_module_stmt_list(std::vector<lang::Node*>& args){
+    std::vector<lang::ModuleStmt*>* stmt_list = new std::vector<lang::ModuleStmt*>;
+    stmt_list->push_back(reinterpret_cast<lang::ModuleStmt*>(args[1]));
+
+    delete args[0];
+    args[0] = stmt_list;
 }
 
 const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
