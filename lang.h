@@ -109,10 +109,29 @@ namespace lang {
             ~LexTokenWrapper();
     };
 
-    class ModuleStmt: public Node {
+    class ModuleStmt: public Node {};
+
+    class FuncSuite: public Node {
         public:
             std::vector<std::string> lines() const;
-            ~ModuleStmt();
+            ~FuncSuite();
+    };
+
+    class FuncDef: public ModuleStmt {
+        private:
+            const std::string& func_name_;
+            const FuncSuite* func_suite_;
+    
+        public:
+            FuncDef(const std::string&, const FuncSuite*);
+            std::vector<std::string> lines() const;
+            ~FuncDef();
+    };
+
+    class Newline: public ModuleStmt {
+        public:
+            std::vector<std::string> lines() const;
+            ~Newline();
     };
 
     class Module: public Node {
@@ -130,7 +149,7 @@ namespace lang {
     /********** Shift reduce parsing *************/
 
     typedef std::vector<std::string> production_t;
-    typedef void (*parse_func_t)(std::vector<Node*>&);
+    typedef void* (*parse_func_t)(std::vector<void*>&);
     typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
 
     prod_rule_t make_pr(
@@ -198,7 +217,7 @@ namespace lang {
             std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
 
             item_set_t top_item_set_;
-            const std::vector<prod_rule_t>& prod_rules_;  // list of produciton rules
+            std::vector<prod_rule_t> prod_rules_;  // list of produciton rules
             parse_table_t parse_table_;  // map of states to map of strings to parse instructions
             std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
             std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
@@ -225,8 +244,8 @@ namespace lang {
             void dump_grammar(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
-            Node* parse(const std::string&);
-            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<Node*>&,
+            void* parse(const std::string&);
+            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<void*>&,
                         std::vector<std::size_t>&);
             
             // Firsts/follows methods 

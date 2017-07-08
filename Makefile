@@ -19,7 +19,10 @@ EXE_FILES = $(TEST_FILES) \
 			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: compile test_lexer test_table_generation test_parser
+test: compile test_lexer test_table_generation test_parser 
+
+test_debug:	CPPFLAGS += -DDEBUG
+test_debug: test
 
 .PHONY: test
 

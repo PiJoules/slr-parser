@@ -81,14 +81,24 @@ void lang::Parser::init_precedence(const precedence_t& precedence){
     }
 }
 
+static void* parse_prime(std::vector<void*>& args){
+    return args.front();
+}
+
 /**
  * Initialize the parse table from the production rules.
  */
 lang::Parser::Parser(Lexer& lexer, const std::vector<prod_rule_t>& prod_rules, 
                      const precedence_t& precedence):
-    lexer_(lexer),
-    prod_rules_(prod_rules)
+    lexer_(lexer)
 {
+    prod_rules_ = prod_rules;
+
+    // Add new top level rule 
+    std::string old_top_rule = std::get<0>(prod_rules_.front());
+    lang::prod_rule_t new_top_pr = make_pr(old_top_rule + "'", {old_top_rule}, parse_prime);
+    prod_rules_.insert(prod_rules_.begin(), new_top_pr);
+
     start_nonterminal_ = std::get<0>(prod_rules_.front());
     init_precedence(precedence);
 
@@ -382,7 +392,7 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
 void lang::Parser::reduce(
         const prod_rule_t& prod_rule, 
         std::vector<LexToken>& symbol_stack,
-        std::vector<Node*>& node_stack,
+        std::vector<void*>& node_stack,
         std::vector<std::size_t>& state_stack){
     const std::string& rule = std::get<0>(prod_rule);
     const production_t& prod = std::get<1>(prod_rule);
@@ -395,37 +405,20 @@ void lang::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 
     auto start = node_stack.begin() + node_stack.size() - prod.size();
+    void* result_node;
     if (func){
-        std::vector<Node*> slice(start, node_stack.end());
-        func(slice);
-
-        // Replace the end of the vector with the slice
-        node_stack.erase(start, node_stack.end());
-        node_stack.push_back(slice.front());
+        std::vector<void*> slice(start, node_stack.end());
+        result_node = func(slice);
     }
     else {
         // Otherwise, add the wrapper for the rule token
-        //node_stack.erase(node_stack.begin() + node_stack.size() - prod.size(), node_stack.end());
-
-        // Delete all the nodes then remove them from the vector 
-        for (auto it = start; it != node_stack.end(); ++it){
-            delete *it;
-        }
-        node_stack.erase(start, node_stack.end());
-
-        //LexTokenWrapper wrapper(rule_token);
-        LexTokenWrapper* wrapper = new LexTokenWrapper(rule_token);
-        node_stack.push_back(wrapper);
+        result_node = new LexTokenWrapper(rule_token);
     }
+    node_stack.erase(start, node_stack.end());
+    node_stack.push_back(result_node);
     
-    // Pop based on the number of symbols in the production
-    //for (std::size_t i = 0; i < prod.size(); ++i){
-    //    state_stack.pop_back();
-    //    symbol_stack.pop_back();
-    //}
     state_stack.erase(state_stack.end()-prod.size(), state_stack.end());
     symbol_stack.erase(symbol_stack.end()-prod.size(), symbol_stack.end());
-
     symbol_stack.push_back(rule_token);
 
     // Next instruction will be GOTO
@@ -452,7 +445,7 @@ const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const LexToke
 /**
  * The actual parsing.
  */
-lang::Node* lang::Parser::parse(const std::string& code){
+void* lang::Parser::parse(const std::string& code){
     // Input the string
     lexer_.input(code);
 
@@ -460,19 +453,29 @@ lang::Node* lang::Parser::parse(const std::string& code){
     state_stack.push_back(item_set_map_.at(top_item_set_));
 
     std::vector<LexToken> symbol_stack;
-    std::vector<Node*> node_stack;
+    std::vector<void*> node_stack;
 
     LexToken lookahead = lexer_.token();
     while (1){
         std::size_t state = state_stack.back();
 
-        //LexTokenWrapper token_wrapper(lookahead);
-        //LexTokenWrapper* token_wrapper = new LexTokenWrapper(lookahead);
+#ifdef DEBUG
+        // Dump the stack  
+        std::cerr << "stack: ";
+        for (const auto& symbol : symbol_stack){
+            std::cerr << symbol.symbol << ", ";
+        }
+        std::cerr << std::endl;
+#endif
+
         LexTokenWrapper* token_wrapper;
         const ParseInstr& instr = get_instr(state, lookahead);
 
         switch (instr.action){
             case ParseInstr::SHIFT:
+#ifdef DEBUG
+                std::cerr << "Shift " << lookahead.symbol << " and goto state " << instr.value << std::endl;
+#endif
                 // Add the next state to its stack and the lookahead to the tokens stack
                 state_stack.push_back(instr.value);
                 symbol_stack.push_back(lookahead);
@@ -483,11 +486,19 @@ lang::Node* lang::Parser::parse(const std::string& code){
                 lookahead = lexer_.token();
                 break;
             case ParseInstr::REDUCE:
+#ifdef DEBUG
+                std::cerr << "Reduce using rule " << instr.value << std::endl;
+#endif
+
                 // Pop from the states stack and replace the rules in the tokens stack 
                 // with the reduce rule
                 reduce(prod_rules_[instr.value], symbol_stack, node_stack, state_stack);
                 break;
             case ParseInstr::ACCEPT:
+#ifdef DEBUG
+                std::cerr << "Accept " << instr.value << " (" << symbol_stack.back().symbol << ")" << std::endl;
+#endif
+
                 // Reached end
                 assert(symbol_stack.size() == 1);
                 assert(node_stack.size() == 1);

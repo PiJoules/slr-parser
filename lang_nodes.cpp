@@ -45,11 +45,30 @@ lang::Module::~Module(){
 }
 
 /**
- * Module statement
- */
-std::vector<std::string> lang::ModuleStmt::lines() const {
+ * FuncDef Module statement
+ */ 
+lang::FuncDef::FuncDef(const std::string& func_name, const FuncSuite* func_suite):
+    func_name_(func_name),
+    func_suite_(func_suite){}
+
+std::vector<std::string> lang::FuncDef::lines() const {
+    // TODO: Add the indentations for the lines based off the func_suite
     std::vector<std::string> v;
     return v;
 }
 
-lang::ModuleStmt::~ModuleStmt(){}
+lang::FuncDef::~FuncDef(){
+    delete func_suite_;
+}
+
+/**
+ * Newline Module Statement
+ */ 
+std::vector<std::string> lang::Newline::lines() const {
+    std::ostringstream out;
+    out << std::endl;
+    std::vector<std::string> v = {out.str()};
+    return v;
+}
+
+lang::Newline::~Newline(){}
