@@ -110,20 +110,70 @@ namespace lang {
     };
 
     class ModuleStmt: public Node {};
-
-    class FuncSuite: public Node {
+    class FuncStmt: public Node {};
+    class SimpleFuncStmt: public FuncStmt {};
+    class Expr: public Node {
         public:
+            // The string representation of the value this expression holds
+            virtual std::string value_str() const;
+
             std::vector<std::string> lines() const;
-            ~FuncSuite();
+    };
+
+    class BinOperator: public Node {};
+    class Add: public BinOperator {};
+    class Sub: public BinOperator {};
+    class Div: public BinOperator {};
+    class Mul: public BinOperator {};
+
+    class Int: public Expr {
+        private:
+            int value_;
+
+        public:
+            Int(const std::string&);
+            Int(int);
+            std::string value_str() const;
+    };
+
+    class NameExpr: public Expr {
+        private:
+            std::string name_;
+
+        public:
+            NameExpr(const std::string&);
+            std::string value_str() const;
+    };
+
+    class BinExpr: public Expr {
+        private:
+            Expr* lhs_;
+            BinOperator op_;
+            Expr* rhs_;
+
+        public:
+            BinExpr(Expr*, BinOperator&, Expr*);
+            ~BinExpr();
+            std::string value_str() const;
+    };
+
+    class ExprStmt: public SimpleFuncStmt {
+        private:
+            Expr* expr_;
+
+        public:
+            ExprStmt(Expr*);
+            std::vector<std::string> lines() const;
+            ~ExprStmt();
     };
 
     class FuncDef: public ModuleStmt {
         private:
             const std::string& func_name_;
-            const FuncSuite* func_suite_;
+            const std::vector<FuncStmt*> func_suite_;
     
         public:
-            FuncDef(const std::string&, const FuncSuite*);
+            FuncDef(const std::string&, const std::vector<FuncStmt*>&);
             std::vector<std::string> lines() const;
             ~FuncDef();
     };
@@ -131,7 +181,6 @@ namespace lang {
     class Newline: public ModuleStmt {
         public:
             std::vector<std::string> lines() const;
-            ~Newline();
     };
 
     class Module: public Node {

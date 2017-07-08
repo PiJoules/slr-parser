@@ -97,17 +97,150 @@ void* parse_func_def(std::vector<void*>& args){
     lang::LexTokenWrapper* lpar = static_cast<lang::LexTokenWrapper*>(args[2]);
     lang::LexTokenWrapper* rpar = static_cast<lang::LexTokenWrapper*>(args[3]);
     lang::LexTokenWrapper* colon = static_cast<lang::LexTokenWrapper*>(args[4]);
-    lang::FuncSuite* func_suite = static_cast<lang::FuncSuite*>(args[5]);
+    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->token().value, func_suite);
+    lang::FuncDef* func_def = new lang::FuncDef(name->token().value, *func_suite);
 
     // Delete unused ones
     delete def;
+    delete name;
     delete lpar;
     delete rpar;
     delete colon;
+    delete func_suite;
 
     return func_def;
+}
+
+// func_suite : NEWLINE INDENT func_stmts DEDENT
+void* parse_func_suite(std::vector<void*>& args){
+    lang::LexTokenWrapper* newline = static_cast<lang::LexTokenWrapper*>(args[0]);
+    lang::LexTokenWrapper* indent = static_cast<lang::LexTokenWrapper*>(args[1]);
+    std::vector<lang::FuncStmt*>* func_stmts = static_cast<std::vector<lang::FuncStmt*>*>(args[2]);
+    lang::LexTokenWrapper* dedent = static_cast<lang::LexTokenWrapper*>(args[3]);
+
+    delete newline;
+    delete indent;
+    delete dedent;
+
+    return func_stmts;
+}
+
+// func_stmts : func_stmt 
+void* parse_func_stmts(std::vector<void*>& args){
+    lang::FuncStmt* func_stmt = static_cast<lang::FuncStmt*>(args[0]);
+    std::vector<lang::FuncStmt*>* func_stmts = new std::vector<lang::FuncStmt*>;
+    func_stmts->push_back(func_stmt);
+
+    return func_stmts;
+}
+
+// func_stmts : func_stmts func_stmt 
+void* parse_func_stmts2(std::vector<void*>& args){
+    lang::FuncStmt* func_stmt = static_cast<lang::FuncStmt*>(args[1]);
+    std::vector<lang::FuncStmt*>* func_stmts = static_cast<std::vector<lang::FuncStmt*>*>(args[0]);
+    func_stmts->push_back(func_stmt);
+
+    return func_stmts;
+}
+
+// func_stmt : simple_func_stmt NEWLINE
+void* parse_func_stmt(std::vector<void*>& args){
+    lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
+    lang::LexTokenWrapper* newline = static_cast<lang::LexTokenWrapper*>(args[1]);
+
+    delete newline;
+
+    return simple_func_stmt;
+}
+
+// simple_func_stmt : expr_stmt
+void* parse_simple_func_stmt(std::vector<void*>& args){
+    return args[0];
+}
+
+// expr_stmt : expr 
+void* parse_expr_stmt(std::vector<void*>& args){
+    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
+    lang::ExprStmt* expr_stmt = new lang::ExprStmt(expr);
+    
+    return expr_stmt;
+}
+
+// expr : expr SUB expr 
+void* parse_bin_sub_expr(std::vector<void*>& args){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lang::LexTokenWrapper* op_tok = static_cast<lang::LexTokenWrapper*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Sub op;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr ADD expr 
+void* parse_bin_add_expr(std::vector<void*>& args){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lang::LexTokenWrapper* op_tok = static_cast<lang::LexTokenWrapper*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Add op;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr MUL expr 
+void* parse_bin_mul_expr(std::vector<void*>& args){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lang::LexTokenWrapper* op_tok = static_cast<lang::LexTokenWrapper*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Mul op;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr DIV expr 
+void* parse_bin_div_expr(std::vector<void*>& args){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lang::LexTokenWrapper* op_tok = static_cast<lang::LexTokenWrapper*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Div op;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : NAME 
+void* parse_name_expr(std::vector<void*>& args){
+    lang::LexTokenWrapper* name = static_cast<lang::LexTokenWrapper*>(args[0]);
+    lang::NameExpr* expr = new lang::NameExpr(name->token().value);
+
+    delete name;
+
+    return expr;
+}
+
+// expr : INT
+void* parse_int_expr(std::vector<void*>& args){
+    lang::LexTokenWrapper* int_tok = static_cast<lang::LexTokenWrapper*>(args[0]);
+    lang::Int* expr = new lang::Int(int_tok->token().value);
+    
+    delete int_tok;
+
+    return expr;
 }
 
 const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
@@ -120,25 +253,25 @@ const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
 
     // Functions 
     lang::make_pr("func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def),
-    lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}),
-    lang::make_pr("func_stmts", {"func_stmt"}),
-    lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}),
-    lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}),
+    lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite),
+    lang::make_pr("func_stmts", {"func_stmt"}, parse_func_stmts),
+    lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2),
+    lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}, parse_func_stmt),
     //lang::make_pr({"func_stmt", {"compound_func_stmt", lang::tokens::NEWLINE}),
-    lang::make_pr("simple_func_stmt", {"expr_stmt"}),
+    lang::make_pr("simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt),
 
     // Simple statements - one line 
-    lang::make_pr("expr_stmt", {"expr"}),
+    lang::make_pr("expr_stmt", {"expr"}, parse_expr_stmt),
 
     // Binary Expressions
-    lang::make_pr("expr", {"expr", "SUB", "expr"}),
-    lang::make_pr("expr", {"expr", "ADD", "expr"}),
-    lang::make_pr("expr", {"expr", "MUL", "expr"}),
-    lang::make_pr("expr", {"expr", "DIV", "expr"}),
+    lang::make_pr("expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr),
+    lang::make_pr("expr", {"expr", "ADD", "expr"}, parse_bin_add_expr),
+    lang::make_pr("expr", {"expr", "MUL", "expr"}, parse_bin_mul_expr),
+    lang::make_pr("expr", {"expr", "DIV", "expr"}, parse_bin_div_expr),
 
     // Atoms
-    lang::make_pr("expr", {"NAME"}),
-    lang::make_pr("expr", {"INT"}),
+    lang::make_pr("expr", {"NAME"}, parse_name_expr),
+    lang::make_pr("expr", {"INT"}, parse_int_expr),
 };
 
 /**************** Associativity ***************/ 

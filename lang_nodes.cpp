@@ -47,7 +47,7 @@ lang::Module::~Module(){
 /**
  * FuncDef Module statement
  */ 
-lang::FuncDef::FuncDef(const std::string& func_name, const FuncSuite* func_suite):
+lang::FuncDef::FuncDef(const std::string& func_name, const std::vector<FuncStmt*>& func_suite):
     func_name_(func_name),
     func_suite_(func_suite){}
 
@@ -58,7 +58,9 @@ std::vector<std::string> lang::FuncDef::lines() const {
 }
 
 lang::FuncDef::~FuncDef(){
-    delete func_suite_;
+    for (lang::FuncStmt* stmt : func_suite_){
+        delete stmt;
+    }
 }
 
 /**
@@ -71,4 +73,70 @@ std::vector<std::string> lang::Newline::lines() const {
     return v;
 }
 
-lang::Newline::~Newline(){}
+/**
+ * Expression Statement
+ */ 
+lang::ExprStmt::ExprStmt(Expr* expr): expr_(expr){}
+
+lang::ExprStmt::~ExprStmt(){
+    delete expr_;
+}
+
+std::vector<std::string> lang::ExprStmt::lines() const {
+    std::vector<std::string> v;
+    for (const auto& line : expr_->lines()){
+        v.push_back(line);
+    }
+    return v;
+}
+
+/**
+ * Expression
+ */ 
+std::vector<std::string> lang::Expr::lines() const {
+    std::vector<std::string> v = {value_str()};
+    return v;
+}
+
+std::string lang::Expr::value_str() const {
+    return "";
+}
+
+/**
+ * BinExpr
+ */ 
+lang::BinExpr::BinExpr(Expr* lhs, BinOperator& op, Expr* rhs):
+    lhs_(lhs), op_(op), rhs_(rhs){}
+
+lang::BinExpr::~BinExpr(){
+    delete lhs_;
+    delete rhs_;
+}
+
+std::string lang::BinExpr::value_str() const {
+    std::ostringstream s;
+    s << lhs_->str() << " " << op_.str() << " " << rhs_->str();
+    return s.str();
+}
+
+/**
+ * Name Expression
+ */ 
+lang::NameExpr::NameExpr(const std::string& name): name_(name){}
+
+std::string lang::NameExpr::value_str() const {
+    return name_;
+}
+
+/**
+ * Int expression
+ */ 
+lang::Int::Int(int value): value_(value){}
+
+lang::Int::Int(const std::string& value): value_(std::stoi(value)){}
+
+std::string lang::Int::value_str() const {
+    std::ostringstream s;
+    s << value_;
+    return s.str();
+}

@@ -1,23 +1,24 @@
 Grammar
 
-Rule 0: module -> module_stmt_list
-Rule 1: module_stmt_list -> module_stmt
-Rule 2: module_stmt_list -> module_stmt_list module_stmt
-Rule 3: module_stmt -> func_def
-Rule 4: module_stmt -> NEWLINE
-Rule 5: func_def -> DEF NAME LPAR RPAR COLON func_suite
-Rule 6: func_suite -> NEWLINE INDENT func_stmts DEDENT
-Rule 7: func_stmts -> func_stmt
-Rule 8: func_stmts -> func_stmts func_stmt
-Rule 9: func_stmt -> simple_func_stmt NEWLINE
-Rule 10: simple_func_stmt -> expr_stmt
-Rule 11: expr_stmt -> expr
-Rule 12: expr -> expr SUB expr
-Rule 13: expr -> expr ADD expr
-Rule 14: expr -> expr MUL expr
-Rule 15: expr -> expr DIV expr
-Rule 16: expr -> NAME
-Rule 17: expr -> INT
+Rule 0: module' -> module
+Rule 1: module -> module_stmt_list
+Rule 2: module_stmt_list -> module_stmt
+Rule 3: module_stmt_list -> module_stmt_list module_stmt
+Rule 4: module_stmt -> func_def
+Rule 5: module_stmt -> NEWLINE
+Rule 6: func_def -> DEF NAME LPAR RPAR COLON func_suite
+Rule 7: func_suite -> NEWLINE INDENT func_stmts DEDENT
+Rule 8: func_stmts -> func_stmt
+Rule 9: func_stmts -> func_stmts func_stmt
+Rule 10: func_stmt -> simple_func_stmt NEWLINE
+Rule 11: simple_func_stmt -> expr_stmt
+Rule 12: expr_stmt -> expr
+Rule 13: expr -> expr SUB expr
+Rule 14: expr -> expr ADD expr
+Rule 15: expr -> expr MUL expr
+Rule 16: expr -> expr DIV expr
+Rule 17: expr -> NAME
+Rule 18: expr -> INT
 
 state 0
 
@@ -27,10 +28,10 @@ state 0
 	expr : expr . MUL expr 
 	expr : expr . DIV expr 
 
-	NEWLINE		reduce using rule 12
-	SUB		reduce using rule 12
+	NEWLINE		reduce using rule 13
+	SUB		reduce using rule 13
 	MUL		shift and go to state 6
-	ADD		reduce using rule 12
+	ADD		reduce using rule 13
 	DIV		shift and go to state 4
 
 state 1
@@ -41,10 +42,10 @@ state 1
 	expr : expr . ADD expr 
 	expr : expr . MUL expr 
 
-	NEWLINE		reduce using rule 14
-	SUB		reduce using rule 14
+	NEWLINE		reduce using rule 15
+	SUB		reduce using rule 15
 	MUL		shift and go to state 6
-	ADD		reduce using rule 14
+	ADD		reduce using rule 15
 	DIV		shift and go to state 4
 
 state 2
@@ -55,19 +56,19 @@ state 2
 	expr : expr . MUL expr 
 	expr : expr . DIV expr 
 
-	NEWLINE		reduce using rule 15
-	SUB		reduce using rule 15
+	NEWLINE		reduce using rule 16
+	SUB		reduce using rule 16
 	MUL		shift and go to state 6
-	ADD		reduce using rule 15
+	ADD		reduce using rule 16
 	DIV		shift and go to state 4
 
 state 3
 
 	func_stmt : simple_func_stmt NEWLINE . 
 
-	NAME		reduce using rule 9
-	INT		reduce using rule 9
-	DEDENT		reduce using rule 9
+	NAME		reduce using rule 10
+	INT		reduce using rule 10
+	DEDENT		reduce using rule 10
 
 state 4
 
@@ -80,8 +81,8 @@ state 4
 	expr : expr DIV . expr 
 
 	expr		goto state 2
-	INT		shift and go to state 22
-	NAME		shift and go to state 25
+	INT		shift and go to state 25
+	NAME		shift and go to state 28
 
 state 5
 
@@ -93,9 +94,9 @@ state 5
 	expr : . expr SUB expr 
 	expr : expr ADD . expr 
 
-	expr		goto state 19
-	INT		shift and go to state 22
-	NAME		shift and go to state 25
+	expr		goto state 16
+	INT		shift and go to state 25
+	NAME		shift and go to state 28
 
 state 6
 
@@ -107,37 +108,39 @@ state 6
 	expr : . expr DIV expr 
 	expr : expr MUL . expr 
 
-	INT		shift and go to state 22
+	INT		shift and go to state 25
 	expr		goto state 1
-	NAME		shift and go to state 25
+	NAME		shift and go to state 28
 
 state 7
 
-	expr : . NAME 
-	expr : . INT 
-	expr : . expr DIV expr 
-	expr : . expr MUL expr 
-	expr : . expr SUB expr 
-	expr : . expr ADD expr 
-	expr : expr SUB . expr 
+	func_stmts : func_stmts func_stmt . 
 
-	expr		goto state 0
-	INT		shift and go to state 22
-	NAME		shift and go to state 25
+	DEDENT		reduce using rule 9
+	INT		reduce using rule 9
+	NAME		reduce using rule 9
 
 state 8
 
-	func_def : DEF NAME LPAR RPAR . COLON func_suite 
+	func_suite : NEWLINE INDENT func_stmts DEDENT . 
 
-	COLON		shift and go to state 17
+	DEF		reduce using rule 7
+	NEWLINE		reduce using rule 7
+	END		reduce using rule 7
 
 state 9
 
 	func_def : DEF NAME LPAR . RPAR COLON func_suite 
 
-	RPAR		shift and go to state 8
+	RPAR		shift and go to state 23
 
 state 10
+
+	module' : module . 
+
+	END		accept 0
+
+state 11
 
 	expr : . INT 
 	func_suite : NEWLINE INDENT func_stmts . DEDENT 
@@ -151,23 +154,37 @@ state 10
 	expr : . expr ADD expr 
 	expr : . expr MUL expr 
 
-	func_stmt		goto state 30
-	NAME		shift and go to state 25
-	expr_stmt		goto state 27
-	simple_func_stmt		goto state 29
-	expr		goto state 28
-	DEDENT		shift and go to state 31
-	INT		shift and go to state 22
+	func_stmt		goto state 7
+	NAME		shift and go to state 28
+	expr_stmt		goto state 30
+	simple_func_stmt		goto state 32
+	expr		goto state 31
+	DEDENT		shift and go to state 8
+	INT		shift and go to state 25
 
-state 11
+state 12
+
+	module_stmt : func_def . 
+
+	DEF		reduce using rule 4
+	NEWLINE		reduce using rule 4
+	END		reduce using rule 4
+
+state 13
+
+	func_def : DEF . NAME LPAR RPAR COLON func_suite 
+
+	NAME		shift and go to state 21
+
+state 14
 
 	module_stmt_list : module_stmt_list module_stmt . 
 
-	END		reduce using rule 2
-	NEWLINE		reduce using rule 2
-	DEF		reduce using rule 2
+	END		reduce using rule 3
+	NEWLINE		reduce using rule 3
+	DEF		reduce using rule 3
 
-state 12
+state 15
 
 	func_def : . DEF NAME LPAR RPAR COLON func_suite 
 	module_stmt : . NEWLINE 
@@ -175,64 +192,16 @@ state 12
 	module_stmt_list : . module_stmt 
 	module_stmt : . func_def 
 	module : . module_stmt_list 
+	module' : . module 
 
-	module_stmt		goto state 15
-	func_def		goto state 13
-	module_stmt_list		goto state 16
-	NEWLINE		shift and go to state 20
-	DEF		shift and go to state 14
-
-state 13
-
-	module_stmt : func_def . 
-
-	DEF		reduce using rule 3
-	NEWLINE		reduce using rule 3
-	END		reduce using rule 3
-
-state 14
-
-	func_def : DEF . NAME LPAR RPAR COLON func_suite 
-
-	NAME		shift and go to state 18
-
-state 15
-
-	module_stmt_list : module_stmt . 
-
-	END		reduce using rule 1
-	NEWLINE		reduce using rule 1
-	DEF		reduce using rule 1
+	module		goto state 10
+	module_stmt		goto state 18
+	func_def		goto state 12
+	module_stmt_list		goto state 19
+	NEWLINE		shift and go to state 17
+	DEF		shift and go to state 13
 
 state 16
-
-	func_def : . DEF NAME LPAR RPAR COLON func_suite 
-	module_stmt : . NEWLINE 
-	module_stmt : . func_def 
-	module : module_stmt_list . 
-	module_stmt_list : module_stmt_list . module_stmt 
-
-	module_stmt		goto state 11
-	END		accept 0
-	func_def		goto state 13
-	NEWLINE		shift and go to state 20
-	DEF		shift and go to state 14
-
-state 17
-
-	func_suite : . NEWLINE INDENT func_stmts DEDENT 
-	func_def : DEF NAME LPAR RPAR COLON . func_suite 
-
-	func_suite		goto state 23
-	NEWLINE		shift and go to state 21
-
-state 18
-
-	func_def : DEF NAME . LPAR RPAR COLON func_suite 
-
-	LPAR		shift and go to state 9
-
-state 19
 
 	expr : expr ADD expr . 
 	expr : expr . SUB expr 
@@ -240,45 +209,101 @@ state 19
 	expr : expr . MUL expr 
 	expr : expr . DIV expr 
 
-	NEWLINE		reduce using rule 13
-	SUB		reduce using rule 13
+	NEWLINE		reduce using rule 14
+	SUB		reduce using rule 14
 	MUL		shift and go to state 6
-	ADD		reduce using rule 13
+	ADD		reduce using rule 14
 	DIV		shift and go to state 4
 
-state 20
+state 17
 
 	module_stmt : NEWLINE . 
 
-	DEF		reduce using rule 4
-	NEWLINE		reduce using rule 4
-	END		reduce using rule 4
+	DEF		reduce using rule 5
+	NEWLINE		reduce using rule 5
+	END		reduce using rule 5
+
+state 18
+
+	module_stmt_list : module_stmt . 
+
+	END		reduce using rule 2
+	NEWLINE		reduce using rule 2
+	DEF		reduce using rule 2
+
+state 19
+
+	func_def : . DEF NAME LPAR RPAR COLON func_suite 
+	module_stmt : . NEWLINE 
+	module_stmt : . func_def 
+	module : module_stmt_list . 
+	module_stmt_list : module_stmt_list . module_stmt 
+
+	module_stmt		goto state 14
+	END		reduce using rule 1
+	func_def		goto state 12
+	NEWLINE		shift and go to state 17
+	DEF		shift and go to state 13
+
+state 20
+
+	func_suite : . NEWLINE INDENT func_stmts DEDENT 
+	func_def : DEF NAME LPAR RPAR COLON . func_suite 
+
+	func_suite		goto state 26
+	NEWLINE		shift and go to state 24
 
 state 21
 
-	func_suite : NEWLINE . INDENT func_stmts DEDENT 
+	func_def : DEF NAME . LPAR RPAR COLON func_suite 
 
-	INDENT		shift and go to state 24
+	LPAR		shift and go to state 9
 
 state 22
 
-	expr : INT . 
+	expr : . NAME 
+	expr : . INT 
+	expr : . expr DIV expr 
+	expr : . expr MUL expr 
+	expr : . expr SUB expr 
+	expr : . expr ADD expr 
+	expr : expr SUB . expr 
 
-	NEWLINE		reduce using rule 17
-	SUB		reduce using rule 17
-	MUL		reduce using rule 17
-	ADD		reduce using rule 17
-	DIV		reduce using rule 17
+	expr		goto state 0
+	INT		shift and go to state 25
+	NAME		shift and go to state 28
 
 state 23
 
-	func_def : DEF NAME LPAR RPAR COLON func_suite . 
+	func_def : DEF NAME LPAR RPAR . COLON func_suite 
 
-	END		reduce using rule 5
-	NEWLINE		reduce using rule 5
-	DEF		reduce using rule 5
+	COLON		shift and go to state 20
 
 state 24
+
+	func_suite : NEWLINE . INDENT func_stmts DEDENT 
+
+	INDENT		shift and go to state 27
+
+state 25
+
+	expr : INT . 
+
+	NEWLINE		reduce using rule 18
+	SUB		reduce using rule 18
+	MUL		reduce using rule 18
+	ADD		reduce using rule 18
+	DIV		reduce using rule 18
+
+state 26
+
+	func_def : DEF NAME LPAR RPAR COLON func_suite . 
+
+	END		reduce using rule 6
+	NEWLINE		reduce using rule 6
+	DEF		reduce using rule 6
+
+state 27
 
 	expr : . NAME 
 	func_suite : NEWLINE INDENT . func_stmts DEDENT 
@@ -293,39 +318,39 @@ state 24
 	expr : . expr ADD expr 
 	expr : . expr MUL expr 
 
-	simple_func_stmt		goto state 29
-	expr		goto state 28
-	func_stmt		goto state 26
-	INT		shift and go to state 22
-	expr_stmt		goto state 27
-	func_stmts		goto state 10
-	NAME		shift and go to state 25
+	simple_func_stmt		goto state 32
+	expr		goto state 31
+	func_stmt		goto state 29
+	INT		shift and go to state 25
+	expr_stmt		goto state 30
+	func_stmts		goto state 11
+	NAME		shift and go to state 28
 
-state 25
+state 28
 
 	expr : NAME . 
 
-	NEWLINE		reduce using rule 16
-	SUB		reduce using rule 16
-	MUL		reduce using rule 16
-	ADD		reduce using rule 16
-	DIV		reduce using rule 16
+	NEWLINE		reduce using rule 17
+	SUB		reduce using rule 17
+	MUL		reduce using rule 17
+	ADD		reduce using rule 17
+	DIV		reduce using rule 17
 
-state 26
+state 29
 
 	func_stmts : func_stmt . 
 
-	DEDENT		reduce using rule 7
-	INT		reduce using rule 7
-	NAME		reduce using rule 7
+	DEDENT		reduce using rule 8
+	INT		reduce using rule 8
+	NAME		reduce using rule 8
 
-state 27
+state 30
 
 	simple_func_stmt : expr_stmt . 
 
-	NEWLINE		reduce using rule 10
+	NEWLINE		reduce using rule 11
 
-state 28
+state 31
 
 	expr : expr . MUL expr 
 	expr : expr . ADD expr 
@@ -333,33 +358,17 @@ state 28
 	expr_stmt : expr . 
 	expr : expr . SUB expr 
 
-	NEWLINE		reduce using rule 11
+	NEWLINE		reduce using rule 12
 	DIV		shift and go to state 4
 	ADD		shift and go to state 5
-	SUB		shift and go to state 7
+	SUB		shift and go to state 22
 	MUL		shift and go to state 6
 
-state 29
+state 32
 
 	func_stmt : simple_func_stmt . NEWLINE 
 
 	NEWLINE		shift and go to state 3
-
-state 30
-
-	func_stmts : func_stmts func_stmt . 
-
-	DEDENT		reduce using rule 8
-	INT		reduce using rule 8
-	NAME		reduce using rule 8
-
-state 31
-
-	func_suite : NEWLINE INDENT func_stmts DEDENT . 
-
-	DEF		reduce using rule 6
-	NEWLINE		reduce using rule 6
-	END		reduce using rule 6
 
 
 Conflicts (0)
