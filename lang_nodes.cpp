@@ -6,9 +6,14 @@ static const std::string INDENT = "    ";
  * Base node
  */ 
 std::string lang::Node::str() const {
-    std::ostringstream s;
-    for (const auto& line : lines()){
-        s << line << std::endl;
+    std::vector<std::string> node_lines = lines();
+    if (node_lines.empty()){
+        return "";
+    }
+
+    std::ostringstream s(node_lines.front());
+    for (auto it = node_lines.begin()+1; it < node_lines.end(); ++it){
+        s << std::endl << *it;
     }
     return s.str();
 }
@@ -30,25 +35,34 @@ std::vector<std::string> lang::LexTokenWrapper::lines() const {
  */ 
 std::vector<std::string> lang::Module::lines() const {
     std::vector<std::string> v;
-    for (const ModuleStmt& node : body_){
-        for (const std::string line : node.lines()){
+    for (const ModuleStmt* node : body_){
+        for (const std::string line : node->lines()){
             v.push_back(line);
         }
     }
     return v;
 }
 
+lang::Module::~Module(){
+    for (const ModuleStmt* stmt : body_){
+        delete stmt;
+    }
+}
+
 /**
  * FuncDef Module statement
  */ 
-lang::FuncDef::FuncDef(const std::string& func_name, const std::vector<FuncStmt>& func_suite):
+lang::FuncDef::FuncDef(const std::string& func_name, std::vector<FuncStmt*>& func_suite):
     func_name_(func_name),
-    func_suite_(func_suite)
-{
-    std::cerr << func_suite_.size() << std::endl;
+    func_suite_(func_suite){}
+
+lang::FuncDef::~FuncDef(){
+    for (const FuncStmt* stmt : func_suite_){
+        delete stmt;
+    }
 }
 
-const std::vector<lang::FuncStmt>& lang::FuncDef::suite() const {
+const std::vector<lang::FuncStmt*>& lang::FuncDef::suite() const {
     return func_suite_;
 }
 
@@ -60,8 +74,8 @@ std::vector<std::string> lang::FuncDef::lines() const {
     line1 << "def " << func_name_ << "():";
     v.push_back(line1.str());
 
-    for (const FuncStmt& stmt : func_suite_){
-        for (std::string& stmt_line : stmt.lines()){
+    for (const FuncStmt* stmt : func_suite_){
+        for (std::string& stmt_line : stmt->lines()){
             v.push_back(INDENT + stmt_line);
         }
     }
@@ -82,14 +96,18 @@ std::vector<std::string> lang::Newline::lines() const {
 /**
  * Expression Statement
  */ 
-lang::ExprStmt::ExprStmt(Expr& expr): expr_(expr){}
+lang::ExprStmt::ExprStmt(Expr* expr): expr_(expr){}
 
 std::vector<std::string> lang::ExprStmt::lines() const {
     std::vector<std::string> v;
-    for (const auto& line : expr_.lines()){
+    for (const auto& line : expr_->lines()){
         v.push_back(line);
     }
     return v;
+}
+
+lang::ExprStmt::~ExprStmt(){
+    delete expr_;
 }
 
 /**
@@ -107,12 +125,18 @@ std::string lang::Expr::value_str() const {
 /**
  * BinExpr
  */ 
-lang::BinExpr::BinExpr(Expr& lhs, BinOperator& op, Expr& rhs):
+lang::BinExpr::BinExpr(Expr* lhs, BinOperator* op, Expr* rhs):
     lhs_(lhs), op_(op), rhs_(rhs){}
+
+lang::BinExpr::~BinExpr(){
+    delete lhs_;
+    delete op_;
+    delete rhs_;
+}
 
 std::string lang::BinExpr::value_str() const {
     std::ostringstream s;
-    s << lhs_.str() << " " << op_.str() << " " << rhs_.str();
+    s << lhs_->str() << " " << op_->symbol() << " " << rhs_->str();
     return s.str();
 }
 

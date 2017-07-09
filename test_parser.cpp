@@ -46,14 +46,9 @@ def func():
     assert(lexer.empty());
 
     // Check the nodes
-    assert(module_node->body().size() == 2);  // The first newline and the func def
-    
-    const lang::ModuleStmt& stmt = module_node->body()[1];
-    const lang::FuncDef& funcdef = dynamic_cast<const lang::FuncDef&>(stmt);
+    assert(module_node->body().size() == 2);  // The first newline and the func def 
 
-    assert(funcdef.suite().size() == 1);
-
-    std::cerr << module_node->str() << std::endl;
+    std::cerr << module_node->str();
 
     delete module_node;
 }

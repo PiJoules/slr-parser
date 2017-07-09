@@ -119,11 +119,30 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
-    class BinOperator: public Node {};
-    class Add: public BinOperator {};
-    class Sub: public BinOperator {};
-    class Div: public BinOperator {};
-    class Mul: public BinOperator {};
+    class BinOperator: public Node {
+        public:
+            virtual std::string symbol() const { return ""; }
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v = {symbol()};
+                return v;
+            }
+    };
+    class Add: public BinOperator {
+        public:
+            std::string symbol() const { return "+"; }
+    };
+    class Sub: public BinOperator {
+        public:
+            std::string symbol() const { return "-"; }
+    };
+    class Div: public BinOperator {
+        public:
+            std::string symbol() const { return "/"; }
+    };
+    class Mul: public BinOperator {
+        public:
+            std::string symbol() const { return "*"; }
+    };
 
     class Int: public Expr {
         private:
@@ -146,33 +165,36 @@ namespace lang {
 
     class BinExpr: public Expr {
         private:
-            Expr lhs_;
-            BinOperator op_;
-            Expr rhs_;
+            Expr* lhs_;
+            BinOperator* op_;
+            Expr* rhs_;
 
         public:
-            BinExpr(Expr&, BinOperator&, Expr&);
+            BinExpr(Expr*, BinOperator*, Expr*);
             std::string value_str() const;
+            ~BinExpr();
     };
 
     class ExprStmt: public SimpleFuncStmt {
         private:
-            Expr expr_;
+            Expr* expr_;
 
         public:
-            ExprStmt(Expr&);
+            ExprStmt(Expr*);
             std::vector<std::string> lines() const;
+            ~ExprStmt();
     };
 
     class FuncDef: public ModuleStmt {
         private:
             std::string func_name_;
-            std::vector<FuncStmt> func_suite_;
+            std::vector<FuncStmt*> func_suite_;
     
         public:
-            FuncDef(const std::string&, const std::vector<FuncStmt>&);
-            const std::vector<FuncStmt>& suite() const;
+            FuncDef(const std::string&, std::vector<FuncStmt*>&);
+            const std::vector<FuncStmt*>& suite() const;
             std::vector<std::string> lines() const;
+            ~FuncDef();
     };
 
     class Newline: public ModuleStmt {
@@ -182,12 +204,13 @@ namespace lang {
 
     class Module: public Node {
         private:
-            std::vector<ModuleStmt> body_;
+            std::vector<ModuleStmt*> body_;
 
         public:
-            Module(std::vector<ModuleStmt>& body): body_(body){}
-            const std::vector<ModuleStmt>& body() const { return body_; }
+            Module(std::vector<ModuleStmt*>& body): body_(body){}
+            const std::vector<ModuleStmt*>& body() const { return body_; }
             std::vector<std::string> lines() const;
+            ~Module();
     };
 
     /********** Shift reduce parsing *************/
