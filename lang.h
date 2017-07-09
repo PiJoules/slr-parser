@@ -106,7 +106,6 @@ namespace lang {
             }
             LexToken token() const;
             virtual std::vector<std::string> lines() const;
-            ~LexTokenWrapper();
     };
 
     class ModuleStmt: public Node {};
@@ -147,35 +146,33 @@ namespace lang {
 
     class BinExpr: public Expr {
         private:
-            Expr* lhs_;
+            Expr lhs_;
             BinOperator op_;
-            Expr* rhs_;
+            Expr rhs_;
 
         public:
-            BinExpr(Expr*, BinOperator&, Expr*);
-            ~BinExpr();
+            BinExpr(Expr&, BinOperator&, Expr&);
             std::string value_str() const;
     };
 
     class ExprStmt: public SimpleFuncStmt {
         private:
-            Expr* expr_;
+            Expr expr_;
 
         public:
-            ExprStmt(Expr*);
+            ExprStmt(Expr&);
             std::vector<std::string> lines() const;
-            ~ExprStmt();
     };
 
     class FuncDef: public ModuleStmt {
         private:
-            const std::string& func_name_;
-            const std::vector<FuncStmt*> func_suite_;
+            std::string func_name_;
+            std::vector<FuncStmt> func_suite_;
     
         public:
-            FuncDef(const std::string&, const std::vector<FuncStmt*>&);
+            FuncDef(const std::string&, const std::vector<FuncStmt>&);
+            const std::vector<FuncStmt>& suite() const;
             std::vector<std::string> lines() const;
-            ~FuncDef();
     };
 
     class Newline: public ModuleStmt {
@@ -185,14 +182,12 @@ namespace lang {
 
     class Module: public Node {
         private:
-            const std::vector<ModuleStmt*> body_;
+            std::vector<ModuleStmt> body_;
 
         public:
-            Module(const std::vector<ModuleStmt*>& body): body_(body){}
-            const std::vector<ModuleStmt*>& body() const { return body_; }
+            Module(std::vector<ModuleStmt>& body): body_(body){}
+            const std::vector<ModuleStmt>& body() const { return body_; }
             std::vector<std::string> lines() const;
-
-            ~Module();
     };
 
     /********** Shift reduce parsing *************/

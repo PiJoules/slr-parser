@@ -44,7 +44,17 @@ def func():
     lang::Parser parser(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
     lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
     assert(lexer.empty());
-    assert(module_node);
+
+    // Check the nodes
+    assert(module_node->body().size() == 2);  // The first newline and the func def
+    
+    const lang::ModuleStmt& stmt = module_node->body()[1];
+    const lang::FuncDef& funcdef = dynamic_cast<const lang::FuncDef&>(stmt);
+
+    assert(funcdef.suite().size() == 1);
+
+    std::cerr << module_node->str() << std::endl;
+
     delete module_node;
 }
 
