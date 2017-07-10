@@ -53,7 +53,7 @@ test_table_generation: clean_exes test_table_generation.out
 clean_test_parser:
 	rm -rf test_parser.out
 
-test_parser: $(OBJS) clean_test_parser test_parser.out
+test_parser: $(OBJS) clean_exes test_parser.out
 	./test_parser.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_parser.out || (echo "memory leak"; exit 1); fi
 

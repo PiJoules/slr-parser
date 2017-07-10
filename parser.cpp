@@ -3,21 +3,21 @@
 /**
  * Initialize a closure from an item set and list of productions.
  */
-void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::prod_rule_t>& prod_rules){
+void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::ParseRule>& prod_rules){
     std::size_t last_size;
 
     do {
         last_size = item_set.size();
         for (const auto& item : item_set){
             std::size_t pos = item.second;  // dot position
-            lang::production_t prod = std::get<1>(item.first);  // production list
+            lang::production_t prod = item.first.production;  // production list
             if (pos < prod.size()){
                 std::string next_symbol = prod[pos];
                 
                 // Find all productions that start with the next_symbol
                 // TODO: See if we can optomize this later
                 for (const auto prod_rule : prod_rules){
-                    if (next_symbol == std::get<0>(prod_rule)){
+                    if (next_symbol == prod_rule.rule){
                         item_set.insert({prod_rule, 0});
                     }
                 }
@@ -31,11 +31,11 @@ void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::prod
  */ 
 lang::item_set_t lang::move_pos(const lang::item_set_t& item_set, 
                                 const std::string& symbol,
-                                const std::vector<lang::prod_rule_t>& prod_rules){
+                                const std::vector<lang::ParseRule>& prod_rules){
     item_set_t moved_item_set;
     for (const auto lr_item : item_set){
         auto prod_rule = lr_item.first;
-        const production_t& prod = std::get<1>(prod_rule);
+        const production_t& prod = prod_rule.production;
         std::size_t pos = lr_item.second;
 
         if (pos < prod.size()){
@@ -51,13 +51,13 @@ lang::item_set_t lang::move_pos(const lang::item_set_t& item_set,
 /**
  * Create the canonical collections of the DFA.
  */ 
-void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::prod_rule_t>& prod_rules){
+void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::ParseRule>& prod_rules){
     std::size_t last_size;
     do {
         last_size = dfa.size();
-        for (const auto& item_set : dfa){
-            for (const auto& lr_item : item_set){
-                auto production = std::get<1>(std::get<0>(lr_item));
+        for (const item_set_t& item_set : dfa){
+            for (const lr_item_t& lr_item : item_set){
+                auto production = lr_item.first.production;
                 std::size_t pos = lr_item.second;
                 if (pos < production.size()){
                     auto next_symbol = production[pos];
@@ -88,18 +88,22 @@ static void* parse_prime(std::vector<void*>& args){
 /**
  * Initialize the parse table from the production rules.
  */
-lang::Parser::Parser(Lexer& lexer, const std::vector<prod_rule_t>& prod_rules, 
+lang::Parser::Parser(Lexer& lexer, const std::vector<ParseRule>& prod_rules, 
                      const precedence_t& precedence):
     lexer_(lexer)
 {
     prod_rules_ = prod_rules;
 
     // Add new top level rule 
-    std::string old_top_rule = std::get<0>(prod_rules_.front());
-    lang::prod_rule_t new_top_pr = make_pr(old_top_rule + "'", {old_top_rule}, parse_prime);
+    std::string old_top_rule = prod_rules_.front().rule;
+    ParseRule new_top_pr = {
+        old_top_rule + "'",  // prime rule
+        {old_top_rule}, 
+        parse_prime
+    };
     prod_rules_.insert(prod_rules_.begin(), new_top_pr);
 
-    start_nonterminal_ = std::get<0>(prod_rules_.front());
+    start_nonterminal_ = prod_rules_.front().rule;
     init_precedence(precedence);
 
     const auto& entry = prod_rules_.front();
@@ -141,7 +145,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
     for (const auto& item_set : dfa){
         for (const auto& lr_item : item_set){
             const auto& prod_rule = lr_item.first;
-            const auto& prod = std::get<1>(prod_rule);
+            const auto& prod = prod_rule.production;
             const std::size_t& pos = lr_item.second;
             auto& action_table = parse_table_[i];
             if (pos < prod.size()){
@@ -179,7 +183,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     // If A -> a ., then ACTION[i, b] = Reduce A -> a for all terminals 
                     // in B -> A . b where b is a terminal
                     int rule_num = prod_rule_map_.at(prod_rule);
-                    const std::string& rule = std::get<0>(prod_rule);
+                    const std::string& rule = prod_rule.rule;
                     ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
                     
                     for (const std::string& follow : follows(rule)){
@@ -202,7 +206,7 @@ std::string lang::Parser::key_for_instr(const ParseInstr& instr, const std::stri
     std::string key_term;
     if (instr.action == ParseInstr::REDUCE){
         std::size_t rule_num = instr.value;
-        const production_t& reduce_prod = std::get<1>(prod_rules_[rule_num]);
+        const production_t& reduce_prod = prod_rules_[rule_num].production;
         key_term = rightmost_terminal(reduce_prod);
     }
     else {
@@ -364,7 +368,7 @@ std::string lang::Parser::conflict_str(const ParseInstr& instr, const std::strin
             stream << "shift and go to state " << instr.value << " on lookahead " << lookahead;
             break;
         case ParseInstr::REDUCE: 
-            prod = std::get<1>(prod_rules_[instr.value]);
+            prod = prod_rules_[instr.value].production;
             stream << "reduce using rule " << instr.value << " on terminal " << rightmost_terminal(prod);
             break;
         case ParseInstr::GOTO: 
@@ -390,13 +394,13 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
  * Reduce depending on the type of associativity.
  */
 void lang::Parser::reduce(
-        const prod_rule_t& prod_rule, 
+        const ParseRule& prod_rule, 
         std::vector<LexToken>& symbol_stack,
         std::vector<void*>& node_stack,
         std::vector<std::size_t>& state_stack){
-    const std::string& rule = std::get<0>(prod_rule);
-    const production_t& prod = std::get<1>(prod_rule);
-    const parse_func_t func = std::get<2>(prod_rule);
+    const std::string& rule = prod_rule.rule;
+    const production_t& prod = prod_rule.production;
+    const parse_func_t func = prod_rule.callback;
     
     LexToken rule_token = {rule,"",0,0,0};
 
@@ -560,8 +564,8 @@ std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol)
     // Find the productions with this symbol on the RHS 
     for (const auto& prod_rule : prod_rules_){
         // For each rule and production
-        const std::string& rule = std::get<0>(prod_rule);
-        const production_t& prod = std::get<1>(prod_rule);
+        const std::string& rule = prod_rule.rule;
+        const production_t& prod = prod_rule.production;
 
         // Check for other symbols that follow this one in a production
         for (std::size_t i = 0; i < prod.size()-1; ++i){
@@ -606,8 +610,8 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
     std::unordered_set<std::string> firsts_set;
 
     for (const auto& prod_rule : prod_rules_){
-        const std::string& rule = std::get<0>(prod_rule);
-        const production_t& prod = std::get<1>(prod_rule);
+        const std::string& rule = prod_rule.rule;
+        const production_t& prod = prod_rule.production;
         if (rule == symbol){
             // For each production mapped to rule X 
             // put firsts(Y1) - {e} into firsts(X)

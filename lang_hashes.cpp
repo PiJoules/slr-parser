@@ -3,9 +3,9 @@
 /**
  * Borrowed from python3.6's tuple hash
  */
-std::size_t lang::ProdRuleHasher::operator()(const prod_rule_t& prod_rule) const {
-    std::string rule = std::get<0>(prod_rule);
-    production_t prod = std::get<1>(prod_rule);
+std::size_t lang::ProdRuleHasher::operator()(const ParseRule& prod_rule) const {
+    std::string rule = prod_rule.rule;
+    production_t prod = prod_rule.production;
     std::hash<std::string> str_hasher;
     std::size_t rule_hash = str_hasher(rule);
 

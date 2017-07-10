@@ -217,19 +217,26 @@ namespace lang {
 
     typedef std::vector<std::string> production_t;
     typedef void* (*parse_func_t)(std::vector<void*>&);
-    typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
 
-    prod_rule_t make_pr(
-            const std::string&, 
-            const std::vector<std::string>&, 
-            const parse_func_t& func = nullptr);
+    typedef struct ParseRule ParseRule;
+    struct ParseRule {
+        std::string rule;
+        production_t production;
+        parse_func_t callback;
+
+        bool operator==(const ParseRule& other) const {
+            return this->rule == other.rule &&
+                   this->production == other.production;
+        }
+    };
+    //typedef std::tuple<std::string, production_t, parse_func_t> prod_rule_t;
 
     struct ProdRuleHasher {
-        std::size_t operator()(const prod_rule_t& prod_rule) const;
+        std::size_t operator()(const ParseRule& prod_rule) const;
     };
 
     // Parse table generation
-    typedef std::pair<prod_rule_t, int> lr_item_t;
+    typedef std::pair<ParseRule, int> lr_item_t;
     struct ItemHasher {
         std::size_t operator()(const lr_item_t& lr_item) const;
     };
@@ -242,9 +249,9 @@ namespace lang {
     };
     typedef std::unordered_set<item_set_t, ItemSetHasher> dfa_t;
 
-    void init_closure(item_set_t&, const std::vector<prod_rule_t>&);
-    item_set_t move_pos(const item_set_t&, const std::string&, const std::vector<prod_rule_t>&);
-    void init_dfa(dfa_t& dfa, const std::vector<prod_rule_t>&);
+    void init_closure(item_set_t&, const std::vector<ParseRule>&);
+    item_set_t move_pos(const item_set_t&, const std::string&, const std::vector<ParseRule>&);
+    void init_dfa(dfa_t& dfa, const std::vector<ParseRule>&);
 
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
@@ -267,7 +274,7 @@ namespace lang {
 
     ///******** Parser ********/ 
 
-    extern const std::vector<prod_rule_t> LANG_RULES;
+    extern const std::vector<ParseRule> LANG_RULES;
     extern const tokens_map_t LANG_TOKENS;
     extern const precedence_t LANG_PRECEDENCE;
 
@@ -284,10 +291,10 @@ namespace lang {
             std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
 
             item_set_t top_item_set_;
-            std::vector<prod_rule_t> prod_rules_;  // list of produciton rules
+            std::vector<ParseRule> prod_rules_;  // list of produciton rules
             parse_table_t parse_table_;  // map of states to map of strings to parse instructions
             std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
-            std::unordered_map<const prod_rule_t, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
+            std::unordered_map<const ParseRule, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
             std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;  // map of symbol to pair of the precedence value and associativity
             std::vector<ParserConflict> conflicts_;
 
@@ -306,13 +313,13 @@ namespace lang {
             std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
 
         public:
-            Parser(Lexer&, const std::vector<prod_rule_t>& prod_rules,
+            Parser(Lexer&, const std::vector<ParseRule>& prod_rules,
                    const precedence_t& precedence={{}});
             void dump_grammar(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
             void* parse(const std::string&);
-            void reduce(const prod_rule_t&, std::vector<LexToken>&, std::vector<void*>&,
+            void reduce(const ParseRule&, std::vector<LexToken>&, std::vector<void*>&,
                         std::vector<std::size_t>&);
             
             // Firsts/follows methods 
@@ -329,7 +336,7 @@ namespace lang {
      */ 
     std::string str(const LexToken&);
     std::string str(const production_t& production);
-    std::string str(const prod_rule_t& prod_rule);
+    std::string str(const ParseRule& prod_rule);
     std::string str(const lr_item_t& lr_item);
     std::string str(const item_set_t& item_set);
     std::string str(const ParseInstr::Action&);

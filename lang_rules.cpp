@@ -146,14 +146,8 @@ void* parse_func_stmts3(std::vector<void*>& args){
     return func_stmts;
 }
 
-// func_stmt : simple_func_stmt
-void* parse_func_stmt(std::vector<void*>& args){
-    lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
-    return simple_func_stmt;
-}
-
 // func_stmt : simple_func_stmt NEWLINE
-void* parse_func_stmt2(std::vector<void*>& args){
+void* parse_func_stmt(std::vector<void*>& args){
     lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
     lang::LexTokenWrapper* newline = static_cast<lang::LexTokenWrapper*>(args[1]);
 
@@ -251,34 +245,34 @@ void* parse_int_expr(std::vector<void*>& args){
     return expr;
 }
 
-const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
+const std::vector<lang::ParseRule> lang::LANG_RULES = {
     // Entry point 
-    lang::make_pr("module", {"module_stmt_list"}, parse_module),
-    lang::make_pr("module_stmt_list", {"module_stmt"}, parse_module_stmt_list),
-    lang::make_pr("module_stmt_list", {"module_stmt_list", "module_stmt"}, parse_module_stmt_list2),
-    lang::make_pr("module_stmt", {"func_def"}, parse_module_stmt),
-    lang::make_pr("module_stmt", {"NEWLINE"}, parse_module_stmt2),
+    {"module", {"module_stmt_list"}, parse_module},
+    {"module_stmt_list", {"module_stmt"}, parse_module_stmt_list},
+    {"module_stmt_list", {"module_stmt_list", "module_stmt"}, parse_module_stmt_list2},
+    {"module_stmt", {"func_def"}, parse_module_stmt},
+    {"module_stmt", {"NEWLINE"}, parse_module_stmt2},
 
     // Functions 
-    lang::make_pr("func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def),
-    lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite),
-    lang::make_pr("func_stmts", {"func_stmt"}, parse_func_stmts),
-    lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2),
-    lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}, parse_func_stmt2),
-    lang::make_pr("simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt),
+    {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
+    {"func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite},
+    {"func_stmts", {"func_stmt"}, parse_func_stmts},
+    {"func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2},
+    {"func_stmt", {"simple_func_stmt", "NEWLINE"}, parse_func_stmt},
+    {"simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt},
 
     // Simple statements - one line 
-    lang::make_pr("expr_stmt", {"expr"}, parse_expr_stmt),
+    {"expr_stmt", {"expr"}, parse_expr_stmt},
 
     // Binary Expressions
-    lang::make_pr("expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr),
-    lang::make_pr("expr", {"expr", "ADD", "expr"}, parse_bin_add_expr),
-    lang::make_pr("expr", {"expr", "MUL", "expr"}, parse_bin_mul_expr),
-    lang::make_pr("expr", {"expr", "DIV", "expr"}, parse_bin_div_expr),
+    {"expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr},
+    {"expr", {"expr", "ADD", "expr"}, parse_bin_add_expr},
+    {"expr", {"expr", "MUL", "expr"}, parse_bin_mul_expr},
+    {"expr", {"expr", "DIV", "expr"}, parse_bin_div_expr},
 
     // Atoms
-    lang::make_pr("expr", {"NAME"}, parse_name_expr),
-    lang::make_pr("expr", {"INT"}, parse_int_expr),
+    {"expr", {"NAME"}, parse_name_expr},
+    {"expr", {"INT"}, parse_int_expr},
 };
 
 /**************** Associativity ***************/ 

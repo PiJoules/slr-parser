@@ -13,14 +13,14 @@ static const lang::tokens_map_t test_tokens = {
     {"DIV", {R"(\\)", nullptr}},
 };
 
-static const std::vector<lang::prod_rule_t> test_rules = {
-    lang::make_pr("module", {"expr"}),
-    lang::make_pr("expr", {"expr", "SUB", "expr"}),
-    lang::make_pr("expr", {"expr", "ADD", "expr"}),
-    lang::make_pr("expr", {"expr", "MUL", "expr"}),
-    lang::make_pr("expr", {"expr", "DIV", "expr"}),
-    lang::make_pr("expr", {"NAME"}),
-    lang::make_pr("expr", {"INT"}),
+static const std::vector<lang::ParseRule> test_rules = {
+    {"module", {"expr"}, nullptr},
+    {"expr", {"expr", "SUB", "expr"}, nullptr},
+    {"expr", {"expr", "ADD", "expr"}, nullptr},
+    {"expr", {"expr", "MUL", "expr"}, nullptr},
+    {"expr", {"expr", "DIV", "expr"}, nullptr},
+    {"expr", {"NAME"}, nullptr},
+    {"expr", {"INT"}, nullptr},
 };
 
 static const lang::precedence_t test_precedence = {
@@ -29,29 +29,29 @@ static const lang::precedence_t test_precedence = {
 };
 
 static const lang::item_set_t clos_expected = {
-    {lang::make_pr("module", {"expr"}), 0},
-    {lang::make_pr("expr", {"expr", "SUB", "expr"}), 0},
-    {lang::make_pr("expr", {"expr", "ADD", "expr"}), 0},
-    {lang::make_pr("expr", {"expr", "MUL", "expr"}), 0},
-    {lang::make_pr("expr", {"expr", "DIV", "expr"}), 0},
-    {lang::make_pr("expr", {"NAME"}), 0},
-    {lang::make_pr("expr", {"INT"}), 0},
+    {{"module", {"expr"}, nullptr}, 0},
+    {{"expr", {"expr", "SUB", "expr"}, nullptr}, 0},
+    {{"expr", {"expr", "ADD", "expr"}, nullptr}, 0},
+    {{"expr", {"expr", "MUL", "expr"}, nullptr}, 0},
+    {{"expr", {"expr", "DIV", "expr"}, nullptr}, 0},
+    {{"expr", {"NAME"}, nullptr}, 0},
+    {{"expr", {"INT"}, nullptr}, 0},
 };
 
 static const lang::item_set_t expr_expected = {
-    {lang::make_pr("module", {"expr"}), 1},
-    {lang::make_pr("expr", {"expr", "SUB", "expr"}), 1},
-    {lang::make_pr("expr", {"expr", "ADD", "expr"}), 1},
-    {lang::make_pr("expr", {"expr", "MUL", "expr"}), 1},
-    {lang::make_pr("expr", {"expr", "DIV", "expr"}), 1},
+    {{"module", {"expr"}, nullptr}, 1},
+    {{"expr", {"expr", "SUB", "expr"}, nullptr}, 1},
+    {{"expr", {"expr", "ADD", "expr"}, nullptr}, 1},
+    {{"expr", {"expr", "MUL", "expr"}, nullptr}, 1},
+    {{"expr", {"expr", "DIV", "expr"}, nullptr}, 1},
 };
 
 static const lang::item_set_t name_expected = {
-    {lang::make_pr("expr", {"NAME"}), 1},
+    {{"expr", {"NAME"}, nullptr}, 1},
 };
 
 static const lang::item_set_t int_expected = {
-    {lang::make_pr("expr", {"INT"}), 1},
+    {{"expr", {"INT"}, nullptr}, 1},
 };
 
 void test_rules1(){
@@ -64,15 +64,15 @@ void test_rules1(){
         {"z", {"z", nullptr}},
     };
 
-    const std::vector<lang::prod_rule_t> rules = {
-        lang::make_pr("S", {"B", "b"}),
-        lang::make_pr("S", {"C", "d"}),
-        lang::make_pr("B", {"a", "B"}),
-        lang::make_pr("B", {"o"}),
-        lang::make_pr("B", {"D", "a"}),
-        lang::make_pr("D", {"z"}),
-        lang::make_pr("C", {"c", "C"}),
-        lang::make_pr("C", {"o"}),
+    const std::vector<lang::ParseRule> rules = {
+        {"S", {"B", "b"}, nullptr},
+        {"S", {"C", "d"}, nullptr},
+        {"B", {"a", "B"}, nullptr},
+        {"B", {"o"}, nullptr},
+        {"B", {"D", "a"}, nullptr},
+        {"D", {"z"}, nullptr},
+        {"C", {"c", "C"}, nullptr},
+        {"C", {"o"}, nullptr},
     };
 
     lang::Lexer lexer(tokens);
@@ -111,13 +111,13 @@ void test_rules2(){
         {"PLUS", {R"(\+)", nullptr}},
     };
 
-    const std::vector<lang::prod_rule_t> rules = {
-        lang::make_pr("S", {"E"}),
-        lang::make_pr("E", {"T"}),
-        lang::make_pr("E", {"LPAR", "E", "RPAR"}),
-        lang::make_pr("T", {"n"}),
-        lang::make_pr("T", {"PLUS", "T"}),
-        lang::make_pr("T", {"T", "PLUS", "T"}),
+    const std::vector<lang::ParseRule> rules = {
+        {"S", {"E"}, nullptr},
+        {"E", {"T"}, nullptr},
+        {"E", {"LPAR", "E", "RPAR"}, nullptr},
+        {"T", {"n"}, nullptr},
+        {"T", {"PLUS", "T"}, nullptr},
+        {"T", {"T", "PLUS", "T"}, nullptr},
     };
 
     lang::Lexer lexer(tokens);
@@ -152,13 +152,13 @@ void test_rules3(){
         {"ID", {"id", nullptr}},
     };
 
-    const std::vector<lang::prod_rule_t> rules = {
-        lang::make_pr("E", {"E", "PLUS", "T"}),
-        lang::make_pr("E", {"T"}),
-        lang::make_pr("T", {"T", "MULT", "F"}),
-        lang::make_pr("T", {"F"}),
-        lang::make_pr("F", {"LPAR", "E", "RPAR"}),
-        lang::make_pr("F", {"ID"}),
+    const std::vector<lang::ParseRule> rules = {
+        {"E", {"E", "PLUS", "T"}, nullptr},
+        {"E", {"T"}, nullptr},
+        {"T", {"T", "MULT", "F"}, nullptr},
+        {"T", {"F"}, nullptr},
+        {"F", {"LPAR", "E", "RPAR"}, nullptr},
+        {"F", {"ID"}, nullptr},
     };
 
     lang::Lexer lexer(tokens);
@@ -207,10 +207,10 @@ void test_rules5(){
         {"a", {"a", nullptr}},
     };
 
-    const std::vector<lang::prod_rule_t> rules = {
-        lang::make_pr("S", {"X"}),
-        lang::make_pr("X", {"a"}),
-        lang::make_pr("X", {lang::nonterminals::EPSILON}),
+    const std::vector<lang::ParseRule> rules = {
+        {"S", {"X"}, nullptr},
+        {"X", {"a"}, nullptr},
+        {"X", {lang::nonterminals::EPSILON}, nullptr},
     };
 
     lang::Lexer lexer(tokens);
@@ -267,21 +267,21 @@ void test_rules6(){
         {"TOKEN", {"TOKEN", nullptr}},
     };
 
-    const std::vector<lang::prod_rule_t> rules = {
+    const std::vector<lang::ParseRule> rules = {
         // Entry point
-        lang::make_pr("module", {"module_stmt_list"}),
-        lang::make_pr("module_stmt_list", {"module_stmt"}),
-        lang::make_pr("module_stmt_list", {"module_stmt_list", "module_stmt"}),
-        lang::make_pr("module_stmt", {"func_def"}),
-        lang::make_pr("module_stmt", {"NEWLINE"}),
+        {"module", {"module_stmt_list"}, nullptr},
+        {"module_stmt_list", {"module_stmt"}, nullptr},
+        {"module_stmt_list", {"module_stmt_list", "module_stmt"}, nullptr},
+        {"module_stmt", {"func_def"}, nullptr},
+        {"module_stmt", {"NEWLINE"}, nullptr},
 
         // Functions 
-        lang::make_pr("func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}),
-        lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}),
-        lang::make_pr("func_stmts", {"func_stmt"}),
-        lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}),
-        lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}),
-        lang::make_pr("simple_func_stmt", {"TOKEN"}),
+        {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, nullptr},
+        {"func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, nullptr},
+        {"func_stmts", {"func_stmt"}, nullptr},
+        {"func_stmts", {"func_stmts", "func_stmt"}, nullptr},
+        {"func_stmt", {"simple_func_stmt", "NEWLINE"}, nullptr},
+        {"simple_func_stmt", {"TOKEN"}, nullptr},
     };
 
     lang::Lexer lexer(tokens);
