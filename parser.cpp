@@ -446,8 +446,11 @@ const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const LexToke
  * The actual parsing.
  */
 void* lang::Parser::parse(const std::string& code){
+    // This language is defined such that all statements must end with a newline 
+    std::string code_cpy = code + "\n";
+
     // Input the string
-    lexer_.input(code);
+    lexer_.input(code_cpy);
 
     std::vector<std::size_t> state_stack;
     state_stack.push_back(item_set_map_.at(top_item_set_));

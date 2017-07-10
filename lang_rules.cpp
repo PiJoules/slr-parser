@@ -134,8 +134,26 @@ void* parse_func_stmts2(std::vector<void*>& args){
     return func_stmts;
 }
 
-// func_stmt : simple_func_stmt NEWLINE
+// func_stmts : func_stmts NEWLINE func_stmt 
+void* parse_func_stmts3(std::vector<void*>& args){
+    lang::FuncStmt* func_stmt = static_cast<lang::FuncStmt*>(args[2]);
+    lang::LexTokenWrapper* newline = static_cast<lang::LexTokenWrapper*>(args[1]);
+    std::vector<lang::FuncStmt*>* func_stmts = static_cast<std::vector<lang::FuncStmt*>*>(args[0]);
+    func_stmts->push_back(func_stmt);
+
+    delete newline;
+
+    return func_stmts;
+}
+
+// func_stmt : simple_func_stmt
 void* parse_func_stmt(std::vector<void*>& args){
+    lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
+    return simple_func_stmt;
+}
+
+// func_stmt : simple_func_stmt NEWLINE
+void* parse_func_stmt2(std::vector<void*>& args){
     lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
     lang::LexTokenWrapper* newline = static_cast<lang::LexTokenWrapper*>(args[1]);
 
@@ -246,8 +264,7 @@ const std::vector<lang::prod_rule_t> lang::LANG_RULES = {
     lang::make_pr("func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite),
     lang::make_pr("func_stmts", {"func_stmt"}, parse_func_stmts),
     lang::make_pr("func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2),
-    lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}, parse_func_stmt),
-    //lang::make_pr({"func_stmt", {"compound_func_stmt", lang::tokens::NEWLINE}),
+    lang::make_pr("func_stmt", {"simple_func_stmt", "NEWLINE"}, parse_func_stmt2),
     lang::make_pr("simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt),
 
     // Simple statements - one line 

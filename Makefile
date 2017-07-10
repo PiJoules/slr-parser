@@ -2,6 +2,8 @@ CPP = g++-4.9
 STD = c++11
 CPPFLAGS = -Wall -Werror -std=$(STD) -Wfatal-errors
 
+MEMCHECK = valgrind --error-exitcode=1 --leak-check=full
+
 SOURCES = lexer.cpp \
 		  lang_utils.cpp \
 		  parser.cpp \
@@ -41,15 +43,19 @@ clean_exes:
 
 test_lexer: clean_exes test_lexer.out
 	./test_lexer.out
-	valgrind ./test_lexer.out || echo 'Valgrind not available'
+	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lexer.out || (echo "memory leak"; exit 1); fi
 
 test_table_generation: clean_exes test_table_generation.out
 	./test_table_generation.out
 	valgrind ./test_table_generation.out || echo 'Valgrind not available' 
+	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_table_generation.out || (echo "memory leak"; exit 1); fi 
 
-test_parser: $(OBJS) clean_exes test_parser.out
+clean_test_parser:
+	rm -rf test_parser.out
+
+test_parser: $(OBJS) clean_test_parser test_parser.out
 	./test_parser.out
-	valgrind ./test_parser.out || echo 'Valgrind not available'
+	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_parser.out || (echo "memory leak"; exit 1); fi
 
 clean_dump_lang:
 	rm -rf dump_lang.out
