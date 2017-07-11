@@ -25,6 +25,7 @@ namespace lang {
         const std::string INDENT = "INDENT";
         const std::string DEDENT = "DEDENT";
         const std::string END = "END";
+        const std::string COMMENT = "COMMENT";
     }
     namespace nonterminals {
         const std::string EPSILON = "EMPTY";

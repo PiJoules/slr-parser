@@ -1,6 +1,7 @@
 CPP = g++-4.9
 STD = c++11
-CPPFLAGS = -Wall -Werror -std=$(STD) -Wfatal-errors
+
+CPPFLAGS = -Wall -Werror -std=$(STD) -Wfatal-errors $(MACROS)
 
 MEMCHECK = valgrind --error-exitcode=1 --leak-check=full
 
@@ -22,9 +23,6 @@ EXE_FILES = $(TEST_FILES) \
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
 test: compile test_lexer test_table_generation test_parser 
-
-test_debug:	CPPFLAGS += -DDEBUG
-test_debug: test
 
 .PHONY: test
 

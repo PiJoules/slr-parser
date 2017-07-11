@@ -7,11 +7,15 @@ std::unordered_map<std::string, std::string> RESERVED_NAMES = {
 };
 
 lang::LexToken reserved_name(lang::Lexer* lexer, lang::LexToken tok){
-    assert(lexer);
     if (RESERVED_NAMES.find(tok.value) == RESERVED_NAMES.end()){
         return tok;
     }
     tok.symbol = RESERVED_NAMES[tok.value];
+    return tok;
+}
+
+lang::LexToken comment(lang::Lexer* lexer, lang::LexToken tok){
+    tok.symbol = lang::tokens::COMMENT;
     return tok;
 }
 
@@ -34,6 +38,7 @@ const lang::tokens_map_t lang::LANG_TOKENS = {
     {"DEF", {R"(def)", nullptr}},
     {"NEWLINE", {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
+    {"WS", {R"([ ]+)", comment}},
     {lang::tokens::INDENT, {lang::tokens::INDENT, nullptr}},
     {lang::tokens::DEDENT, {lang::tokens::DEDENT, nullptr}},
 };

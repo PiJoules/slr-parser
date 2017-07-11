@@ -123,6 +123,11 @@ void lang::Lexer::load_next_tok(){
 
     // Remove this part of string and update position
     lexcode_.erase(0, match.size());
+
+    // If the token is a comment, ignore and try again
+    if (next_tok_.symbol == tokens::COMMENT){
+        load_next_tok();
+    }
 }
 
 lang::LexToken lang::Lexer::make_indent() const {
