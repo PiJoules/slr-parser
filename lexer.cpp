@@ -1,11 +1,9 @@
-#include "lang.h"
-
-#define NEWLINE_C '\n'
+#include "lexer.h"
 
 /**
  * Feed a string into the code stream.
  */
-void lang::Lexer::input(const std::string& code){
+void lexing::Lexer::input(const std::string& code){
     lexcode_ += code;
     load_next_tok();
 }
@@ -92,7 +90,7 @@ void lang::Lexer::load_next_tok(){
             // Check if whitespace that was not caught as a token 
             // Trim whitespace, advance position, then try to load again 
             while (isspace(lexcode_.front())){
-                if (lexcode_.front() == NEWLINE_C){
+                if (lexcode_.front() == '\n'){
                     advancenl();
                 }
                 else {
@@ -113,7 +111,7 @@ void lang::Lexer::load_next_tok(){
     // Advance the stream 
     // Count newlines that may be in the match'd string
     for (const char c : match){
-        if (c == NEWLINE_C){
+        if (c == '\n'){
             advancenl();
         }
         else {
@@ -183,7 +181,7 @@ lang::LexToken lang::Lexer::token(){
 
             // Make sure the indentations match any of the previous ones 
             if (!std::any_of(levels.begin(), levels.end(), [next_col](int lvl){ return lvl == next_col; })){
-                throw IndentationError(next_tok_.lineno);
+                throw lexing::IndentationError(next_tok_.lineno);
             }
 
             found_dedent = true;
