@@ -1,5 +1,0 @@
-states      stack       lookahead       input                   action
-
-12                      NEWLINE         DEF,NAME        shift to 20 
-12,20       NEWLINE     DEF             NAME,LPAR       reduce using (module_stmt -> NEWLINE)
-12          module_stmt module_stmt
