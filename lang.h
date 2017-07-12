@@ -17,6 +17,7 @@
 #include <cassert>
 
 #include "lexer.h"
+#include "parser.h"
 
 // Borrowed from python hash
 #define _HASH_MULTIPLIER 1000003
@@ -25,6 +26,35 @@ namespace lang {
     namespace tokens {
         const std::string INDENT = "INDENT";
         const std::string DEDENT = "DEDENT";
+    };
+
+    class LangLexer: public lexing::Lexer {
+        private:
+            lexing::LexToken make_indent() const;
+            lexing::LexToken make_dedent() const;
+
+            // Indentation tracking
+            std::vector<int> levels = {1};
+            bool found_indent = false, found_dedent = false;
+            lexing::LexToken next_tok_;
+            void load_next_tok();
+
+        public:
+            LangLexer(const lexing::TokensMap&);
+
+            void input(const std::string&);
+            lexing::LexToken token();
+    };
+
+    // Custom exceptions 
+    class IndentationError: public std::runtime_error {
+        private:
+            int lineno_;
+
+        public:
+            IndentationError(int lineno): std::runtime_error("Indentation error"),
+                lineno_(lineno){}
+            virtual const char* what() const throw();
     };
 
     /****** Nodes ********/ 
@@ -46,15 +76,15 @@ namespace lang {
 
     class LexTokenWrapper: public Node {
         private:
-            LexToken token_;
+            lexing::LexToken token_;
 
         public:
-            LexTokenWrapper(const LexToken&);
-            LexTokenWrapper& operator=(const LexToken& other){
+            LexTokenWrapper(const lexing::LexToken&);
+            LexTokenWrapper& operator=(const lexing::LexToken& other){
                 token_ = other;
                 return *this;
             }
-            LexToken token() const;
+            lexing::LexToken token() const;
             virtual std::vector<std::string> lines() const;
     };
 
@@ -225,12 +255,12 @@ namespace lang {
     ///******** Parser ********/ 
 
     extern const std::vector<ParseRule> LANG_RULES;
-    extern const tokens_map_t LANG_TOKENS;
+    extern const lexing::TokensMap LANG_TOKENS;
     extern const precedence_t LANG_PRECEDENCE;
 
     class Parser {
         private:
-            Lexer lexer_;
+            LangLexer lexer_;
 
             // For Creating first/follow sets 
             std::unordered_set<std::string> nonterminals_;
@@ -257,19 +287,19 @@ namespace lang {
                     std::unordered_map<std::string, ParseInstr>&);
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const production_t&) const;
-            const ParseInstr& get_instr(std::size_t, const LexToken&);
+            const ParseInstr& get_instr(std::size_t, const lexing::LexToken&);
 
             // For creating firsts/follows sets
             std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
 
         public:
-            Parser(Lexer&, const std::vector<ParseRule>& prod_rules,
+            Parser(LangLexer&, const std::vector<ParseRule>& prod_rules,
                    const precedence_t& precedence={{}});
             void dump_grammar(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
             void* parse(const std::string&);
-            void reduce(const ParseRule&, std::vector<LexToken>&, std::vector<void*>&,
+            void reduce(const ParseRule&, std::vector<lexing::LexToken>&, std::vector<void*>&,
                         std::vector<std::size_t>&);
             
             // Firsts/follows methods 
@@ -284,7 +314,7 @@ namespace lang {
     /**
      * Debugging
      */ 
-    std::string str(const LexToken&);
+    std::string str(const lexing::LexToken&);
     std::string str(const production_t& production);
     std::string str(const ParseRule& prod_rule);
     std::string str(const lr_item_t& lr_item);

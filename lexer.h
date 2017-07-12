@@ -1,17 +1,16 @@
 #ifndef _LEXER_H
 #define _LEXER_H
 
+#include <unordered_map>
+#include <regex>
 #include <stdexcept>
 
 namespace lexing {
+    // Common token names
     namespace tokens {
         const std::string NEWLINE = "NEWLINE";
-        const std::string END = "END";
+        const std::string END = "END";  // End of input/file
         const std::string COMMENT = "COMMENT";
-    }
-
-    namespace nonterminals {
-        const std::string EPSILON = "EMPTY";
     }
 
     struct LexToken {
@@ -20,47 +19,38 @@ namespace lexing {
         int pos, lineno, colno;
     };
 
-    class Lexer;
-
     // Callback for handling a token found by the lexer.
-    typedef void (*TokenCallback)(Lexer&, LexToken&);
+    typedef void (*TokenCallback)(LexToken& token, void* data);
 
     // A dict mapping a token to its regex and callback.
+    typedef std::unordered_map<std::string, std::pair<std::regex, TokenCallback>> TokensMapRegex;
+
+    // Same as the above, but maps the token to the string representation of its regex
     typedef std::unordered_map<std::string, std::pair<std::string, TokenCallback>> TokensMap;
 
     class Lexer {
         private:
             std::string lexcode_;
             int pos_ = 1, lineno_ = 1, colno_ = 1;
-            std::unordered_map<std::string, std::pair<std::regex, tok_callback_t>> tokens_;
+            const TokensMapRegex tokens_;
 
-            // Indentation tracking
-            std::vector<int> levels = {1};
-            bool found_indent = false, found_dedent = false;
-            LexToken next_tok_ = {tokens::END, "", pos_, lineno_, colno_};
-            void load_next_tok();
-            LexToken make_indent() const;
-            LexToken make_dedent() const;
+            TokensMapRegex to_regex_map(const TokensMap&) const;
 
         public:
-            Lexer(const std::unordered_map<std::string, std::pair<std::string, TokenCallback>>&);
-            void input(const std::string& code);
-            LexToken token();
-            const std::unordered_map<std::string, std::pair<std::regex, tok_callback_t>>& tokens() const;
+            Lexer(const TokensMap&);
+            Lexer(const TokensMapRegex&);
+
+            void input(const std::string&);
+            LexToken token(void* data=nullptr);
             bool empty() const;
             void advance(int count=1);
             void advancenl(int count=1);
-    };
 
-    // Custom exceptions 
-    class IndentationError: public std::runtime_error {
-        private:
-            int lineno_;
-
-        public:
-            IndentationError(int lineno): std::runtime_error("Indentation error"),
-                lineno_(lineno){}
-            virtual const char* what() const throw();
+            // Getters
+            int pos() const;
+            int lineno() const;
+            int colno() const;
+            const TokensMapRegex& tokens() const;
     };
 }
 

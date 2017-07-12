@@ -6,20 +6,17 @@ std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"def", "DEF"},
 };
 
-lang::LexToken reserved_name(lang::Lexer* lexer, lang::LexToken tok){
-    if (RESERVED_NAMES.find(tok.value) == RESERVED_NAMES.end()){
-        return tok;
+void reserved_name(lexing::LexToken& tok, void* data){
+    if (RESERVED_NAMES.find(tok.value) != RESERVED_NAMES.end()){
+        tok.symbol = RESERVED_NAMES[tok.value];
     }
-    tok.symbol = RESERVED_NAMES[tok.value];
-    return tok;
 }
 
-lang::LexToken comment(lang::Lexer* lexer, lang::LexToken tok){
-    tok.symbol = lang::tokens::COMMENT;
-    return tok;
+void comment(lexing::LexToken& tok, void* data){
+    tok.symbol = lexing::tokens::COMMENT;
 }
 
-const lang::tokens_map_t lang::LANG_TOKENS = {
+const lexing::TokensMap lang::LANG_TOKENS = {
     // Values
     {"INT", {R"(\d+)", nullptr}},
     {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", reserved_name}},

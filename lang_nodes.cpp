@@ -21,9 +21,9 @@ std::string lang::Node::str() const {
 /**
  * LexTokenWrapper
  */
-lang::LexTokenWrapper::LexTokenWrapper(const LexToken& token): token_(token){}
+lang::LexTokenWrapper::LexTokenWrapper(const lexing::LexToken& token): token_(token){}
 
-lang::LexToken lang::LexTokenWrapper::token() const { return token_; }
+lexing::LexToken lang::LexTokenWrapper::token() const { return token_; }
 
 std::vector<std::string> lang::LexTokenWrapper::lines() const { 
     std::vector<std::string> v = {token_.value};

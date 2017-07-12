@@ -88,7 +88,7 @@ static void* parse_prime(std::vector<void*>& args){
 /**
  * Initialize the parse table from the production rules.
  */
-lang::Parser::Parser(Lexer& lexer, const std::vector<ParseRule>& prod_rules, 
+lang::Parser::Parser(LangLexer& lexer, const std::vector<ParseRule>& prod_rules, 
                      const precedence_t& precedence):
     lexer_(lexer)
 {
@@ -176,7 +176,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
             else {
                 if (prod_rule == top_prod_rule){
                     // Finished whole module; cannot reduce further
-                    action_table[tokens::END] = {lang::ParseInstr::Action::ACCEPT, 0};
+                    action_table[lexing::tokens::END] = {lang::ParseInstr::Action::ACCEPT, 0};
                 }
                 else {
                     // End of rule; Reduce 
@@ -395,14 +395,14 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
  */
 void lang::Parser::reduce(
         const ParseRule& prod_rule, 
-        std::vector<LexToken>& symbol_stack,
+        std::vector<lexing::LexToken>& symbol_stack,
         std::vector<void*>& node_stack,
         std::vector<std::size_t>& state_stack){
     const std::string& rule = prod_rule.rule;
     const production_t& prod = prod_rule.production;
     const parse_func_t func = prod_rule.callback;
     
-    LexToken rule_token = {rule,"",0,0,0};
+    lexing::LexToken rule_token = {rule,"",0,0,0};
 
     // Note: the symbol stack and production may not be the same length, but the 
     // symbol stack and node stack will always be the same size
@@ -433,7 +433,7 @@ void lang::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 }
 
-const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const LexToken& lookahead){
+const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const lexing::LexToken& lookahead){
     if (parse_table_[state].find(lookahead.symbol) == parse_table_[state].cend()){
         // Parse error
         std::ostringstream err;
@@ -459,10 +459,10 @@ void* lang::Parser::parse(const std::string& code){
     std::vector<std::size_t> state_stack;
     state_stack.push_back(item_set_map_.at(top_item_set_));
 
-    std::vector<LexToken> symbol_stack;
+    std::vector<lexing::LexToken> symbol_stack;
     std::vector<void*> node_stack;
 
-    LexToken lookahead = lexer_.token();
+    lexing::LexToken lookahead = lexer_.token();
     while (1){
         std::size_t state = state_stack.back();
 
@@ -522,7 +522,7 @@ std::unordered_set<std::string> lang::Parser::firsts(const std::string& symbol){
         return firsts_map_[symbol];
     }
 
-    if (is_terminal(symbol) || symbol == nonterminals::EPSILON){
+    if (is_terminal(symbol) || symbol == parsing::nonterminals::EPSILON){
         firsts_map_[symbol] = {symbol};
         return firsts_map_[symbol];
     }
@@ -558,7 +558,7 @@ std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol)
     // Initialize the set with the symbol if it is the starting nonterminal
     std::unordered_set<std::string> follows_set;
     if (symbol == start_nonterminal_){
-        follows_set.insert(tokens::END);
+        follows_set.insert(lexing::tokens::END);
     }
 
     // Find the productions with this symbol on the RHS 
@@ -572,8 +572,8 @@ std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol)
             if (prod[i] == symbol){
                 const std::unordered_set<std::string> next_set = firsts(prod[i+1]);
                 std::unordered_set<std::string> next_without_eps(next_set);
-                if (next_without_eps.find(nonterminals::EPSILON) != next_without_eps.end()){
-                    next_without_eps.erase(nonterminals::EPSILON);
+                if (next_without_eps.find(parsing::nonterminals::EPSILON) != next_without_eps.end()){
+                    next_without_eps.erase(parsing::nonterminals::EPSILON);
                 }
 
                 // Add to the follows set 
@@ -582,7 +582,7 @@ std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol)
 
                 // Add follows of this rule if the firsts contains epsilon
                 // if EPSILON in self.firsts(prod[i+1)
-                if (next_set.find(nonterminals::EPSILON) != next_set.end()){
+                if (next_set.find(parsing::nonterminals::EPSILON) != next_set.end()){
                     // follows_set |= self.follows(rule)
                     std::unordered_set<std::string> rule_follows = follows(rule);
                     follows_set.insert(rule_follows.begin(), rule_follows.end());
@@ -616,8 +616,8 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
             // For each production mapped to rule X 
             // put firsts(Y1) - {e} into firsts(X)
             std::unordered_set<std::string> diff(firsts(prod[0]));
-            if (diff.find(nonterminals::EPSILON) != diff.end()){
-                diff.erase(nonterminals::EPSILON);
+            if (diff.find(parsing::nonterminals::EPSILON) != diff.end()){
+                diff.erase(parsing::nonterminals::EPSILON);
             }
             firsts_set.insert(diff.begin(), diff.end());
 
@@ -625,10 +625,10 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
             bool all_have_empty = true;
             for (std::size_t i = 0; i < prod.size()-1; ++i){
                 const std::unordered_set<std::string> current_set = firsts(prod[i]);
-                if (current_set.find(nonterminals::EPSILON) != current_set.end()){
+                if (current_set.find(parsing::nonterminals::EPSILON) != current_set.end()){
                     std::unordered_set<std::string> next_set = firsts(prod[i+1]);
-                    if (next_set.find(nonterminals::EPSILON) != next_set.end()){
-                        next_set.erase(nonterminals::EPSILON);
+                    if (next_set.find(parsing::nonterminals::EPSILON) != next_set.end()){
+                        next_set.erase(parsing::nonterminals::EPSILON);
                     }
                     firsts_set.insert(next_set.begin(), next_set.end());
                 }
@@ -638,8 +638,8 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
             }
             // Check for last one having epsilon
             const std::unordered_set<std::string> last_set = firsts(prod.back());
-            if (all_have_empty && last_set.find(nonterminals::EPSILON) != last_set.end()){
-                firsts_set.insert(nonterminals::EPSILON);
+            if (all_have_empty && last_set.find(parsing::nonterminals::EPSILON) != last_set.end()){
+                firsts_set.insert(parsing::nonterminals::EPSILON);
             }
         }
     }

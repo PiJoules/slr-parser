@@ -1,7 +1,7 @@
 #include "lang.h"
 #include <cassert>
 
-static const lang::tokens_map_t test_tokens = {
+static const lexing::TokensMap test_tokens = {
     // Values
     {"INT", {R"(\d+)", nullptr}},
     {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", nullptr}},
@@ -55,7 +55,7 @@ static const lang::item_set_t int_expected = {
 };
 
 void test_rules1(){
-    const lang::tokens_map_t tokens = {
+    const lexing::TokensMap tokens = {
         {"a", {"a", nullptr}},
         {"b", {"b", nullptr}},
         {"c", {"c", nullptr}},
@@ -75,7 +75,7 @@ void test_rules1(){
         {"C", {"o"}, nullptr},
     };
 
-    lang::Lexer lexer(tokens);
+    lang::LangLexer lexer(tokens);
     lang::Parser parser(lexer, rules);
 
     // firsts 
@@ -89,7 +89,7 @@ void test_rules1(){
     assert(parser.firsts("C") == expected);
 
     // follows 
-    expected = {lang::tokens::END};
+    expected = {lexing::tokens::END};
     assert(parser.follows("S") == expected);
     expected = {"b"};
     assert(parser.follows("B") == expected);
@@ -104,7 +104,7 @@ void test_rules1(){
 }
 
 void test_rules2(){
-    const lang::tokens_map_t tokens = {
+    const lexing::TokensMap tokens = {
         {"LPAR", {R"(\()", nullptr}},
         {"RPAR", {R"(\))", nullptr}},
         {"n", {"n", nullptr}},
@@ -120,7 +120,7 @@ void test_rules2(){
         {"T", {"T", "PLUS", "T"}, nullptr},
     };
 
-    lang::Lexer lexer(tokens);
+    lang::LangLexer lexer(tokens);
     lang::Parser parser(lexer, rules);
 
     // firsts 
@@ -131,11 +131,11 @@ void test_rules2(){
     assert(parser.firsts("T") == expected);
 
     // follows 
-    expected = {lang::tokens::END};
+    expected = {lexing::tokens::END};
     assert(parser.follows("S") == expected);
-    expected = {"RPAR", lang::tokens::END};
+    expected = {"RPAR", lexing::tokens::END};
     assert(parser.follows("E") == expected);
-    expected = {"PLUS", "RPAR", lang::tokens::END};
+    expected = {"PLUS", "RPAR", lexing::tokens::END};
     assert(parser.follows("T") == expected);
 
     // empty stacks 
@@ -144,7 +144,7 @@ void test_rules2(){
 }
 
 void test_rules3(){
-    const lang::tokens_map_t tokens = {
+    const lexing::TokensMap tokens = {
         {"LPAR", {R"(\()", nullptr}},
         {"RPAR", {R"(\))", nullptr}},
         {"PLUS", {R"(\+)", nullptr}},
@@ -161,7 +161,7 @@ void test_rules3(){
         {"F", {"ID"}, nullptr},
     };
 
-    lang::Lexer lexer(tokens);
+    lang::LangLexer lexer(tokens);
     lang::Parser parser(lexer, rules);
 
     // firsts 
@@ -171,9 +171,9 @@ void test_rules3(){
     assert(parser.firsts("F") == expected);
 
     // follows 
-    expected = {lang::tokens::END, "PLUS", "RPAR"};
+    expected = {lexing::tokens::END, "PLUS", "RPAR"};
     assert(parser.follows("E") == expected);
-    expected = {lang::tokens::END, "PLUS", "RPAR", "MULT"};
+    expected = {lexing::tokens::END, "PLUS", "RPAR", "MULT"};
     assert(parser.follows("T") == expected);
     assert(parser.follows("F") == expected);
 
@@ -183,7 +183,7 @@ void test_rules3(){
 }
 
 void test_rules4(){
-    lang::Lexer lexer(test_tokens);
+    lang::LangLexer lexer(test_tokens);
     lang::Parser parser(lexer, test_rules);
 
     // firsts
@@ -192,9 +192,9 @@ void test_rules4(){
     assert(parser.firsts("module") == expected);
 
     // follows 
-    expected = {lang::tokens::END, "ADD", "SUB", "MUL", "DIV"};
+    expected = {lexing::tokens::END, "ADD", "SUB", "MUL", "DIV"};
     assert(parser.follows("expr") == expected);
-    expected = {lang::tokens::END};
+    expected = {lexing::tokens::END};
     assert(parser.follows("module") == expected);
 
     // empty stacks 
@@ -203,26 +203,26 @@ void test_rules4(){
 }
 
 void test_rules5(){
-    const lang::tokens_map_t tokens = {
+    const lexing::TokensMap tokens = {
         {"a", {"a", nullptr}},
     };
 
     const std::vector<lang::ParseRule> rules = {
         {"S", {"X"}, nullptr},
         {"X", {"a"}, nullptr},
-        {"X", {lang::nonterminals::EPSILON}, nullptr},
+        {"X", {parsing::nonterminals::EPSILON}, nullptr},
     };
 
-    lang::Lexer lexer(tokens);
+    lang::LangLexer lexer(tokens);
     lang::Parser parser(lexer, rules);
 
     // firsts 
-    std::unordered_set<std::string> expected = {"a", lang::nonterminals::EPSILON};
+    std::unordered_set<std::string> expected = {"a", parsing::nonterminals::EPSILON};
     assert(parser.firsts("S") == expected);
     assert(parser.firsts("X") == expected);
 
     // follows 
-    expected = {lang::tokens::END};
+    expected = {lexing::tokens::END};
     assert(parser.follows("S") == expected);
     assert(parser.follows("X") == expected);
 
@@ -236,17 +236,15 @@ static std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"TOKEN", "TOKEN"},
 };
 
-static lang::LexToken reserved(lang::Lexer* lexer, lang::LexToken tok){
-    if (RESERVED_NAMES.find(tok.value) == RESERVED_NAMES.end()){
-        return tok;
+static void reserved(lexing::LexToken& tok, void* data){
+    if (RESERVED_NAMES.find(tok.value) != RESERVED_NAMES.end()){
+        tok.symbol = RESERVED_NAMES[tok.value];
     }
-    tok.symbol = RESERVED_NAMES[tok.value];
-    return tok;
 }
 
 void test_rules6(){
 
-    const lang::tokens_map_t tokens = {
+    const lexing::TokensMap tokens = {
         // Values
         {"INT", {R"(\d+)", nullptr}},
         {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", reserved}},
@@ -284,7 +282,7 @@ void test_rules6(){
         {"simple_func_stmt", {"TOKEN"}, nullptr},
     };
 
-    lang::Lexer lexer(tokens);
+    lang::LangLexer lexer(tokens);
     lang::Parser parser(lexer, rules);
 
     // firsts 
@@ -294,9 +292,9 @@ void test_rules6(){
     assert(parser.firsts("module") == expected);
 
     // follows 
-    expected = {lang::tokens::END};
+    expected = {lexing::tokens::END};
     assert(parser.follows("module") == expected);
-    expected = {lang::tokens::END, "DEF", "NEWLINE"};
+    expected = {lexing::tokens::END, "DEF", "NEWLINE"};
     assert(parser.follows("module_stmt") == expected);
     assert(parser.follows("module_stmt_list") == expected);
 
@@ -334,7 +332,7 @@ void test_move_pos(){
 }
 
 void test_parse_precedence(){
-    lang::Lexer lexer(test_tokens);
+    lang::LangLexer lexer(test_tokens);
 
     // Should have conflicts 
     lang::Parser parser(lexer, test_rules);

@@ -15,7 +15,7 @@ const char* lang::IndentationError::what() const throw() {
 /**
  * String conversion
  */
-std::string lang::str(const LexToken& tok){
+std::string lang::str(const lexing::LexToken& tok){
     std::ostringstream s;
     s << "{" << "symbol: " << tok.symbol << ", value: '" << tok.value 
       << "', pos: " << tok.pos << ", lineno: " << tok.lineno << ", colno: "

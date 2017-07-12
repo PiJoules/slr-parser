@@ -29,7 +29,7 @@ void __assert_int_equal(const int& i1, const int& i2,
     }
 }
 
-static const lang::tokens_map_t test_tokens = {
+static const lexing::TokensMap test_tokens = {
     // Values
     {"INT", {R"(\d+)", nullptr}},
     {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", nullptr}},
@@ -41,26 +41,26 @@ static const lang::tokens_map_t test_tokens = {
     {"DIV", {R"(\\)", nullptr}},
 
     // Misc
-    {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},  // Capture newlines
+    {lexing::tokens::NEWLINE, {R"(\n+)", nullptr}},  // Capture newlines
 };
 
 /**
  * Test creating an empty lexer.
  */
 void test_lexer_creation(){
-    lang::Lexer lex(test_tokens);
+    lexing::Lexer lex(test_tokens);
     auto tok = lex.token();
     assert(tok.value == "");
     assert_int_equal(tok.lineno, 1);
     assert(tok.colno == 1);
-    assert(tok.symbol == lang::tokens::END);
+    assert(tok.symbol == lexing::tokens::END);
 
     // Same output
     tok = lex.token();
     assert(tok.value == "");
     assert(tok.lineno == 1);
     assert(tok.colno == 1);
-    assert(tok.symbol == lang::tokens::END);
+    assert(tok.symbol == lexing::tokens::END);
 }
 
 /**
@@ -68,7 +68,7 @@ void test_lexer_creation(){
  */
 void test_lexer_input(){
     std::string code("x + y\n4-3");
-    lang::Lexer lex(test_tokens);
+    lexing::Lexer lex(test_tokens);
     lex.input(code);
 
     auto tok = lex.token();
@@ -94,7 +94,7 @@ void test_lexer_input(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 1);
     assert(tok.colno == 6);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert(tok.value == "4");
@@ -119,7 +119,7 @@ void test_lexer_input(){
  * Test reading names
  */
 void test_name(){
-    lang::Lexer lex(test_tokens);
+    lexing::Lexer lex(test_tokens);
     lex.input("_x");
     auto tok = lex.token();
     assert(tok.value == "_x");
@@ -139,7 +139,7 @@ void test_name(){
  * Test indentation
  */
 void test_indentation(){
-    lang::Lexer lex(test_tokens);
+    lang::LangLexer lex(test_tokens);
     lex.input(R"(x
 
     a
@@ -161,7 +161,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 1);
     assert_int_equal(tok.colno, 2);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert_str_equal(tok.value, "");
@@ -179,7 +179,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 3);
     assert_int_equal(tok.colno, 6);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert_str_equal(tok.value, "");
@@ -197,7 +197,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 4);
     assert_int_equal(tok.colno, 8);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert_str_equal(tok.value, "");
@@ -215,7 +215,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 6);
     assert_int_equal(tok.colno, 6);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert_str_equal(tok.value, "e");
@@ -227,7 +227,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 8);
     assert_int_equal(tok.colno, 6);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert_str_equal(tok.value, "");
@@ -245,7 +245,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 9);
     assert_int_equal(tok.colno, 2);
-    assert(tok.symbol == lang::tokens::NEWLINE);
+    assert(tok.symbol == lexing::tokens::NEWLINE);
 
     tok = lex.token();
     assert_str_equal(tok.value, "7");
@@ -258,7 +258,7 @@ void test_indentation(){
  * Test bad indentation throws an indentation error.
  */ 
 void bad_indeation_code(){
-    lang::Lexer lex(test_tokens);
+    lang::LangLexer lex(test_tokens);
     lex.input(R"(x
   y
  z

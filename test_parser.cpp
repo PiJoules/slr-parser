@@ -9,7 +9,7 @@ def func():
     x + y
 )";
 
-    lang::Lexer lexer(lang::LANG_TOKENS);
+    lang::LangLexer lexer(lang::LANG_TOKENS);
     lexer.input(code);
 
     // line 1
@@ -40,7 +40,7 @@ def func():
     x + y
 )";
 
-    lang::Lexer lexer(lang::LANG_TOKENS);
+    lang::LangLexer lexer(lang::LANG_TOKENS);
     lang::Parser parser(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
     assert(parser.conflicts().empty());
 
