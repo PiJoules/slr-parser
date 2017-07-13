@@ -131,6 +131,19 @@ lexing::LexToken lexing::Lexer::token(void* data){
 
     // Remove this part of string and update position
     lexcode_.erase(0, match.size());
-    
+
+    // Ignore comments
+    if (next_token.symbol == lexing::tokens::COMMENT){
+        return token(data);
+    }
+
     return next_token;
+}
+
+std::string lexing::LexToken::str() const {
+    std::ostringstream s;
+    s << "{" << "symbol: " << symbol << ", value: '" << value 
+      << "', pos: " << pos << ", lineno: " << lineno << ", colno: "
+      << colno << "}";  
+    return s.str();
 }

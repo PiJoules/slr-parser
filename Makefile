@@ -6,12 +6,12 @@ CPPFLAGS = -Wall -Werror -std=$(STD) -Wfatal-errors $(MACROS)
 MEMCHECK = valgrind --error-exitcode=1 --leak-check=full
 
 SOURCES = lexer.cpp \
-		  lang_lexer.cpp \
-		  lang_utils.cpp \
 		  parser.cpp \
+		  lang_lexer.cpp \
+		  lang_parser.cpp \
+		  lang_utils.cpp \
 		  lang_rules.cpp \
-		  lang_nodes.cpp \
-		  lang_hashes.cpp
+		  lang_nodes.cpp
 OBJS = $(SOURCES:.cpp=.o)
 
 TEST_FILES = test_lexer.cpp \

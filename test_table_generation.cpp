@@ -13,7 +13,7 @@ static const lexing::TokensMap test_tokens = {
     {"DIV", {R"(\\)", nullptr}},
 };
 
-static const std::vector<lang::ParseRule> test_rules = {
+static const std::vector<parsing::ParseRule> test_rules = {
     {"module", {"expr"}, nullptr},
     {"expr", {"expr", "SUB", "expr"}, nullptr},
     {"expr", {"expr", "ADD", "expr"}, nullptr},
@@ -23,12 +23,12 @@ static const std::vector<lang::ParseRule> test_rules = {
     {"expr", {"INT"}, nullptr},
 };
 
-static const lang::precedence_t test_precedence = {
-    {lang::RIGHT_ASSOC, {"ADD", "SUB"}},
-    {lang::LEFT_ASSOC, {"MUL", "DIV"}},
+static const parsing::precedence_t test_precedence = {
+    {parsing::RIGHT_ASSOC, {"ADD", "SUB"}},
+    {parsing::LEFT_ASSOC, {"MUL", "DIV"}},
 };
 
-static const lang::item_set_t clos_expected = {
+static const parsing::item_set_t clos_expected = {
     {{"module", {"expr"}, nullptr}, 0},
     {{"expr", {"expr", "SUB", "expr"}, nullptr}, 0},
     {{"expr", {"expr", "ADD", "expr"}, nullptr}, 0},
@@ -38,7 +38,7 @@ static const lang::item_set_t clos_expected = {
     {{"expr", {"INT"}, nullptr}, 0},
 };
 
-static const lang::item_set_t expr_expected = {
+static const parsing::item_set_t expr_expected = {
     {{"module", {"expr"}, nullptr}, 1},
     {{"expr", {"expr", "SUB", "expr"}, nullptr}, 1},
     {{"expr", {"expr", "ADD", "expr"}, nullptr}, 1},
@@ -46,11 +46,11 @@ static const lang::item_set_t expr_expected = {
     {{"expr", {"expr", "DIV", "expr"}, nullptr}, 1},
 };
 
-static const lang::item_set_t name_expected = {
+static const parsing::item_set_t name_expected = {
     {{"expr", {"NAME"}, nullptr}, 1},
 };
 
-static const lang::item_set_t int_expected = {
+static const parsing::item_set_t int_expected = {
     {{"expr", {"INT"}, nullptr}, 1},
 };
 
@@ -64,7 +64,7 @@ void test_rules1(){
         {"z", {"z", nullptr}},
     };
 
-    const std::vector<lang::ParseRule> rules = {
+    const std::vector<parsing::ParseRule> rules = {
         {"S", {"B", "b"}, nullptr},
         {"S", {"C", "d"}, nullptr},
         {"B", {"a", "B"}, nullptr},
@@ -76,7 +76,7 @@ void test_rules1(){
     };
 
     lang::LangLexer lexer(tokens);
-    lang::Parser parser(lexer, rules);
+    parsing::Parser parser(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"a", "o", "z", "c"};
@@ -111,7 +111,7 @@ void test_rules2(){
         {"PLUS", {R"(\+)", nullptr}},
     };
 
-    const std::vector<lang::ParseRule> rules = {
+    const std::vector<parsing::ParseRule> rules = {
         {"S", {"E"}, nullptr},
         {"E", {"T"}, nullptr},
         {"E", {"LPAR", "E", "RPAR"}, nullptr},
@@ -121,7 +121,7 @@ void test_rules2(){
     };
 
     lang::LangLexer lexer(tokens);
-    lang::Parser parser(lexer, rules);
+    parsing::Parser parser(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"n", "PLUS", "LPAR"};
@@ -152,7 +152,7 @@ void test_rules3(){
         {"ID", {"id", nullptr}},
     };
 
-    const std::vector<lang::ParseRule> rules = {
+    const std::vector<parsing::ParseRule> rules = {
         {"E", {"E", "PLUS", "T"}, nullptr},
         {"E", {"T"}, nullptr},
         {"T", {"T", "MULT", "F"}, nullptr},
@@ -162,7 +162,7 @@ void test_rules3(){
     };
 
     lang::LangLexer lexer(tokens);
-    lang::Parser parser(lexer, rules);
+    parsing::Parser parser(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"ID", "LPAR"};
@@ -184,7 +184,7 @@ void test_rules3(){
 
 void test_rules4(){
     lang::LangLexer lexer(test_tokens);
-    lang::Parser parser(lexer, test_rules);
+    parsing::Parser parser(lexer, test_rules);
 
     // firsts
     std::unordered_set<std::string> expected = {"NAME", "INT"};
@@ -207,14 +207,14 @@ void test_rules5(){
         {"a", {"a", nullptr}},
     };
 
-    const std::vector<lang::ParseRule> rules = {
+    const std::vector<parsing::ParseRule> rules = {
         {"S", {"X"}, nullptr},
         {"X", {"a"}, nullptr},
         {"X", {parsing::nonterminals::EPSILON}, nullptr},
     };
 
     lang::LangLexer lexer(tokens);
-    lang::Parser parser(lexer, rules);
+    parsing::Parser parser(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"a", parsing::nonterminals::EPSILON};
@@ -265,7 +265,7 @@ void test_rules6(){
         {"TOKEN", {"TOKEN", nullptr}},
     };
 
-    const std::vector<lang::ParseRule> rules = {
+    const std::vector<parsing::ParseRule> rules = {
         // Entry point
         {"module", {"module_stmt_list"}, nullptr},
         {"module_stmt_list", {"module_stmt"}, nullptr},
@@ -283,7 +283,7 @@ void test_rules6(){
     };
 
     lang::LangLexer lexer(tokens);
-    lang::Parser parser(lexer, rules);
+    parsing::Parser parser(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"DEF", "NEWLINE"};
@@ -305,29 +305,29 @@ void test_rules6(){
 
 void test_closure(){
     const auto& entry = test_rules.front();
-    lang::item_set_t item_set = {{entry, 0}};
-    lang::init_closure(item_set, test_rules);
+    parsing::item_set_t item_set = {{entry, 0}};
+    parsing::init_closure(item_set, test_rules);
 
     // Check the contents 
     // Should really be the same as the existing rules but with positions of 0
     assert(item_set == clos_expected);
     
     // item_set should not change 
-    lang::init_closure(item_set, test_rules);
+    parsing::init_closure(item_set, test_rules);
     assert(item_set == clos_expected);
 }
 
 void test_move_pos(){
     // GOTO expressios
-    lang::item_set_t expr_item_set = lang::move_pos(clos_expected, "expr", test_rules);
+    parsing::item_set_t expr_item_set = parsing::move_pos(clos_expected, "expr", test_rules);
     assert(expr_item_set == expr_expected);
     
     // GOTO name
-    lang::item_set_t name_item_set = lang::move_pos(clos_expected, "NAME", test_rules);
+    parsing::item_set_t name_item_set = parsing::move_pos(clos_expected, "NAME", test_rules);
     assert(name_item_set == name_expected);
     
     // GOTO int
-    lang::item_set_t int_item_set = lang::move_pos(clos_expected, "INT", test_rules);
+    parsing::item_set_t int_item_set = parsing::move_pos(clos_expected, "INT", test_rules);
     assert(int_item_set == int_expected);
 }
 
@@ -335,11 +335,11 @@ void test_parse_precedence(){
     lang::LangLexer lexer(test_tokens);
 
     // Should have conflicts 
-    lang::Parser parser(lexer, test_rules);
+    parsing::Parser parser(lexer, test_rules);
     assert(!parser.conflicts().empty());
 
     // Should not have conflicts 
-    lang::Parser parser2(lexer, test_rules, test_precedence);
+    parsing::Parser parser2(lexer, test_rules, test_precedence);
     assert(parser2.conflicts().empty());
 }
 

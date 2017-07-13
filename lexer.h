@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <regex>
 #include <stdexcept>
+#include <sstream>
 
 namespace lexing {
     // Common token names
@@ -17,6 +18,7 @@ namespace lexing {
         std::string symbol;
         std::string value;
         int pos, lineno, colno;
+        std::string str() const;
     };
 
     // Callback for handling a token found by the lexer.

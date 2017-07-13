@@ -41,7 +41,7 @@ def func():
 )";
 
     lang::LangLexer lexer(lang::LANG_TOKENS);
-    lang::Parser parser(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
+    parsing::Parser parser(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
     assert(parser.conflicts().empty());
 
     lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
@@ -56,7 +56,7 @@ def func():
 }
 
 int main(){
-    test_tokens();
+    //test_tokens();
     test_parser();
 
     return 0;

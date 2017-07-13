@@ -7,11 +7,6 @@ lang::LangLexer::LangLexer(const lexing::TokensMap& tokens): lexing::Lexer(token
  */
 void lang::LangLexer::load_next_tok(){
     next_tok_ = lexing::Lexer::token(nullptr);
-
-    // If the token is a comment, ignore and try again
-    if (next_tok_.symbol == lexing::tokens::COMMENT){
-        load_next_tok();
-    }
 }
 
 void lang::LangLexer::input(const std::string& code){
@@ -43,6 +38,7 @@ lexing::LexToken lang::LangLexer::token(){
     assert(!(found_dedent && found_indent));
     lexing::LexToken tok = next_tok_;
 
+    std::cerr << "calling overriden token()" << std::endl;
     if (found_indent){
         found_indent = false;
         return make_indent();
@@ -53,8 +49,10 @@ lexing::LexToken lang::LangLexer::token(){
     }
 
     load_next_tok();
+    std::cerr << "loaded next tok" << std::endl;
 
     if (tok.symbol == lexing::tokens::NEWLINE){
+        std::cerr << "found newline" << std::endl;
         int next_col = next_tok_.colno;
 
         // The next token to be returned may be an indent or dedent 
@@ -64,6 +62,7 @@ lexing::LexToken lang::LangLexer::token(){
             // Return order: NEWLINE, INDENT, next_tok.symbol
             levels.push_back(next_col);
             found_indent = true;
+            std::cerr << "next token will be indent" << std::endl;
         }
         else if (next_col < last_level){
             // Dedent 
@@ -76,6 +75,7 @@ lexing::LexToken lang::LangLexer::token(){
             }
 
             found_dedent = true;
+            std::cerr << "next token will be dedent" << std::endl;
         }
     }
     return tok;

@@ -1,16 +1,16 @@
-#include "lang.h"
+#include "parser.h"
 
 /**
  * Initialize a closure from an item set and list of productions.
  */
-void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::ParseRule>& prod_rules){
+void parsing::init_closure(parsing::item_set_t& item_set, const std::vector<parsing::ParseRule>& prod_rules){
     std::size_t last_size;
 
     do {
         last_size = item_set.size();
         for (const auto& item : item_set){
             std::size_t pos = item.second;  // dot position
-            lang::production_t prod = item.first.production;  // production list
+            std::vector<std::string> prod = item.first.production;  // production list
             if (pos < prod.size()){
                 std::string next_symbol = prod[pos];
                 
@@ -29,13 +29,13 @@ void lang::init_closure(lang::item_set_t& item_set, const std::vector<lang::Pars
 /**
  * Move the parser position over by 1.
  */ 
-lang::item_set_t lang::move_pos(const lang::item_set_t& item_set, 
+parsing::item_set_t parsing::move_pos(const parsing::item_set_t& item_set, 
                                 const std::string& symbol,
-                                const std::vector<lang::ParseRule>& prod_rules){
+                                const std::vector<parsing::ParseRule>& prod_rules){
     item_set_t moved_item_set;
     for (const auto lr_item : item_set){
         auto prod_rule = lr_item.first;
-        const production_t& prod = prod_rule.production;
+        const std::vector<std::string>& prod = prod_rule.production;
         std::size_t pos = lr_item.second;
 
         if (pos < prod.size()){
@@ -51,7 +51,7 @@ lang::item_set_t lang::move_pos(const lang::item_set_t& item_set,
 /**
  * Create the canonical collections of the DFA.
  */ 
-void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::ParseRule>& prod_rules){
+void parsing::init_dfa(parsing::dfa_t& dfa, const std::vector<parsing::ParseRule>& prod_rules){
     std::size_t last_size;
     do {
         last_size = dfa.size();
@@ -61,7 +61,7 @@ void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::ParseRule>& prod_r
                 std::size_t pos = lr_item.second;
                 if (pos < production.size()){
                     auto next_symbol = production[pos];
-                    auto moved_item_set = lang::move_pos(item_set, next_symbol, prod_rules);
+                    auto moved_item_set = parsing::move_pos(item_set, next_symbol, prod_rules);
                     dfa.insert(moved_item_set);
                 }
             }
@@ -69,7 +69,7 @@ void lang::init_dfa(lang::dfa_t& dfa, const std::vector<lang::ParseRule>& prod_r
     } while (dfa.size() != last_size);  // while dfa did not change
 }
 
-void lang::Parser::init_precedence(const precedence_t& precedence){
+void parsing::Parser::init_precedence(const precedence_t& precedence){
     precedence_map_.reserve(precedence.size());
     for (std::size_t i = 0; i < precedence.size(); ++i){
         const auto& entry = precedence[i];
@@ -81,15 +81,15 @@ void lang::Parser::init_precedence(const precedence_t& precedence){
     }
 }
 
-static void* parse_prime(std::vector<void*>& args){
+static void* parse_prime(std::vector<void*>& args, void* data){
     return args.front();
 }
 
 /**
  * Initialize the parse table from the production rules.
  */
-lang::Parser::Parser(LangLexer& lexer, const std::vector<ParseRule>& prod_rules, 
-                     const precedence_t& precedence):
+parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& prod_rules, 
+                        const precedence_t& precedence):
     lexer_(lexer)
 {
     prod_rules_ = prod_rules;
@@ -114,15 +114,15 @@ lang::Parser::Parser(LangLexer& lexer, const std::vector<ParseRule>& prod_rules,
     init_parse_table(dfa);
 }
 
-bool lang::Parser::is_terminal(const std::string& symbol) const {
+bool parsing::Parser::is_terminal(const std::string& symbol) const {
     return lexer_.tokens().find(symbol) != lexer_.tokens().end();
 }
 
-const std::vector<lang::ParserConflict>& lang::Parser::conflicts() const {
+const std::vector<parsing::ParserConflict>& parsing::Parser::conflicts() const {
     return conflicts_;
 }
 
-void lang::Parser::init_parse_table(const dfa_t& dfa){
+void parsing::Parser::init_parse_table(const dfa_t& dfa){
     const auto& top_prod_rule = prod_rules_.front();
     parse_table_.reserve(dfa.size());
     item_set_map_.reserve(dfa.size());
@@ -159,7 +159,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                 if (is_terminal(next_symbol)){
                     // next_symbol is a token 
                     auto existing_it = action_table.find(next_symbol);
-                    ParseInstr shift_instr = {lang::ParseInstr::Action::SHIFT, j};
+                    ParseInstr shift_instr = {parsing::ParseInstr::Action::SHIFT, j};
                     if (existing_it != action_table.cend()){
                         // Possible action conlfict. Check for precedence 
                         check_precedence(existing_it->second, shift_instr, next_symbol, action_table);
@@ -170,13 +170,13 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     }
                 }
                 else {
-                    action_table[next_symbol] = {lang::ParseInstr::Action::GOTO, j};
+                    action_table[next_symbol] = {parsing::ParseInstr::Action::GOTO, j};
                 }
             }
             else {
                 if (prod_rule == top_prod_rule){
                     // Finished whole module; cannot reduce further
-                    action_table[lexing::tokens::END] = {lang::ParseInstr::Action::ACCEPT, 0};
+                    action_table[lexing::tokens::END] = {parsing::ParseInstr::Action::ACCEPT, 0};
                 }
                 else {
                     // End of rule; Reduce 
@@ -184,7 +184,7 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
                     // in B -> A . b where b is a terminal
                     int rule_num = prod_rule_map_.at(prod_rule);
                     const std::string& rule = prod_rule.rule;
-                    ParseInstr instr = {lang::ParseInstr::Action::REDUCE, rule_num};
+                    ParseInstr instr = {parsing::ParseInstr::Action::REDUCE, rule_num};
                     
                     for (const std::string& follow : follows(rule)){
                         if (action_table.find(follow) != action_table.cend()){
@@ -202,11 +202,11 @@ void lang::Parser::init_parse_table(const dfa_t& dfa){
     }
 }
 
-std::string lang::Parser::key_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
+std::string parsing::Parser::key_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
     std::string key_term;
     if (instr.action == ParseInstr::REDUCE){
         std::size_t rule_num = instr.value;
-        const production_t& reduce_prod = prod_rules_[rule_num].production;
+        const std::vector<std::string>& reduce_prod = prod_rules_[rule_num].production;
         key_term = rightmost_terminal(reduce_prod);
     }
     else {
@@ -215,7 +215,7 @@ std::string lang::Parser::key_for_instr(const ParseInstr& instr, const std::stri
     return key_term;
 }
 
-void lang::Parser::check_precedence(
+void parsing::Parser::check_precedence(
         const ParseInstr& existing_instr,
         const ParseInstr& new_instr,
         const std::string& lookahead,
@@ -283,7 +283,7 @@ void lang::Parser::check_precedence(
     }
 }
 
-void lang::Parser::dump_state(std::size_t state, std::ostream& stream) const {
+void parsing::Parser::dump_state(std::size_t state, std::ostream& stream) const {
     item_set_t item_sets[item_set_map_.size()];
     for (auto it = item_set_map_.cbegin(); it != item_set_map_.cend(); ++it){
         item_sets[it->second] = it->first;
@@ -294,7 +294,7 @@ void lang::Parser::dump_state(std::size_t state, std::ostream& stream) const {
     // Print item sets
     const auto& item_set = item_sets[state];
     for (const auto& lr_item : item_set){
-        stream << "\t" << lang::str(lr_item) << std::endl;
+        stream << "\t" << parsing::str(lr_item) << std::endl;
     }
     stream << std::endl;
 
@@ -330,7 +330,7 @@ void lang::Parser::dump_state(std::size_t state, std::ostream& stream) const {
 /**
  * Pretty print the parse table similar to how ply prints it.
  */
-void lang::Parser::dump_grammar(std::ostream& stream) const {
+void parsing::Parser::dump_grammar(std::ostream& stream) const {
     // Grammar 
     stream << "Grammar" << std::endl << std::endl;
     for (std::size_t i = 0; i < prod_rules_.size(); ++i){
@@ -360,9 +360,9 @@ void lang::Parser::dump_grammar(std::ostream& stream) const {
     }
 }
 
-std::string lang::Parser::conflict_str(const ParseInstr& instr, const std::string lookahead) const {
+std::string parsing::Parser::conflict_str(const ParseInstr& instr, const std::string lookahead) const {
     std::ostringstream stream;
-    production_t prod;
+    std::vector<std::string> prod;
     switch (instr.action){
         case ParseInstr::SHIFT: 
             stream << "shift and go to state " << instr.value << " on lookahead " << lookahead;
@@ -380,7 +380,7 @@ std::string lang::Parser::conflict_str(const ParseInstr& instr, const std::strin
     return stream.str();
 }
 
-std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
+std::string parsing::Parser::rightmost_terminal(const std::vector<std::string>& prod) const {
     for (auto it = prod.crbegin(); it != prod.crend(); ++it){
         if (is_terminal(*it)){
             return *it;
@@ -393,14 +393,15 @@ std::string lang::Parser::rightmost_terminal(const production_t& prod) const {
  * All terminal symbols on the stack have the same precedence and associativity.
  * Reduce depending on the type of associativity.
  */
-void lang::Parser::reduce(
+void parsing::Parser::reduce(
         const ParseRule& prod_rule, 
         std::vector<lexing::LexToken>& symbol_stack,
         std::vector<void*>& node_stack,
-        std::vector<std::size_t>& state_stack){
+        std::vector<std::size_t>& state_stack,
+        void* data){
     const std::string& rule = prod_rule.rule;
-    const production_t& prod = prod_rule.production;
-    const parse_func_t func = prod_rule.callback;
+    const std::vector<std::string>& prod = prod_rule.production;
+    const ParseCallback func = prod_rule.callback;
     
     lexing::LexToken rule_token = {rule,"",0,0,0};
 
@@ -412,7 +413,7 @@ void lang::Parser::reduce(
     void* result_node;
     if (func){
         std::vector<void*> slice(start, node_stack.end());
-        result_node = func(slice);
+        result_node = func(slice, data);
     }
     else {
         // Otherwise, add the wrapper for the rule token
@@ -433,7 +434,7 @@ void lang::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 }
 
-const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const lexing::LexToken& lookahead){
+const parsing::ParseInstr& parsing::Parser::get_instr(std::size_t state, const lexing::LexToken& lookahead){
     if (parse_table_[state].find(lookahead.symbol) == parse_table_[state].cend()){
         // Parse error
         std::ostringstream err;
@@ -449,7 +450,7 @@ const lang::ParseInstr& lang::Parser::get_instr(std::size_t state, const lexing:
 /**
  * The actual parsing.
  */
-void* lang::Parser::parse(const std::string& code){
+void* parsing::Parser::parse(const std::string& code, void* data){
     // This language is defined such that all statements must end with a newline 
     std::string code_cpy = code + "\n";
 
@@ -462,6 +463,7 @@ void* lang::Parser::parse(const std::string& code){
     std::vector<lexing::LexToken> symbol_stack;
     std::vector<void*> node_stack;
 
+    std::cerr << "called token" << std::endl;
     lexing::LexToken lookahead = lexer_.token();
     while (1){
         std::size_t state = state_stack.back();
@@ -490,6 +492,7 @@ void* lang::Parser::parse(const std::string& code){
                 token_wrapper = new LexTokenWrapper(lookahead);
                 node_stack.push_back(token_wrapper);
 
+                std::cerr << "called token" << std::endl;
                 lookahead = lexer_.token();
                 break;
             case ParseInstr::REDUCE:
@@ -499,7 +502,7 @@ void* lang::Parser::parse(const std::string& code){
 
                 // Pop from the states stack and replace the rules in the tokens stack 
                 // with the reduce rule
-                reduce(prod_rules_[instr.value], symbol_stack, node_stack, state_stack);
+                reduce(prod_rules_[instr.value], symbol_stack, node_stack, state_stack, data);
                 break;
             case ParseInstr::ACCEPT:
 #ifdef DEBUG
@@ -517,7 +520,7 @@ void* lang::Parser::parse(const std::string& code){
     }
 }
 
-std::unordered_set<std::string> lang::Parser::firsts(const std::string& symbol){
+std::unordered_set<std::string> parsing::Parser::firsts(const std::string& symbol){
     if (firsts_map_.find(symbol) != firsts_map_.end()){
         return firsts_map_[symbol];
     }
@@ -540,7 +543,7 @@ std::unordered_set<std::string> lang::Parser::firsts(const std::string& symbol){
     }
 }
 
-std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol){
+std::unordered_set<std::string> parsing::Parser::follows(const std::string& symbol){
     // If the symbol is already in the follows map, return it
     if (follows_map_.find(symbol) != follows_map_.end()){
         return follows_map_[symbol];
@@ -565,7 +568,7 @@ std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol)
     for (const auto& prod_rule : prod_rules_){
         // For each rule and production
         const std::string& rule = prod_rule.rule;
-        const production_t& prod = prod_rule.production;
+        const std::vector<std::string>& prod = prod_rule.production;
 
         // Check for other symbols that follow this one in a production
         for (std::size_t i = 0; i < prod.size()-1; ++i){
@@ -606,12 +609,12 @@ std::unordered_set<std::string> lang::Parser::follows(const std::string& symbol)
 /**
  * Method for initially creating the firsts set for a nonterminal before memoizing.
  */
-std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std::string& symbol){
+std::unordered_set<std::string> parsing::Parser::make_nonterminal_firsts(const std::string& symbol){
     std::unordered_set<std::string> firsts_set;
 
     for (const auto& prod_rule : prod_rules_){
         const std::string& rule = prod_rule.rule;
-        const production_t& prod = prod_rule.production;
+        const std::vector<std::string>& prod = prod_rule.production;
         if (rule == symbol){
             // For each production mapped to rule X 
             // put firsts(Y1) - {e} into firsts(X)
@@ -647,10 +650,142 @@ std::unordered_set<std::string> lang::Parser::make_nonterminal_firsts(const std:
     return firsts_set;
 }
 
-const std::unordered_set<std::string>& lang::Parser::firsts_stack() const {
+const std::unordered_set<std::string>& parsing::Parser::firsts_stack() const {
     return firsts_stack_;
 }
 
-const std::unordered_set<std::string>& lang::Parser::follows_stack() const {
+const std::unordered_set<std::string>& parsing::Parser::follows_stack() const {
     return follows_stack_;
 }
+
+std::string parsing::str(const std::vector<std::string>& production){
+    std::ostringstream s;
+    std::size_t len = production.size();
+    int end = static_cast<int>(len) - 1;
+    for (int i = 0; i < end; ++i){
+        s << production[i] << " ";
+    }
+    if (len){
+        s << production.back();
+    }
+    return s.str();
+}
+
+std::string parsing::str(const ParseRule& rule){
+    std::ostringstream s;
+    s << rule.rule << " -> " << str(rule.production);
+    return s.str();
+}
+
+std::string parsing::str(const lr_item_t& lr_item){
+    ParseRule prod_rule = lr_item.first;
+    int pos = lr_item.second;
+    std::ostringstream s;
+    s << prod_rule.rule << " : ";
+
+    // Before dot
+    for (int i = 0; i < pos; ++i){
+        s << prod_rule.production[i] << " ";
+    }
+
+    s << ". ";
+
+    // After dot 
+    int len = static_cast<int>(prod_rule.production.size());
+    for (int i = pos; i < len; ++i){
+        s << prod_rule.production[i] << " ";
+    }
+
+    return s.str();
+}
+
+std::string parsing::str(const ParseInstr::Action& action){
+    switch (action){
+        case ParseInstr::SHIFT: return "shift";
+        case ParseInstr::REDUCE: return "reduce";
+        case ParseInstr::GOTO: return "goto";
+        case ParseInstr::ACCEPT: return "accept";
+        default: return "";
+    }
+}
+
+
+/********** Nodes ************/
+
+std::string parsing::Node::str() const {
+    std::vector<std::string> node_lines = lines();
+    if (node_lines.empty()){
+        return "";
+    }
+
+    std::ostringstream s(node_lines.front());
+    for (auto it = node_lines.begin()+1; it < node_lines.end(); ++it){
+        s << std::endl << *it;
+    }
+    return s.str();
+}
+
+parsing::LexTokenWrapper::LexTokenWrapper(const lexing::LexToken& token): token_(token){}
+
+lexing::LexToken parsing::LexTokenWrapper::token() const { return token_; }
+
+std::vector<std::string> parsing::LexTokenWrapper::lines() const { 
+    std::vector<std::string> v = {token_.value};
+    return v;
+}
+
+
+/************ Hashes *************/
+
+// Borrowed from python hash
+static std::size_t _HASH_MULTIPLIER = 1000003;
+
+/**
+ * Equality between parse rules
+ */ 
+bool parsing::ParseRule::operator==(const ParseRule& other) const {
+    return this->rule == other.rule && this->production == other.production;
+}
+
+/**
+ * Borrowed from python3.6's tuple hash
+ */
+std::size_t parsing::ProdRuleHasher::operator()(const ParseRule& prod_rule) const {
+    const std::string& rule = prod_rule.rule;
+    const std::vector<std::string>& prod = prod_rule.production;
+    const std::hash<std::string> str_hasher;
+    std::size_t rule_hash = str_hasher(rule);
+
+    std::size_t hash_mult = _HASH_MULTIPLIER;
+    std::size_t prod_hash = 0x345678;
+    std::size_t len = prod.size();
+    for (const std::string& r : prod){
+        prod_hash = (prod_hash ^ str_hasher(r)) * hash_mult;
+        hash_mult += 82520 + len + len;
+    }
+    prod_hash += 97531;
+    return prod_hash ^ rule_hash;
+}
+
+std::size_t parsing::ItemHasher::operator()(const lr_item_t& lr_item) const {
+    ProdRuleHasher hasher;
+    return hasher(lr_item.first) ^ static_cast<std::size_t>(lr_item.second);
+}
+
+/**
+ * Borrowed from python3.6's frozenset hash
+ */ 
+static std::size_t _shuffle_bits(std::size_t h){
+    return ((h ^ 89869747UL) ^ (h << 16)) * 3644798167UL;
+}
+
+std::size_t parsing::ItemSetHasher::operator()(const item_set_t& item_set) const {
+    std::size_t hash = 0;
+    ItemHasher item_hasher;
+    for (const auto& lr_item : item_set){
+        hash ^= _shuffle_bits(item_hasher(lr_item));  // entry hashes
+    }
+    hash ^= item_set.size() * 1927868237UL;  // # of active entrues
+    hash = hash * 69069U + 907133923UL;
+    return hash;
+};

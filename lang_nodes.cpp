@@ -3,34 +3,6 @@
 static const std::string INDENT = "    ";
 
 /**
- * Base node
- */ 
-std::string lang::Node::str() const {
-    std::vector<std::string> node_lines = lines();
-    if (node_lines.empty()){
-        return "";
-    }
-
-    std::ostringstream s(node_lines.front());
-    for (auto it = node_lines.begin()+1; it < node_lines.end(); ++it){
-        s << std::endl << *it;
-    }
-    return s.str();
-}
-
-/**
- * LexTokenWrapper
- */
-lang::LexTokenWrapper::LexTokenWrapper(const lexing::LexToken& token): token_(token){}
-
-lexing::LexToken lang::LexTokenWrapper::token() const { return token_; }
-
-std::vector<std::string> lang::LexTokenWrapper::lines() const { 
-    std::vector<std::string> v = {token_.value};
-    return v;
-}
-
-/**
  * Module
  */ 
 std::vector<std::string> lang::Module::lines() const {
