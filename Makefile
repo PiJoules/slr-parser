@@ -23,7 +23,7 @@ EXE_FILES = $(TEST_FILES) \
 			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: compile test_lexer test_table_generation test_parser 
+test: compile_clean test_lexer test_table_generation test_parser 
 
 .PHONY: test
 
@@ -31,7 +31,8 @@ test: compile test_lexer test_table_generation test_parser
 %.o: %.cpp 
 	$(CPP) $(CPPFLAGS) -O2 -c $< -o $@
 
-compile: $(OBJS) clean_exes $(EXE_OUTPUTS)
+compile: $(OBJS) $(EXE_OUTPUTS)
+compile_clean: $(OBJS) clean_exes $(EXE_OUTPUTS)
 
 # Executable binaries from cpp files
 %.out: %.cpp

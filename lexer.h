@@ -9,7 +9,6 @@
 namespace lexing {
     // Common token names
     namespace tokens {
-        const std::string NEWLINE = "NEWLINE";
         const std::string END = "END";  // End of input/file
         const std::string COMMENT = "COMMENT";
     }

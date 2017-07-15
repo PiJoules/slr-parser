@@ -41,7 +41,7 @@ static const lexing::TokensMap test_tokens = {
     {"DIV", {R"(\\)", nullptr}},
 
     // Misc
-    {lexing::tokens::NEWLINE, {R"(\n+)", nullptr}},  // Capture newlines
+    {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},  // Capture newlines
 };
 
 /**
@@ -94,7 +94,7 @@ void test_lexer_input(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 1);
     assert(tok.colno == 6);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert(tok.value == "4");
@@ -161,7 +161,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 1);
     assert_int_equal(tok.colno, 2);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
@@ -179,7 +179,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 3);
     assert_int_equal(tok.colno, 6);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
@@ -197,7 +197,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 4);
     assert_int_equal(tok.colno, 8);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
@@ -215,7 +215,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 6);
     assert_int_equal(tok.colno, 6);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert_str_equal(tok.value, "e");
@@ -227,7 +227,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 8);
     assert_int_equal(tok.colno, 6);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
@@ -245,7 +245,7 @@ void test_indentation(){
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 9);
     assert_int_equal(tok.colno, 2);
-    assert(tok.symbol == lexing::tokens::NEWLINE);
+    assert(tok.symbol == lang::tokens::NEWLINE);
 
     tok = lex.token(nullptr);
     assert_str_equal(tok.value, "7");

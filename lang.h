@@ -24,6 +24,7 @@ namespace lang {
 
     /********* Lexer ********/
     namespace tokens {
+        const std::string NEWLINE = "NEWLINE";
         const std::string INDENT = "INDENT";
         const std::string DEDENT = "DEDENT";
     };

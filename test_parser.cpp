@@ -13,7 +13,7 @@ def func():
     lexer.input(code);
 
     // line 1
-    assert(lexer.token(nullptr).symbol == "NEWLINE");
+    assert(lexer.token(nullptr).symbol == lang::tokens::NEWLINE);
 
     // line 2
     assert(lexer.token(nullptr).symbol == "DEF");
@@ -21,14 +21,14 @@ def func():
     assert(lexer.token(nullptr).symbol == "LPAR");
     assert(lexer.token(nullptr).symbol == "RPAR");
     assert(lexer.token(nullptr).symbol == "COLON");
-    assert(lexer.token(nullptr).symbol == "NEWLINE");
+    assert(lexer.token(nullptr).symbol == lang::tokens::NEWLINE);
 
     // line 3
     assert(lexer.token(nullptr).symbol == lang::tokens::INDENT);
     assert(lexer.token(nullptr).symbol == "NAME");
     assert(lexer.token(nullptr).symbol == "ADD");
     assert(lexer.token(nullptr).symbol == "NAME");
-    assert(lexer.token(nullptr).symbol == "NEWLINE");
+    assert(lexer.token(nullptr).symbol == lang::tokens::NEWLINE);
     assert(lexer.token(nullptr).symbol == lang::tokens::DEDENT);
 
     assert(lexer.empty());

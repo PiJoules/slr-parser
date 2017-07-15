@@ -43,7 +43,7 @@ lexing::LexToken lang::LangLexer::token(void* data){
 
     next_tok_ = lexing::Lexer::token(data);
 
-    if (tok.symbol == lexing::tokens::NEWLINE){
+    if (tok.symbol == lang::tokens::NEWLINE){
         int next_col = next_tok_.colno;
 
         // The next token to be returned may be an indent or dedent 

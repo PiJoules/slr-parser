@@ -28,7 +28,7 @@ static const parsing::precedence_t test_precedence = {
     {parsing::LEFT_ASSOC, {"MUL", "DIV"}},
 };
 
-static const parsing::item_set_t clos_expected = {
+static const parsing::ItemSet clos_expected = {
     {{"module", {"expr"}, nullptr}, 0},
     {{"expr", {"expr", "SUB", "expr"}, nullptr}, 0},
     {{"expr", {"expr", "ADD", "expr"}, nullptr}, 0},
@@ -38,7 +38,7 @@ static const parsing::item_set_t clos_expected = {
     {{"expr", {"INT"}, nullptr}, 0},
 };
 
-static const parsing::item_set_t expr_expected = {
+static const parsing::ItemSet expr_expected = {
     {{"module", {"expr"}, nullptr}, 1},
     {{"expr", {"expr", "SUB", "expr"}, nullptr}, 1},
     {{"expr", {"expr", "ADD", "expr"}, nullptr}, 1},
@@ -46,11 +46,11 @@ static const parsing::item_set_t expr_expected = {
     {{"expr", {"expr", "DIV", "expr"}, nullptr}, 1},
 };
 
-static const parsing::item_set_t name_expected = {
+static const parsing::ItemSet name_expected = {
     {{"expr", {"NAME"}, nullptr}, 1},
 };
 
-static const parsing::item_set_t int_expected = {
+static const parsing::ItemSet int_expected = {
     {{"expr", {"INT"}, nullptr}, 1},
 };
 
@@ -261,7 +261,7 @@ void test_rules6(){
 
         // Misc 
         {"DEF", {R"(def)", nullptr}},
-        {"NEWLINE", {R"(\n+)", nullptr}},
+        {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
         {"TOKEN", {"TOKEN", nullptr}},
     };
 
@@ -271,14 +271,14 @@ void test_rules6(){
         {"module_stmt_list", {"module_stmt"}, nullptr},
         {"module_stmt_list", {"module_stmt_list", "module_stmt"}, nullptr},
         {"module_stmt", {"func_def"}, nullptr},
-        {"module_stmt", {"NEWLINE"}, nullptr},
+        {"module_stmt", {lang::tokens::NEWLINE}, nullptr},
 
         // Functions 
         {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, nullptr},
-        {"func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, nullptr},
+        {"func_suite", {lang::tokens::NEWLINE, lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, nullptr},
         {"func_stmts", {"func_stmt"}, nullptr},
         {"func_stmts", {"func_stmts", "func_stmt"}, nullptr},
-        {"func_stmt", {"simple_func_stmt", "NEWLINE"}, nullptr},
+        {"func_stmt", {"simple_func_stmt", lang::tokens::NEWLINE}, nullptr},
         {"simple_func_stmt", {"TOKEN"}, nullptr},
     };
 
@@ -286,7 +286,7 @@ void test_rules6(){
     parsing::Parser parser(lexer, rules);
 
     // firsts 
-    std::unordered_set<std::string> expected = {"DEF", "NEWLINE"};
+    std::unordered_set<std::string> expected = {"DEF", lang::tokens::NEWLINE};
     assert(parser.firsts("module_stmt") == expected);
     assert(parser.firsts("module_stmt_list") == expected);
     assert(parser.firsts("module") == expected);
@@ -294,7 +294,7 @@ void test_rules6(){
     // follows 
     expected = {lexing::tokens::END};
     assert(parser.follows("module") == expected);
-    expected = {lexing::tokens::END, "DEF", "NEWLINE"};
+    expected = {lexing::tokens::END, "DEF", lang::tokens::NEWLINE};
     assert(parser.follows("module_stmt") == expected);
     assert(parser.follows("module_stmt_list") == expected);
 
@@ -305,7 +305,7 @@ void test_rules6(){
 
 void test_closure(){
     const auto& entry = test_rules.front();
-    parsing::item_set_t item_set = {{entry, 0}};
+    parsing::ItemSet item_set = {{entry, 0}};
     parsing::init_closure(item_set, test_rules);
 
     // Check the contents 
@@ -319,15 +319,15 @@ void test_closure(){
 
 void test_move_pos(){
     // GOTO expressios
-    parsing::item_set_t expr_item_set = parsing::move_pos(clos_expected, "expr", test_rules);
+    parsing::ItemSet expr_item_set = parsing::move_pos(clos_expected, "expr", test_rules);
     assert(expr_item_set == expr_expected);
     
     // GOTO name
-    parsing::item_set_t name_item_set = parsing::move_pos(clos_expected, "NAME", test_rules);
+    parsing::ItemSet name_item_set = parsing::move_pos(clos_expected, "NAME", test_rules);
     assert(name_item_set == name_expected);
     
     // GOTO int
-    parsing::item_set_t int_item_set = parsing::move_pos(clos_expected, "INT", test_rules);
+    parsing::ItemSet int_item_set = parsing::move_pos(clos_expected, "INT", test_rules);
     assert(int_item_set == int_expected);
 }
 

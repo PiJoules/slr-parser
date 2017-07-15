@@ -22,42 +22,56 @@ namespace parsing {
         std::string rule;
         std::vector<std::string> production;
         ParseCallback callback;
+
         bool operator==(const ParseRule& other) const;
+        std::string str() const;
     };
 
-    struct ProdRuleHasher {
-        std::size_t operator()(const ParseRule& prod_rule) const;
+    struct ParseRuleHasher {
+        std::size_t operator()(const ParseRule& parse_rule) const;
+    };
+
+    typedef struct LRItem LRItem;
+    struct LRItem {
+        ParseRule parse_rule;
+        std::size_t pos;
+
+        bool operator==(const LRItem& other) const;
+        std::string str() const;
     };
 
     // Parse table generation
-    typedef std::pair<ParseRule, int> lr_item_t;
     struct ItemHasher {
-        std::size_t operator()(const lr_item_t& lr_item) const;
+        std::size_t operator()(const LRItem& lr_item) const;
     };
     // TODO: Create an immutable container type (like tuples/frozensets in python)
     // so that we don't have to take the hash of a mutable container set at compile time.
-    typedef std::unordered_set<lr_item_t, ItemHasher> item_set_t;
+    typedef std::unordered_set<LRItem, ItemHasher> ItemSet;
 
     struct ItemSetHasher {
-        std::size_t operator()(const item_set_t&) const;
+        std::size_t operator()(const ItemSet&) const;
     };
-    typedef std::unordered_set<item_set_t, ItemSetHasher> dfa_t;
 
-    void init_closure(item_set_t&, const std::vector<ParseRule>&);
-    item_set_t move_pos(const item_set_t&, const std::string&, const std::vector<ParseRule>&);
-    void init_dfa(dfa_t& dfa, const std::vector<ParseRule>&);
+    // Deterministic finite automata
+    typedef std::unordered_set<ItemSet, ItemSetHasher> DFA;
+
+    void init_closure(ItemSet&, const std::vector<ParseRule>&);
+    ItemSet move_pos(const ItemSet&, const std::string&, const std::vector<ParseRule>&);
+    void init_dfa(DFA& dfa, const std::vector<ParseRule>&);
 
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
         enum Action {SHIFT, REDUCE, GOTO, ACCEPT} action;
         int value;
+
+        std::string str() const;
     };
     typedef std::unordered_map<int, std::unordered_map<std::string, ParseInstr>> parse_table_t;
 
     enum Associativity {
         LEFT_ASSOC,
         RIGHT_ASSOC,
-        // Ply also implements nonassociativity, but ignoring that for now
+        // TODO: Ply also implements nonassociativity, but ignoring that for now
     };
     typedef std::vector<std::pair<enum Associativity, std::vector<std::string>>> precedence_t;
     typedef struct {
@@ -67,7 +81,7 @@ namespace parsing {
     } ParserConflict;
 
 
-    /******** Nodes ***********/ 
+    /******** Base Nodes ***********/ 
 
     class Node {
         public:
@@ -96,6 +110,8 @@ namespace parsing {
             virtual std::vector<std::string> lines() const;
     };
 
+    /************** Parser ************/
+
     class Parser {
         private:
             lexing::Lexer& lexer_;
@@ -108,16 +124,16 @@ namespace parsing {
             std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;  // memoization
             std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
 
-            item_set_t top_item_set_;
-            std::vector<ParseRule> prod_rules_;  // list of produciton rules
+            ItemSet top_item_set_;
+            std::vector<ParseRule> parse_rules_;  // list of produciton rules
             parse_table_t parse_table_;  // map of states to map of strings to parse instructions
-            std::unordered_map<const item_set_t, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
-            std::unordered_map<const ParseRule, int, ProdRuleHasher> prod_rule_map_;  // map of production rule index to production rule (flipped keys + vals of prod_rules_)
+            std::unordered_map<const ItemSet, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
+            std::unordered_map<const ParseRule, int, ParseRuleHasher> parse_rule_map_;  // map of production rule index to production rule (flipped keys + vals of parse_rules_)
             std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;  // map of symbol to pair of the precedence value and associativity
             std::vector<ParserConflict> conflicts_;
 
             /******* Methods ********/
-            void init_parse_table(const dfa_t&);
+            void init_parse_table(const DFA&);
             bool is_terminal(const std::string&) const;
             void init_precedence(const precedence_t&);
             std::string key_for_instr(const ParseInstr&, const std::string&) const;
@@ -134,7 +150,7 @@ namespace parsing {
                         std::vector<std::size_t>&, void* data);
 
         public:
-            Parser(lexing::Lexer&, const std::vector<ParseRule>& prod_rules,
+            Parser(lexing::Lexer&, const std::vector<ParseRule>& parse_rules,
                    const precedence_t& precedence={{}});
             void dump_grammar(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
@@ -149,12 +165,6 @@ namespace parsing {
             const std::unordered_set<std::string>& firsts_stack() const;
             const std::unordered_set<std::string>& follows_stack() const;
     };
-
-    std::string str(const std::vector<std::string>& production);
-    std::string str(const ParseRule& prod_rule);
-    std::string str(const lr_item_t& lr_item);
-    std::string str(const item_set_t& item_set);
-    std::string str(const ParseInstr::Action&);
 }
 
 #endif

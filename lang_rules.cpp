@@ -33,7 +33,7 @@ const lexing::TokensMap lang::LANG_TOKENS = {
 
     // Misc 
     {"DEF", {R"(def)", nullptr}},
-    {"NEWLINE", {R"(\n+)", nullptr}},
+    {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
     {"WS", {R"([ ]+)", comment}},
     {lang::tokens::INDENT, {lang::tokens::INDENT, nullptr}},
@@ -253,14 +253,14 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"module_stmt_list", {"module_stmt"}, parse_module_stmt_list},
     {"module_stmt_list", {"module_stmt_list", "module_stmt"}, parse_module_stmt_list2},
     {"module_stmt", {"func_def"}, parse_module_stmt},
-    {"module_stmt", {"NEWLINE"}, parse_module_stmt2},
+    {"module_stmt", {lang::tokens::NEWLINE}, parse_module_stmt2},
 
     // Functions 
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
-    {"func_suite", {"NEWLINE", lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite},
+    {"func_suite", {lang::tokens::NEWLINE, lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite},
     {"func_stmts", {"func_stmt"}, parse_func_stmts},
     {"func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2},
-    {"func_stmt", {"simple_func_stmt", "NEWLINE"}, parse_func_stmt},
+    {"func_stmt", {"simple_func_stmt", lang::tokens::NEWLINE}, parse_func_stmt},
     {"simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt},
 
     // Simple statements - one line 
