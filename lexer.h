@@ -37,16 +37,18 @@ namespace lexing {
             const TokensMapRegex tokens_;
 
             TokensMapRegex to_regex_map(const TokensMap&) const;
+            void advance_pos(char);
+            void advance_stream_and_pos(const std::string&);
+            void advance_stream_and_pos(char);
+            bool find_match(LexToken&, void* data);
 
         public:
             Lexer(const TokensMap&);
             Lexer(const TokensMapRegex&);
 
             void input(const std::string&);
-            LexToken token(void* data=nullptr);
+            virtual LexToken token(void* data);
             bool empty() const;
-            void advance(int count=1);
-            void advancenl(int count=1);
 
             // Getters
             int pos() const;

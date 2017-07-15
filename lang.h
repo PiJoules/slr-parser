@@ -36,14 +36,13 @@ namespace lang {
             // Indentation tracking
             std::vector<int> levels = {1};
             bool found_indent = false, found_dedent = false;
+            bool loaded_init_token_ = false;
             lexing::LexToken next_tok_;
-            void load_next_tok();
 
         public:
             LangLexer(const lexing::TokensMap&);
 
-            void input(const std::string&);
-            lexing::LexToken token();
+            lexing::LexToken token(void* data) override;
     };
 
     // Custom exceptions 

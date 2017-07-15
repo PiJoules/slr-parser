@@ -49,14 +49,14 @@ static const lexing::TokensMap test_tokens = {
  */
 void test_lexer_creation(){
     lexing::Lexer lex(test_tokens);
-    auto tok = lex.token();
+    auto tok = lex.token(nullptr);
     assert(tok.value == "");
     assert_int_equal(tok.lineno, 1);
     assert(tok.colno == 1);
     assert(tok.symbol == lexing::tokens::END);
 
     // Same output
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert(tok.value == "");
     assert(tok.lineno == 1);
     assert(tok.colno == 1);
@@ -71,44 +71,44 @@ void test_lexer_input(){
     lexing::Lexer lex(test_tokens);
     lex.input(code);
 
-    auto tok = lex.token();
+    auto tok = lex.token(nullptr);
     assert_str_equal(tok.value, "x");
     assert(tok.lineno == 1);
     assert(tok.colno == 1);
     assert(tok.symbol == "NAME");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "+");
     assert(tok.lineno == 1);
     assert(tok.colno == 3);
     assert_str_equal(tok.symbol, "ADD");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert(tok.value == "y");
     assert(tok.lineno == 1);
     assert(tok.colno == 5);
     assert(tok.symbol == "NAME");
 
     // We listen for newlines
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 1);
     assert(tok.colno == 6);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert(tok.value == "4");
     assert(tok.lineno == 2);
     assert(tok.colno == 1);
     assert(tok.symbol == "INT");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert(tok.value == "-");
     assert(tok.lineno == 2);
     assert(tok.colno == 2);
     assert(tok.symbol == "SUB");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert(tok.value == "3");
     assert(tok.lineno == 2);
     assert(tok.colno == 3);
@@ -121,14 +121,14 @@ void test_lexer_input(){
 void test_name(){
     lexing::Lexer lex(test_tokens);
     lex.input("_x");
-    auto tok = lex.token();
+    auto tok = lex.token(nullptr);
     assert(tok.value == "_x");
     assert(tok.lineno == 1);
     assert(tok.colno == 1);
     assert(tok.symbol == "NAME");
 
     lex.input("_92");
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert(tok.value == "_92");
     assert(tok.lineno == 1);
     assert(tok.colno == 3);
@@ -151,103 +151,103 @@ void test_indentation(){
 6
 7)");
 
-    auto tok = lex.token();
+    auto tok = lex.token(nullptr);
     assert(tok.value == "x");
     assert(tok.lineno == 1);
     assert(tok.colno == 1);
     assert(tok.symbol == "NAME");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 1);
     assert_int_equal(tok.colno, 2);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
     assert(tok.lineno == 3);
     assert_int_equal(tok.colno, 1);
     assert(tok.symbol == lang::tokens::INDENT);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "a");
     assert(tok.lineno == 3);
     assert_int_equal(tok.colno, 5);
     assert(tok.symbol == "NAME");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 3);
     assert_int_equal(tok.colno, 6);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
     assert(tok.lineno == 4);
     assert_int_equal(tok.colno, 1);
     assert(tok.symbol == lang::tokens::INDENT);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "b");
     assert(tok.lineno == 4);
     assert_int_equal(tok.colno, 7);
     assert(tok.symbol == "NAME");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 4);
     assert_int_equal(tok.colno, 8);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
     assert(tok.lineno == 6);
     assert_int_equal(tok.colno, 1);
     assert(tok.symbol == lang::tokens::DEDENT);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "d");
     assert(tok.lineno == 6);
     assert_int_equal(tok.colno, 5);
     assert(tok.symbol == "NAME");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n\n");
     assert(tok.lineno == 6);
     assert_int_equal(tok.colno, 6);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "e");
     assert(tok.lineno == 8);
     assert_int_equal(tok.colno, 5);
     assert(tok.symbol == "NAME");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 8);
     assert_int_equal(tok.colno, 6);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "");
     assert(tok.lineno == 9);
     assert_int_equal(tok.colno, 1);
     assert(tok.symbol == lang::tokens::DEDENT);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "6");
     assert(tok.lineno == 9);
     assert_int_equal(tok.colno, 1);
     assert(tok.symbol == "INT");
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "\n");
     assert(tok.lineno == 9);
     assert_int_equal(tok.colno, 2);
     assert(tok.symbol == lexing::tokens::NEWLINE);
 
-    tok = lex.token();
+    tok = lex.token(nullptr);
     assert_str_equal(tok.value, "7");
     assert(tok.lineno == 10);
     assert_int_equal(tok.colno, 1);
@@ -263,12 +263,12 @@ void bad_indeation_code(){
   y
  z
 )");
-    lex.token();  // x
-    lex.token();  // newline
-    lex.token();  // indent 
-    lex.token();  // y 
-    lex.token();  // newline 
-    lex.token();  // dedent (IndentationError thrown here)
+    lex.token(nullptr);  // x
+    lex.token(nullptr);  // newline
+    lex.token(nullptr);  // indent 
+    lex.token(nullptr);  // y 
+    lex.token(nullptr);  // newline 
+    lex.token(nullptr);  // dedent (IndentationError thrown here)
 }
 
 void test_indentation_error(){

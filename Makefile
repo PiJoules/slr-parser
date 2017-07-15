@@ -40,11 +40,11 @@ compile: $(OBJS) clean_exes $(EXE_OUTPUTS)
 clean_exes:
 	rm -rf $(EXE_OUTPUTS)
 
-test_lexer: clean_exes test_lexer.out
+test_lexer: $(OBJS) clean_exes test_lexer.out
 	./test_lexer.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lexer.out || (echo "memory leak"; exit 1); fi
 
-test_table_generation: clean_exes test_table_generation.out
+test_table_generation: $(OBJS) clean_exes test_table_generation.out
 	./test_table_generation.out
 	valgrind ./test_table_generation.out || echo 'Valgrind not available' 
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_table_generation.out || (echo "memory leak"; exit 1); fi 
