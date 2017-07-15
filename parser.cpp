@@ -69,7 +69,16 @@ void parsing::init_dfa(parsing::DFA& dfa, const std::vector<parsing::ParseRule>&
     } while (dfa.size() != last_size);  // while dfa did not change
 }
 
-void parsing::Parser::init_precedence(const precedence_t& precedence){
+parsing::Parser::Parser(lexing::Lexer& lexer, const ParseTable& table): 
+    lexer_(lexer), parse_table_(table){}
+
+parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules,
+                        const Precedence& precedence):
+    lexer_(lexer), 
+    parse_table_(parse_rules_to_table(parse_rules, lexer, precedence)){}
+
+
+std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> parsing::precedence_to_map(const Precedence& precedence){
     precedence_map_.reserve(precedence.size());
     for (std::size_t i = 0; i < precedence.size(); ++i){
         const auto& entry = precedence[i];
@@ -86,10 +95,30 @@ static void* parse_prime(std::vector<void*>& args, void* data){
 }
 
 /**
+ * Convert a list of parse rules to a parse table to be used by the parser.
+ */
+ParseTable parse_rules_to_table(std::vector<ParseRule> parse_rules,
+                                const lexing::Lexer& lexer,
+                                const Precedence& precedence){
+    // Add new top level rule 
+    std::string old_top_rule = parse_rules.front().rule;
+    std::string start_nonterminal = old_top_rule + "'";  // prime rule
+    ParseRule new_top_pr = {
+        start_nonterminal,
+        {old_top_rule}, 
+        parse_prime
+    };
+    parse_rules.insert(parse_rules.begin(), new_top_pr);
+
+    // Initialize the precedence map 
+    std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map;
+}
+
+/**
  * Initialize the parse table from the production rules.
  */
 parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules, 
-                        const precedence_t& precedence):
+                        const Precedence& precedence):
     lexer_(lexer)
 {
     parse_rules_ = parse_rules;
@@ -327,7 +356,7 @@ void parsing::Parser::dump_state(std::size_t state, std::ostream& stream) const 
     stream << std::endl;
 }
 
-std::string parsing::ParseInstr::str() const {
+std::string parsing::action_str(const ParseInstr::Action& action){
     std::ostringstream s;
     switch (action){
         case ParseInstr::SHIFT: return "shift";
@@ -364,8 +393,8 @@ void parsing::Parser::dump_grammar(std::ostream& stream) const {
 
         const ParseInstr::Action& act1 = chosen.action;
         const ParseInstr::Action& act2 = other.action;
-        stream << act1.str() << "/" << act2.str() << " conflict (defaulting to " << act1.str()
-               << ")" << std::endl;
+        stream << action_str(act1) << "/" << action_str(act2) << " conflict (defaulting to " 
+               << action_str(act1) << ")" << std::endl;
         stream << "- " << conflict_str(chosen, lookahead) << std::endl;
         stream << "- " << conflict_str(other, lookahead) << std::endl;
     }

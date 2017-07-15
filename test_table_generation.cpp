@@ -23,7 +23,7 @@ static const std::vector<parsing::ParseRule> test_rules = {
     {"expr", {"INT"}, nullptr},
 };
 
-static const parsing::precedence_t test_precedence = {
+static const parsing::Precedence test_precedence = {
     {parsing::RIGHT_ASSOC, {"ADD", "SUB"}},
     {parsing::LEFT_ASSOC, {"MUL", "DIV"}},
 };

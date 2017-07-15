@@ -279,7 +279,7 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
 
 /**************** Associativity ***************/ 
 
-const parsing::precedence_t lang::LANG_PRECEDENCE = {
+const parsing::Precedence lang::LANG_PRECEDENCE = {
     {parsing::LEFT_ASSOC, {"ADD", "SUB"}},
     {parsing::RIGHT_ASSOC, {"MUL", "DIV"}},
 };
