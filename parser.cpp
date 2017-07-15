@@ -463,8 +463,8 @@ void* parsing::Parser::parse(const std::string& code, void* data){
     std::vector<lexing::LexToken> symbol_stack;
     std::vector<void*> node_stack;
 
-    std::cerr << "called token" << std::endl;
     lexing::LexToken lookahead = lexer_.token(data);
+
     while (1){
         std::size_t state = state_stack.back();
 
@@ -492,7 +492,6 @@ void* parsing::Parser::parse(const std::string& code, void* data){
                 token_wrapper = new LexTokenWrapper(lookahead);
                 node_stack.push_back(token_wrapper);
 
-                std::cerr << "called token" << std::endl;
                 lookahead = lexer_.token(data);
                 break;
             case ParseInstr::REDUCE:

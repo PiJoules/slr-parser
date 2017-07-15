@@ -56,7 +56,7 @@ def func():
 }
 
 int main(){
-    //test_tokens();
+    test_tokens();
     test_parser();
 
     return 0;
