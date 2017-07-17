@@ -74,6 +74,7 @@ namespace parsing {
     };
 
     typedef std::vector<std::pair<enum Associativity, std::vector<std::string>>> PrecedenceList;
+    typedef std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> PrecedenceTable;
 
     typedef struct {
         ParseInstr instr1;  // Default chosen instruction will be whatever appeared first in the rules
@@ -102,10 +103,9 @@ namespace parsing {
 
             ItemSet top_item_set_;
             std::vector<ParseRule> parse_rules_;  // list of produciton rules
-            std::unordered_map<int, std::unordered_map<std::string, ParseInstr>> parse_table_;  // map of states to map of strings to parse instructions
+            const ParseTable parse_table_;  // map of states to map of strings to parse instructions
             std::unordered_map<const ItemSet, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
             std::unordered_map<const ParseRule, int, ParseRuleHasher> parse_rule_map_;  // map of production rule index to production rule (flipped keys + vals of parse_rules_)
-            std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map_;  // map of symbol to pair of the precedence value and associativity
             std::vector<ParserConflict> conflicts_;
 
             /******* Methods ********/

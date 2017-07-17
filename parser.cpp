@@ -73,7 +73,7 @@ parsing::Parser::Parser(lexing::Lexer& lexer, const ParseTable& table):
     lexer_(lexer), parse_table_(table){}
 
 parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules,
-                        const Precedence& precedence):
+                        const PrecedenceList& precedence):
     lexer_(lexer), 
     parse_table_(parse_rules_to_table(parse_rules, lexer, precedence)){}
 
@@ -99,7 +99,7 @@ static void* parse_prime(std::vector<void*>& args, void* data){
  */
 ParseTable parse_rules_to_table(std::vector<ParseRule> parse_rules,
                                 const lexing::Lexer& lexer,
-                                const Precedence& precedence){
+                                const PrecedenceList& precedence){
     // Add new top level rule 
     std::string old_top_rule = parse_rules.front().rule;
     std::string start_nonterminal = old_top_rule + "'";  // prime rule
@@ -111,7 +111,16 @@ ParseTable parse_rules_to_table(std::vector<ParseRule> parse_rules,
     parse_rules.insert(parse_rules.begin(), new_top_pr);
 
     // Initialize the precedence map 
-    std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> precedence_map;
+    PrecedenceTable precedence_table;
+    precedence_table.reserve(precedence.size());
+    for (std::size_t i = 0; i < precedence.size(); ++i){
+        const auto& entry = precedence[i];
+        enum Associativity assoc = entry.first;
+        const std::vector<std::string>& tokens = entry.second;
+        for (const std::string& tok : tokens){
+            precedence_table[tok] = {i, assoc};
+        }
+    }
 }
 
 /**
