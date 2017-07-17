@@ -55,10 +55,6 @@ namespace parsing {
     // Deterministic finite automata
     typedef std::unordered_set<ItemSet, ItemSetHasher> DFA;
 
-    void init_closure(ItemSet&, const std::vector<ParseRule>&);
-    ItemSet move_pos(const ItemSet&, const std::string&, const std::vector<ParseRule>&);
-    void init_dfa(DFA& dfa, const std::vector<ParseRule>&);
-
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
         enum Action {SHIFT, REDUCE, GOTO, ACCEPT} action;
@@ -84,17 +80,21 @@ namespace parsing {
 
     typedef std::unordered_map<std::size_t, std::unordered_map<std::string, ParseInstr>> ParseTable;
 
+    void init_closure(ItemSet&, const std::vector<ParseRule>&);
+    ItemSet move_pos(const ItemSet&, const std::string&, const std::vector<ParseRule>&);
+    void init_dfa(DFA& dfa, const std::vector<ParseRule>&);
+
 
     /************** Parser ************/ 
 
-    ParseTable parse_rules_to_table(std::vector<ParseRule>, const lexing::Lexer&, const PrecedenceList&);
-
-    class Parser {
+    /**
+     * Class for storing all data structures used for the parser and debugging
+     */
+    class Grammar {
         private:
             lexing::Lexer& lexer_;
 
             // For Creating first/follow sets 
-            std::unordered_set<std::string> nonterminals_;
             std::string start_nonterminal_;
             std::unordered_set<std::string> firsts_stack_;  // for keeping track of recursive calls 
             std::unordered_set<std::string> follows_stack_;
@@ -102,8 +102,9 @@ namespace parsing {
             std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
 
             ItemSet top_item_set_;
+            PrecedenceTable precedence_map_;
             std::vector<ParseRule> parse_rules_;  // list of produciton rules
-            const ParseTable parse_table_;  // map of states to map of strings to parse instructions
+            ParseTable parse_table_;  // map of states to map of strings to parse instructions
             std::unordered_map<const ItemSet, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
             std::unordered_map<const ParseRule, int, ParseRuleHasher> parse_rule_map_;  // map of production rule index to production rule (flipped keys + vals of parse_rules_)
             std::vector<ParserConflict> conflicts_;
@@ -117,23 +118,17 @@ namespace parsing {
                     std::unordered_map<std::string, ParseInstr>&);
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const std::vector<std::string>&) const;
-            const ParseInstr& get_instr(std::size_t, const lexing::LexToken&);
 
             // For creating firsts/follows sets
             std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
 
-            void reduce(const ParseRule&, std::vector<lexing::LexToken>&, std::vector<void*>&,
-                        std::vector<std::size_t>&, void* data);
-
         public:
-            Parser(lexing::Lexer&, const ParseTable& table);
-            Parser(lexing::Lexer&, const std::vector<ParseRule>& parse_rules,
-                   const PrecedenceList& precedence={{}});
+            Grammar(lexing::Lexer&, const std::vector<ParseRule>&,
+                    const PrecedenceList& precedence={{}});
 
             void dump_grammar(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
             const std::vector<ParserConflict>& conflicts() const;
-            void* parse(const std::string&, void* data=nullptr);
             
             // Firsts/follows methods 
             std::unordered_set<std::string> firsts(const std::string&);
@@ -142,6 +137,33 @@ namespace parsing {
             const std::unordered_set<std::string>& follows() const;
             const std::unordered_set<std::string>& firsts_stack() const;
             const std::unordered_set<std::string>& follows_stack() const;
+
+            const ParseTable& parse_table() const;
+            std::size_t init_state() const;
+            const std::vector<ParseRule>& parse_rules() const;
+    };
+
+    Grammar make_grammar(lexing::Lexer&, const std::vector<ParseRule>&,
+                         const PrecedenceList& precedence={{}});
+
+    class Parser {
+        private:
+            lexing::Lexer& lexer_;
+            const Grammar grammar_;
+
+            void reduce(const ParseRule&, std::vector<lexing::LexToken>&, std::vector<void*>&,
+                        std::vector<std::size_t>&, void* data);
+            const ParseInstr& get_instr(std::size_t, const lexing::LexToken&);
+
+        public:
+            Parser(lexing::Lexer&, const Grammar& table);
+            Parser(lexing::Lexer&, const std::vector<ParseRule>& parse_rules,
+                   const PrecedenceList& precedence={{}});
+
+            void* parse(const std::string&, void* data=nullptr);
+
+            // Getters
+            const Grammar& grammar() const;
     };
 
 

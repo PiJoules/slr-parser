@@ -23,7 +23,7 @@ static const std::vector<parsing::ParseRule> test_rules = {
     {"expr", {"INT"}, nullptr},
 };
 
-static const parsing::Precedence test_precedence = {
+static const parsing::PrecedenceList test_precedence = {
     {parsing::RIGHT_ASSOC, {"ADD", "SUB"}},
     {parsing::LEFT_ASSOC, {"MUL", "DIV"}},
 };
@@ -76,31 +76,31 @@ void test_rules1(){
     };
 
     lang::LangLexer lexer(tokens);
-    parsing::Parser parser(lexer, rules);
+    parsing::Grammar grammar(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"a", "o", "z", "c"};
-    assert(parser.firsts("S") == expected);
+    assert(grammar.firsts("S") == expected);
     expected = {"a", "o", "z"};
-    assert(parser.firsts("B") == expected);
+    assert(grammar.firsts("B") == expected);
     expected = {"z"};
-    assert(parser.firsts("D") == expected);
+    assert(grammar.firsts("D") == expected);
     expected = {"o", "c"};
-    assert(parser.firsts("C") == expected);
+    assert(grammar.firsts("C") == expected);
 
     // follows 
     expected = {lexing::tokens::END};
-    assert(parser.follows("S") == expected);
+    assert(grammar.follows("S") == expected);
     expected = {"b"};
-    assert(parser.follows("B") == expected);
+    assert(grammar.follows("B") == expected);
     expected = {"d"};
-    assert(parser.follows("C") == expected);
+    assert(grammar.follows("C") == expected);
     expected = {"a"};
-    assert(parser.follows("D") == expected);
+    assert(grammar.follows("D") == expected);
 
     // empty stacks 
-    assert(parser.firsts_stack().empty());
-    assert(parser.follows_stack().empty());
+    assert(grammar.firsts_stack().empty());
+    assert(grammar.follows_stack().empty());
 }
 
 void test_rules2(){
@@ -121,26 +121,26 @@ void test_rules2(){
     };
 
     lang::LangLexer lexer(tokens);
-    parsing::Parser parser(lexer, rules);
+    parsing::Grammar grammar(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"n", "PLUS", "LPAR"};
-    assert(parser.firsts("S") == expected);
-    assert(parser.firsts("E") == expected);
+    assert(grammar.firsts("S") == expected);
+    assert(grammar.firsts("E") == expected);
     expected = {"n", "PLUS"};
-    assert(parser.firsts("T") == expected);
+    assert(grammar.firsts("T") == expected);
 
     // follows 
     expected = {lexing::tokens::END};
-    assert(parser.follows("S") == expected);
+    assert(grammar.follows("S") == expected);
     expected = {"RPAR", lexing::tokens::END};
-    assert(parser.follows("E") == expected);
+    assert(grammar.follows("E") == expected);
     expected = {"PLUS", "RPAR", lexing::tokens::END};
-    assert(parser.follows("T") == expected);
+    assert(grammar.follows("T") == expected);
 
     // empty stacks 
-    assert(parser.firsts_stack().empty());
-    assert(parser.follows_stack().empty());
+    assert(grammar.firsts_stack().empty());
+    assert(grammar.follows_stack().empty());
 }
 
 void test_rules3(){
@@ -162,44 +162,44 @@ void test_rules3(){
     };
 
     lang::LangLexer lexer(tokens);
-    parsing::Parser parser(lexer, rules);
+    parsing::Grammar grammar(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"ID", "LPAR"};
-    assert(parser.firsts("E") == expected);
-    assert(parser.firsts("T") == expected);
-    assert(parser.firsts("F") == expected);
+    assert(grammar.firsts("E") == expected);
+    assert(grammar.firsts("T") == expected);
+    assert(grammar.firsts("F") == expected);
 
     // follows 
     expected = {lexing::tokens::END, "PLUS", "RPAR"};
-    assert(parser.follows("E") == expected);
+    assert(grammar.follows("E") == expected);
     expected = {lexing::tokens::END, "PLUS", "RPAR", "MULT"};
-    assert(parser.follows("T") == expected);
-    assert(parser.follows("F") == expected);
+    assert(grammar.follows("T") == expected);
+    assert(grammar.follows("F") == expected);
 
     // empty stacks 
-    assert(parser.firsts_stack().empty());
-    assert(parser.follows_stack().empty());
+    assert(grammar.firsts_stack().empty());
+    assert(grammar.follows_stack().empty());
 }
 
 void test_rules4(){
     lang::LangLexer lexer(test_tokens);
-    parsing::Parser parser(lexer, test_rules);
+    parsing::Grammar grammar(lexer, test_rules);
 
     // firsts
     std::unordered_set<std::string> expected = {"NAME", "INT"};
-    assert(parser.firsts("expr") == expected);
-    assert(parser.firsts("module") == expected);
+    assert(grammar.firsts("expr") == expected);
+    assert(grammar.firsts("module") == expected);
 
     // follows 
     expected = {lexing::tokens::END, "ADD", "SUB", "MUL", "DIV"};
-    assert(parser.follows("expr") == expected);
+    assert(grammar.follows("expr") == expected);
     expected = {lexing::tokens::END};
-    assert(parser.follows("module") == expected);
+    assert(grammar.follows("module") == expected);
 
     // empty stacks 
-    assert(parser.firsts_stack().empty());
-    assert(parser.follows_stack().empty());
+    assert(grammar.firsts_stack().empty());
+    assert(grammar.follows_stack().empty());
 }
 
 void test_rules5(){
@@ -214,21 +214,21 @@ void test_rules5(){
     };
 
     lang::LangLexer lexer(tokens);
-    parsing::Parser parser(lexer, rules);
+    parsing::Grammar grammar(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"a", parsing::nonterminals::EPSILON};
-    assert(parser.firsts("S") == expected);
-    assert(parser.firsts("X") == expected);
+    assert(grammar.firsts("S") == expected);
+    assert(grammar.firsts("X") == expected);
 
     // follows 
     expected = {lexing::tokens::END};
-    assert(parser.follows("S") == expected);
-    assert(parser.follows("X") == expected);
+    assert(grammar.follows("S") == expected);
+    assert(grammar.follows("X") == expected);
 
     // empty stacks 
-    assert(parser.firsts_stack().empty());
-    assert(parser.follows_stack().empty());
+    assert(grammar.firsts_stack().empty());
+    assert(grammar.follows_stack().empty());
 }
 
 static std::unordered_map<std::string, std::string> RESERVED_NAMES = {
@@ -283,24 +283,24 @@ void test_rules6(){
     };
 
     lang::LangLexer lexer(tokens);
-    parsing::Parser parser(lexer, rules);
+    parsing::Grammar grammar(lexer, rules);
 
     // firsts 
     std::unordered_set<std::string> expected = {"DEF", lang::tokens::NEWLINE};
-    assert(parser.firsts("module_stmt") == expected);
-    assert(parser.firsts("module_stmt_list") == expected);
-    assert(parser.firsts("module") == expected);
+    assert(grammar.firsts("module_stmt") == expected);
+    assert(grammar.firsts("module_stmt_list") == expected);
+    assert(grammar.firsts("module") == expected);
 
     // follows 
     expected = {lexing::tokens::END};
-    assert(parser.follows("module") == expected);
+    assert(grammar.follows("module") == expected);
     expected = {lexing::tokens::END, "DEF", lang::tokens::NEWLINE};
-    assert(parser.follows("module_stmt") == expected);
-    assert(parser.follows("module_stmt_list") == expected);
+    assert(grammar.follows("module_stmt") == expected);
+    assert(grammar.follows("module_stmt_list") == expected);
 
     // empty stacks 
-    assert(parser.firsts_stack().empty());
-    assert(parser.follows_stack().empty());
+    assert(grammar.firsts_stack().empty());
+    assert(grammar.follows_stack().empty());
 }
 
 void test_closure(){
@@ -335,12 +335,12 @@ void test_parse_precedence(){
     lang::LangLexer lexer(test_tokens);
 
     // Should have conflicts 
-    parsing::Parser parser(lexer, test_rules);
-    assert(!parser.conflicts().empty());
+    parsing::Grammar grammar(lexer, test_rules);
+    assert(!grammar.conflicts().empty());
 
     // Should not have conflicts 
-    parsing::Parser parser2(lexer, test_rules, test_precedence);
-    assert(parser2.conflicts().empty());
+    parsing::Grammar grammar2(lexer, test_rules, test_precedence);
+    assert(grammar2.conflicts().empty());
 }
 
 int main(){

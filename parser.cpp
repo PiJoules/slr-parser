@@ -69,16 +69,27 @@ void parsing::init_dfa(parsing::DFA& dfa, const std::vector<parsing::ParseRule>&
     } while (dfa.size() != last_size);  // while dfa did not change
 }
 
-parsing::Parser::Parser(lexing::Lexer& lexer, const ParseTable& table): 
-    lexer_(lexer), parse_table_(table){}
+parsing::Grammar parsing::make_grammar(lexing::Lexer& lexer,
+                                       const std::vector<ParseRule>& parse_rules,
+                                       const PrecedenceList& precedence){
+    Grammar grammar(lexer, parse_rules, precedence);
+    return grammar;
+}
+
+parsing::Parser::Parser(lexing::Lexer& lexer, const Grammar& grammar): 
+    lexer_(lexer), grammar_(grammar){}
 
 parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules,
                         const PrecedenceList& precedence):
     lexer_(lexer), 
-    parse_table_(parse_rules_to_table(parse_rules, lexer, precedence)){}
+    grammar_(make_grammar(lexer, parse_rules, precedence)){}
 
 
-std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> parsing::precedence_to_map(const Precedence& precedence){
+static void* parse_prime(std::vector<void*>& args, void* data){
+    return args.front();
+}
+
+void parsing::Grammar::init_precedence(const PrecedenceList& precedence){
     precedence_map_.reserve(precedence.size());
     for (std::size_t i = 0; i < precedence.size(); ++i){
         const auto& entry = precedence[i];
@@ -90,44 +101,15 @@ std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> pars
     }
 }
 
-static void* parse_prime(std::vector<void*>& args, void* data){
-    return args.front();
-}
-
-/**
- * Convert a list of parse rules to a parse table to be used by the parser.
- */
-ParseTable parse_rules_to_table(std::vector<ParseRule> parse_rules,
-                                const lexing::Lexer& lexer,
-                                const PrecedenceList& precedence){
-    // Add new top level rule 
-    std::string old_top_rule = parse_rules.front().rule;
-    std::string start_nonterminal = old_top_rule + "'";  // prime rule
-    ParseRule new_top_pr = {
-        start_nonterminal,
-        {old_top_rule}, 
-        parse_prime
-    };
-    parse_rules.insert(parse_rules.begin(), new_top_pr);
-
-    // Initialize the precedence map 
-    PrecedenceTable precedence_table;
-    precedence_table.reserve(precedence.size());
-    for (std::size_t i = 0; i < precedence.size(); ++i){
-        const auto& entry = precedence[i];
-        enum Associativity assoc = entry.first;
-        const std::vector<std::string>& tokens = entry.second;
-        for (const std::string& tok : tokens){
-            precedence_table[tok] = {i, assoc};
-        }
-    }
+const parsing::Grammar& parsing::Parser::grammar() const {
+    return grammar_;
 }
 
 /**
  * Initialize the parse table from the production rules.
  */
-parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules, 
-                        const Precedence& precedence):
+parsing::Grammar::Grammar(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules, 
+                          const PrecedenceList& precedence):
     lexer_(lexer)
 {
     parse_rules_ = parse_rules;
@@ -152,15 +134,15 @@ parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& pars
     init_parse_table(dfa);
 }
 
-bool parsing::Parser::is_terminal(const std::string& symbol) const {
+bool parsing::Grammar::is_terminal(const std::string& symbol) const {
     return lexer_.tokens().find(symbol) != lexer_.tokens().end();
 }
 
-const std::vector<parsing::ParserConflict>& parsing::Parser::conflicts() const {
+const std::vector<parsing::ParserConflict>& parsing::Grammar::conflicts() const {
     return conflicts_;
 }
 
-void parsing::Parser::init_parse_table(const DFA& dfa){
+void parsing::Grammar::init_parse_table(const DFA& dfa){
     const auto& top_parse_rule = parse_rules_.front();
     parse_table_.reserve(dfa.size());
     item_set_map_.reserve(dfa.size());
@@ -240,7 +222,7 @@ void parsing::Parser::init_parse_table(const DFA& dfa){
     }
 }
 
-std::string parsing::Parser::key_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
+std::string parsing::Grammar::key_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
     std::string key_term;
     if (instr.action == ParseInstr::REDUCE){
         std::size_t rule_num = instr.value;
@@ -253,7 +235,7 @@ std::string parsing::Parser::key_for_instr(const ParseInstr& instr, const std::s
     return key_term;
 }
 
-void parsing::Parser::check_precedence(
+void parsing::Grammar::check_precedence(
         const ParseInstr& existing_instr,
         const ParseInstr& new_instr,
         const std::string& lookahead,
@@ -321,7 +303,7 @@ void parsing::Parser::check_precedence(
     }
 }
 
-void parsing::Parser::dump_state(std::size_t state, std::ostream& stream) const {
+void parsing::Grammar::dump_state(std::size_t state, std::ostream& stream) const {
     ItemSet item_sets[item_set_map_.size()];
     for (auto it = item_set_map_.cbegin(); it != item_set_map_.cend(); ++it){
         item_sets[it->second] = it->first;
@@ -379,7 +361,7 @@ std::string parsing::action_str(const ParseInstr::Action& action){
 /**
  * Pretty print the parse table similar to how ply prints it.
  */
-void parsing::Parser::dump_grammar(std::ostream& stream) const {
+void parsing::Grammar::dump_grammar(std::ostream& stream) const {
     // Grammar 
     stream << "Grammar" << std::endl << std::endl;
     for (std::size_t i = 0; i < parse_rules_.size(); ++i){
@@ -409,7 +391,7 @@ void parsing::Parser::dump_grammar(std::ostream& stream) const {
     }
 }
 
-std::string parsing::Parser::conflict_str(const ParseInstr& instr, const std::string lookahead) const {
+std::string parsing::Grammar::conflict_str(const ParseInstr& instr, const std::string lookahead) const {
     std::ostringstream stream;
     std::vector<std::string> prod;
     switch (instr.action){
@@ -429,7 +411,7 @@ std::string parsing::Parser::conflict_str(const ParseInstr& instr, const std::st
     return stream.str();
 }
 
-std::string parsing::Parser::rightmost_terminal(const std::vector<std::string>& prod) const {
+std::string parsing::Grammar::rightmost_terminal(const std::vector<std::string>& prod) const {
     for (auto it = prod.crbegin(); it != prod.crend(); ++it){
         if (is_terminal(*it)){
             return *it;
@@ -483,17 +465,30 @@ void parsing::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 }
 
+const parsing::ParseTable& parsing::Grammar::parse_table() const {
+    return parse_table_;
+}
+
 const parsing::ParseInstr& parsing::Parser::get_instr(std::size_t state, const lexing::LexToken& lookahead){
-    if (parse_table_[state].find(lookahead.symbol) == parse_table_[state].cend()){
+    const ParseTable& parse_table = grammar_.parse_table();
+    if (parse_table.at(state).find(lookahead.symbol) == parse_table.at(state).cend()){
         // Parse error
         std::ostringstream err;
         err << "Unable to handle lookahead '" << lookahead.symbol << "' in state " << state 
             << ". Line " << lookahead.lineno << ", col " << lookahead.colno << "."
             << std::endl << std::endl;
-        dump_state(state, err);
+        grammar_.dump_state(state, err);
         throw std::runtime_error(err.str());
     }
-    return parse_table_[state][lookahead.symbol];
+    return parse_table.at(state).at(lookahead.symbol);
+}
+
+std::size_t parsing::Grammar::init_state() const {
+    return item_set_map_.at(top_item_set_);
+}
+
+const std::vector<parsing::ParseRule>& parsing::Grammar::parse_rules() const {
+    return parse_rules_;
 }
 
 /**
@@ -507,12 +502,15 @@ void* parsing::Parser::parse(const std::string& code, void* data){
     lexer_.input(code_cpy);
 
     std::vector<std::size_t> state_stack;
-    state_stack.push_back(item_set_map_.at(top_item_set_));
+
+    // Add the initial state number
+    state_stack.push_back(grammar_.init_state());
 
     std::vector<lexing::LexToken> symbol_stack;
     std::vector<void*> node_stack;
 
     lexing::LexToken lookahead = lexer_.token(data);
+    const std::vector<ParseRule>& parse_rules = grammar_.parse_rules();
 
     while (1){
         std::size_t state = state_stack.back();
@@ -550,7 +548,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
 
                 // Pop from the states stack and replace the rules in the tokens stack 
                 // with the reduce rule
-                reduce(parse_rules_[instr.value], symbol_stack, node_stack, state_stack, data);
+                reduce(parse_rules[instr.value], symbol_stack, node_stack, state_stack, data);
                 break;
             case ParseInstr::ACCEPT:
 #ifdef DEBUG
@@ -568,7 +566,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
     }
 }
 
-std::unordered_set<std::string> parsing::Parser::firsts(const std::string& symbol){
+std::unordered_set<std::string> parsing::Grammar::firsts(const std::string& symbol){
     if (firsts_map_.find(symbol) != firsts_map_.end()){
         return firsts_map_[symbol];
     }
@@ -591,7 +589,7 @@ std::unordered_set<std::string> parsing::Parser::firsts(const std::string& symbo
     }
 }
 
-std::unordered_set<std::string> parsing::Parser::follows(const std::string& symbol){
+std::unordered_set<std::string> parsing::Grammar::follows(const std::string& symbol){
     // If the symbol is already in the follows map, return it
     if (follows_map_.find(symbol) != follows_map_.end()){
         return follows_map_[symbol];
@@ -657,7 +655,7 @@ std::unordered_set<std::string> parsing::Parser::follows(const std::string& symb
 /**
  * Method for initially creating the firsts set for a nonterminal before memoizing.
  */
-std::unordered_set<std::string> parsing::Parser::make_nonterminal_firsts(const std::string& symbol){
+std::unordered_set<std::string> parsing::Grammar::make_nonterminal_firsts(const std::string& symbol){
     std::unordered_set<std::string> firsts_set;
 
     for (const auto& parse_rule : parse_rules_){
@@ -698,11 +696,11 @@ std::unordered_set<std::string> parsing::Parser::make_nonterminal_firsts(const s
     return firsts_set;
 }
 
-const std::unordered_set<std::string>& parsing::Parser::firsts_stack() const {
+const std::unordered_set<std::string>& parsing::Grammar::firsts_stack() const {
     return firsts_stack_;
 }
 
-const std::unordered_set<std::string>& parsing::Parser::follows_stack() const {
+const std::unordered_set<std::string>& parsing::Grammar::follows_stack() const {
     return follows_stack_;
 }
 

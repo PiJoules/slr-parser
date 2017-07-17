@@ -61,7 +61,7 @@ namespace lang {
 
     extern const std::vector<parsing::ParseRule> LANG_RULES;
     extern const lexing::TokensMap LANG_TOKENS;
-    extern const parsing::Precedence LANG_PRECEDENCE;
+    extern const parsing::PrecedenceList LANG_PRECEDENCE;
 }
 
 #endif
