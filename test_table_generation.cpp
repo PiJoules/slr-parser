@@ -28,7 +28,7 @@ static const parsing::PrecedenceList test_precedence = {
     {parsing::LEFT_ASSOC, {"MUL", "DIV"}},
 };
 
-static const parsing::ItemSet clos_expected = {
+static const parsing::LRItemSet clos_expected = {
     {{"module", {"expr"}, nullptr}, 0},
     {{"expr", {"expr", "SUB", "expr"}, nullptr}, 0},
     {{"expr", {"expr", "ADD", "expr"}, nullptr}, 0},
@@ -38,7 +38,7 @@ static const parsing::ItemSet clos_expected = {
     {{"expr", {"INT"}, nullptr}, 0},
 };
 
-static const parsing::ItemSet expr_expected = {
+static const parsing::LRItemSet expr_expected = {
     {{"module", {"expr"}, nullptr}, 1},
     {{"expr", {"expr", "SUB", "expr"}, nullptr}, 1},
     {{"expr", {"expr", "ADD", "expr"}, nullptr}, 1},
@@ -46,11 +46,11 @@ static const parsing::ItemSet expr_expected = {
     {{"expr", {"expr", "DIV", "expr"}, nullptr}, 1},
 };
 
-static const parsing::ItemSet name_expected = {
+static const parsing::LRItemSet name_expected = {
     {{"expr", {"NAME"}, nullptr}, 1},
 };
 
-static const parsing::ItemSet int_expected = {
+static const parsing::LRItemSet int_expected = {
     {{"expr", {"INT"}, nullptr}, 1},
 };
 
@@ -305,7 +305,7 @@ void test_rules6(){
 
 void test_closure(){
     const auto& entry = test_rules.front();
-    parsing::ItemSet item_set = {{entry, 0}};
+    parsing::LRItemSet item_set = {{entry, 0}};
     parsing::init_closure(item_set, test_rules);
 
     // Check the contents 
@@ -319,15 +319,15 @@ void test_closure(){
 
 void test_move_pos(){
     // GOTO expressios
-    parsing::ItemSet expr_item_set = parsing::move_pos(clos_expected, "expr", test_rules);
+    parsing::LRItemSet expr_item_set = parsing::move_pos(clos_expected, "expr", test_rules);
     assert(expr_item_set == expr_expected);
     
     // GOTO name
-    parsing::ItemSet name_item_set = parsing::move_pos(clos_expected, "NAME", test_rules);
+    parsing::LRItemSet name_item_set = parsing::move_pos(clos_expected, "NAME", test_rules);
     assert(name_item_set == name_expected);
     
     // GOTO int
-    parsing::ItemSet int_item_set = parsing::move_pos(clos_expected, "INT", test_rules);
+    parsing::LRItemSet int_item_set = parsing::move_pos(clos_expected, "INT", test_rules);
     assert(int_item_set == int_expected);
 }
 
@@ -344,16 +344,16 @@ void test_parse_precedence(){
 }
 
 int main(){
+    test_closure();
+    test_move_pos();
+    test_parse_precedence();
+
     test_rules1();
     test_rules2();
     test_rules3();
     test_rules4();
     test_rules5();
     test_rules6();
-
-    test_closure();
-    test_move_pos();
-    test_parse_precedence();
 
     return 0;
 }

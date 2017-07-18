@@ -47,20 +47,13 @@ test_lexer: $(OBJS) clean_exes test_lexer.out
 
 test_table_generation: $(OBJS) clean_exes test_table_generation.out
 	./test_table_generation.out
-	valgrind ./test_table_generation.out || echo 'Valgrind not available' 
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_table_generation.out || (echo "memory leak"; exit 1); fi 
-
-clean_test_parser:
-	rm -rf test_parser.out
 
 test_parser: $(OBJS) clean_exes test_parser.out
 	./test_parser.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_parser.out || (echo "memory leak"; exit 1); fi
 
-clean_dump_lang:
-	rm -rf dump_lang.out
-
-dump_lang: $(OBJS) clean_dump_lang dump_lang.out
+dump_lang: $(OBJS) clean_exes dump_lang.out
 	./dump_lang.out
 
 clean:

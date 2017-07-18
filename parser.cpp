@@ -91,11 +91,12 @@ std::size_t parsing::LRItemHasher::operator()(const LRItem& lr_item) const {
  * This essentially expands the entire set of lr items by adding other lr items that 
  * start at position zero into this set.
  *
- * until item_set not changing
+ * repeat
  *     for A->a.Bb in item_set:
  *         item_set.insert(B->.a)
+ * until item_set not changing
  */
-void parsing::init_closure(ItemSet& item_set, const std::vector<ParseRule>& parse_rules){
+void parsing::init_closure(LRItemSet& item_set, const std::vector<ParseRule>& parse_rules){
     // For marking which lr items were already inserted
     std::unordered_set<LRItem, LRItemHasher> found_items(item_set.begin(), item_set.end());
 
@@ -131,11 +132,17 @@ void parsing::init_closure(ItemSet& item_set, const std::vector<ParseRule>& pars
 
 /**
  * Advance the position of all lr items in an item set and return the new set.
+ *
+ * s = {}
+ * for A->a.Xb in item_set:  # Where X is symbol in this case
+ *     s.insert(A->aX.b)
+ * return closure(s)
  */ 
-parsing::ItemSet parsing::move_pos(const ItemSet& item_set, 
-                                   const std::string& symbol,
-                                   const std::vector<ParseRule>& parse_rules){
-    ItemSet moved_item_set;
+parsing::LRItemSet parsing::move_pos(const LRItemSet& item_set, 
+                                     const std::string& symbol,
+                                     const std::vector<ParseRule>& parse_rules){
+    LRItemSet moved_item_set;
+
     for (const LRItem lr_item : item_set){
         ParseRule parse_rule = lr_item.parse_rule;
         std::vector<std::string>& prod = parse_rule.production;
@@ -157,23 +164,45 @@ parsing::ItemSet parsing::move_pos(const ItemSet& item_set,
 
 /**
  * Create the canonical collections of the DFA.
+ *
+ * C = {closure({S'->.S})}
+ * repeat 
+ *     for item_set in C:
+ *         for A->a.Xb in item_set:
+ *             C |= move_pos(item_set, X)
+ * until C not changing
+ * return C
  */ 
-void parsing::init_dfa(parsing::DFA& dfa, const std::vector<parsing::ParseRule>& parse_rules){
-    std::size_t last_size;
-    do {
-        last_size = dfa.size();
-        for (const ItemSet& item_set : dfa){
-            for (const LRItem& lr_item : item_set){
-                std::vector<std::string> production = lr_item.parse_rule.production;
-                std::size_t pos = lr_item.pos;
-                if (pos < production.size()){
-                    auto next_symbol = production[pos];
-                    auto moved_item_set = parsing::move_pos(item_set, next_symbol, parse_rules);
-                    dfa.insert(moved_item_set);
+parsing::DFA parsing::make_dfa(const std::vector<ParseRule>& parse_rules){
+    const ParseRule& entry = parse_rules.front();
+    LRItemSet top_item_set = {{entry, 0}};
+    init_closure(top_item_set, parse_rules);
+    DFA dfa = {top_item_set};
+
+    std::unordered_set<LRItemSet, LRItemSetHasher> found_sets(dfa.begin(), dfa.end());
+
+    std::size_t i = 0;
+    while (i < dfa.size()){
+        const LRItemSet item_set = dfa[i];  // do copy since this item_set may be edited
+
+        for (const LRItem& lr_item : item_set){
+            std::vector<std::string> production = lr_item.parse_rule.production;
+            std::size_t pos = lr_item.pos;
+            if (pos < production.size()){
+                std::string next_symbol = production[pos];
+                LRItemSet moved_item_set = move_pos(item_set, next_symbol, parse_rules);
+
+                if (found_sets.find(moved_item_set) == found_sets.end()){
+                    dfa.push_back(moved_item_set);
+                    found_sets.insert(moved_item_set);
                 }
             }
         }
-    } while (dfa.size() != last_size);  // while dfa did not change
+
+        ++i;
+    }
+
+    return dfa;
 }
 
 parsing::Grammar parsing::make_grammar(lexing::Lexer& lexer,
@@ -196,20 +225,33 @@ static void* parse_prime(std::vector<void*>& args, void* data){
     return args.front();
 }
 
-void parsing::Grammar::init_precedence(const PrecedenceList& precedence){
-    precedence_map_.reserve(precedence.size());
+parsing::PrecedenceTable parsing::make_precedence_table(const PrecedenceList& precedence){
+    PrecedenceTable prec_table;
+    prec_table.reserve(precedence.size());
     for (std::size_t i = 0; i < precedence.size(); ++i){
         const auto& entry = precedence[i];
         enum Associativity assoc = entry.first;
         const auto& tokens = entry.second;
         for (const std::string& tok : tokens){
-            precedence_map_[tok] = {i, assoc};
+            prec_table[tok] = {i, assoc};
         }
     }
+    return prec_table;
 }
 
 const parsing::Grammar& parsing::Parser::grammar() const {
     return grammar_;
+}
+
+std::vector<parsing::ParseRule> parsing::prepend_prime_rule(std::vector<ParseRule> parse_rules){
+    std::string old_top_rule = parse_rules.front().rule;
+    ParseRule new_top_pr = {
+        old_top_rule + "'",  // prime rule
+        {old_top_rule}, 
+        parse_prime
+    };
+    parse_rules.insert(parse_rules.begin(), new_top_pr);
+    return parse_rules;
 }
 
 /**
@@ -217,39 +259,13 @@ const parsing::Grammar& parsing::Parser::grammar() const {
  */
 parsing::Grammar::Grammar(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules, 
                           const PrecedenceList& precedence):
-    lexer_(lexer)
+    lexer_(lexer), 
+    parse_rules_(prepend_prime_rule(parse_rules)), 
+    start_nonterminal_(parse_rules_.front().rule),
+    precedence_map_(make_precedence_table(precedence))
 {
-    parse_rules_ = parse_rules;
+    DFA dfa = make_dfa(parse_rules_);
 
-    // Add new top level rule 
-    std::string old_top_rule = parse_rules_.front().rule;
-    ParseRule new_top_pr = {
-        old_top_rule + "'",  // prime rule
-        {old_top_rule}, 
-        parse_prime
-    };
-    parse_rules_.insert(parse_rules_.begin(), new_top_pr);
-
-    start_nonterminal_ = parse_rules_.front().rule;
-    init_precedence(precedence);
-
-    const auto& entry = parse_rules_.front();
-    top_item_set_ = {{entry, 0}};
-    init_closure(top_item_set_, parse_rules_);
-    DFA dfa = {top_item_set_};
-    init_dfa(dfa, parse_rules_);
-    init_parse_table(dfa);
-}
-
-bool parsing::Grammar::is_terminal(const std::string& symbol) const {
-    return lexer_.tokens().find(symbol) != lexer_.tokens().end();
-}
-
-const std::vector<parsing::ParserConflict>& parsing::Grammar::conflicts() const {
-    return conflicts_;
-}
-
-void parsing::Grammar::init_parse_table(const DFA& dfa){
     const auto& top_parse_rule = parse_rules_.front();
     parse_table_.reserve(dfa.size());
     item_set_map_.reserve(dfa.size());
@@ -327,6 +343,14 @@ void parsing::Grammar::init_parse_table(const DFA& dfa){
         }
         ++i;
     }
+}
+
+bool parsing::Grammar::is_terminal(const std::string& symbol) const {
+    return lexer_.tokens().find(symbol) != lexer_.tokens().end();
+}
+
+const std::vector<parsing::ParserConflict>& parsing::Grammar::conflicts() const {
+    return conflicts_;
 }
 
 std::string parsing::Grammar::key_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
@@ -411,7 +435,7 @@ void parsing::Grammar::check_precedence(
 }
 
 void parsing::Grammar::dump_state(std::size_t state, std::ostream& stream) const {
-    ItemSet item_sets[item_set_map_.size()];
+    LRItemSet item_sets[item_set_map_.size()];
     for (auto it = item_set_map_.cbegin(); it != item_set_map_.cend(); ++it){
         item_sets[it->second] = it->first;
     }
@@ -590,10 +614,6 @@ const parsing::ParseInstr& parsing::Parser::get_instr(std::size_t state, const l
     return parse_table.at(state).at(lookahead.symbol);
 }
 
-std::size_t parsing::Grammar::init_state() const {
-    return item_set_map_.at(top_item_set_);
-}
-
 const std::vector<parsing::ParseRule>& parsing::Grammar::parse_rules() const {
     return parse_rules_;
 }
@@ -611,7 +631,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
     std::vector<std::size_t> state_stack;
 
     // Add the initial state number
-    state_stack.push_back(grammar_.init_state());
+    state_stack.push_back(0);
 
     std::vector<lexing::LexToken> symbol_stack;
     std::vector<void*> node_stack;
@@ -846,7 +866,7 @@ static std::size_t _shuffle_bits(std::size_t h){
     return ((h ^ 89869747UL) ^ (h << 16)) * 3644798167UL;
 }
 
-std::size_t parsing::ItemSetHasher::operator()(const ItemSet& item_set) const {
+std::size_t parsing::LRItemSetHasher::operator()(const LRItemSet& item_set) const {
     std::size_t hash = 0;
     LRItemHasher item_hasher;
     for (const auto& lr_item : item_set){

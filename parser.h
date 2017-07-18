@@ -55,16 +55,19 @@ namespace parsing {
 
     // The container holding the lr items. This is not exposed as a set for debugging
     // purposes to retain order of insertion into the set. We would like to print them 
-    // in order. Internally, the vectors are converted to unordered sets for easy lookup.
-    typedef std::vector<LRItem> ItemSet;
+    // in order. Internally, the vectors are converted to unordered sets when lookup
+    // is necessary.
+    typedef std::vector<LRItem> LRItemSet;
 
-    struct ItemSetHasher {
-        std::size_t operator()(const ItemSet&) const;
+    struct LRItemSetHasher {
+        std::size_t operator()(const LRItemSet&) const;
     };
 
     // Deterministic finite automata
-    // This is essentially the set of item sets.
-    typedef std::unordered_set<ItemSet, ItemSetHasher> DFA;
+    // This is essentially the set of item sets. Also implemented as a vector to 
+    // retain insertion order for debugging in the grammar dump.
+    typedef std::vector<LRItemSet> DFA;
+    //typedef std::unordered_set<LRItemSet, LRItemSetHasher> DFA;
 
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
@@ -91,9 +94,13 @@ namespace parsing {
 
     typedef std::unordered_map<std::size_t, std::unordered_map<std::string, ParseInstr>> ParseTable;
 
-    void init_closure(ItemSet&, const std::vector<ParseRule>&);
-    ItemSet move_pos(const ItemSet&, const std::string&, const std::vector<ParseRule>&);
-    void init_dfa(DFA& dfa, const std::vector<ParseRule>&);
+    std::vector<ParseRule> prepend_prime_rule(std::vector<ParseRule>);
+
+    void init_closure(LRItemSet&, const std::vector<ParseRule>&);
+    LRItemSet move_pos(const LRItemSet&, const std::string&, const std::vector<ParseRule>&);
+    DFA make_dfa(const std::vector<ParseRule>&);
+
+    PrecedenceTable make_precedence_table(const PrecedenceList&);
 
 
     /************** Parser ************/ 
@@ -105,23 +112,26 @@ namespace parsing {
         private:
             lexing::Lexer& lexer_;
 
+            // List of produciton rules 
+            // This must be declared first immediately after the lexer b/c of constructor
+            // member initialization order.
+            const std::vector<ParseRule> parse_rules_;  
+
             // For Creating first/follow sets 
-            std::string start_nonterminal_;
+            const std::string start_nonterminal_;
             std::unordered_set<std::string> firsts_stack_;  // for keeping track of recursive calls 
             std::unordered_set<std::string> follows_stack_;
             std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;  // memoization
             std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
 
-            ItemSet top_item_set_;
-            PrecedenceTable precedence_map_;
-            std::vector<ParseRule> parse_rules_;  // list of produciton rules
+            const PrecedenceTable precedence_map_;
+
             ParseTable parse_table_;  // map of states to map of strings to parse instructions
-            std::unordered_map<const ItemSet, int, ItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
+            std::unordered_map<const LRItemSet, int, LRItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
             std::unordered_map<const ParseRule, int, ParseRuleHasher> parse_rule_map_;  // map of production rule index to production rule (flipped keys + vals of parse_rules_)
             std::vector<ParserConflict> conflicts_;
 
             /******* Methods ********/
-            void init_parse_table(const DFA&);
             bool is_terminal(const std::string&) const;
             void init_precedence(const PrecedenceList&);
             std::string key_for_instr(const ParseInstr&, const std::string&) const;
@@ -150,7 +160,6 @@ namespace parsing {
             const std::unordered_set<std::string>& follows_stack() const;
 
             const ParseTable& parse_table() const;
-            std::size_t init_state() const;
             const std::vector<ParseRule>& parse_rules() const;
     };
 
