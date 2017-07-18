@@ -1,17 +1,22 @@
 #include "lexer.h"
 
+/********** LexToken *********/
+
 /**
- * Getters
- */ 
-int lexing::Lexer::pos() const { return pos_; }
-int lexing::Lexer::lineno() const { return lineno_; }
-int lexing::Lexer::colno() const { return colno_; }
-const lexing::TokensMapRegex& lexing::Lexer::tokens() const { return tokens_; }
+ * String representation of a lextoken for debugging.
+ */
+std::string lexing::LexToken::str() const {
+    std::ostringstream s;
+    s << "{" << "symbol: " << symbol << ", value: '" << value 
+      << "', pos: " << pos << ", lineno: " << lineno << ", colno: "
+      << colno << "}";  
+    return s.str();
+}
 
 /**
  * Convert a TokensMap to a TokensMapRegex
  */
-lexing::TokensMapRegex lexing::Lexer::to_regex_map(const TokensMap& token_map) const {
+lexing::TokensMapRegex lexing::to_regex_map(const TokensMap& token_map){
     TokensMapRegex regex_map;
     regex_map.reserve(token_map.size());
 
@@ -27,23 +32,11 @@ lexing::TokensMapRegex lexing::Lexer::to_regex_map(const TokensMap& token_map) c
     return regex_map;
 }
 
-lexing::Lexer::Lexer(const TokensMapRegex& tokens): tokens_(tokens){}
-lexing::Lexer::Lexer(const TokensMap& tokens): tokens_(to_regex_map(tokens)){}
+/********* Lexer ************/
 
 /**
- * Feed a string into the code stream.
+ * Advance the position, and column number or line number depending on the character.
  */
-void lexing::Lexer::input(const std::string& code){
-    lexcode_ += code;
-}
-
-/**
- * Checks if the stream has reached the end.
- */
-bool lexing::Lexer::empty() const {
-    return lexcode_.empty();
-}
-
 void lexing::Lexer::advance_pos(char c){
     pos_++;
     if (c == '\n'){
@@ -53,9 +46,11 @@ void lexing::Lexer::advance_pos(char c){
     else {
         colno_++;
     }
-
 }
 
+/**
+ * Advance the position and trim the start of the saved code.
+ */
 void lexing::Lexer::advance_stream_and_pos(const std::string& s){
     // Advance the position
     for (const char c : s){
@@ -66,11 +61,22 @@ void lexing::Lexer::advance_stream_and_pos(const std::string& s){
     lexcode_.erase(0, s.size());
 }
 
+/**
+ * Same as advance_stream_and_pos but for a single character.
+ */
 void lexing::Lexer::advance_stream_and_pos(char c){
     advance_pos(c);
     lexcode_.erase(0, 1);
 }
 
+/** 
+ * Search the tokens map for a regex that matches the start of the stream.
+ *
+ * @param next_token The token that will contain the matched value for the regex found.
+ * @param data Miscellanious data that the user implements and may edit on matching specific tokens.
+ *
+ * @return true if any of the regexs provided match the start of the lexcode_.
+ */
 bool lexing::Lexer::find_match(LexToken& next_token, void* data){
     next_token.pos = pos_;
     next_token.lineno = lineno_;
@@ -84,8 +90,7 @@ bool lexing::Lexer::find_match(LexToken& next_token, void* data){
     }
 
     std::smatch matches;
-    auto it = tokens_.cbegin();
-    for (; it != tokens_.cend(); ++it){
+    for (auto it = tokens_.begin(); it != tokens_.end(); ++it){
         const std::string& symbol = it->first;
         const std::regex& re = it->second.first;
         const TokenCallback& callback = it->second.second;
@@ -112,6 +117,19 @@ bool lexing::Lexer::find_match(LexToken& next_token, void* data){
 }
 
 /**
+ * Constructors
+ */
+lexing::Lexer::Lexer(const TokensMapRegex& tokens): tokens_(tokens){}
+lexing::Lexer::Lexer(const TokensMap& tokens): tokens_(to_regex_map(tokens)){}
+
+/**
+ * Feed a string into the code stream.
+ */
+void lexing::Lexer::input(const std::string& code){
+    lexcode_ += code;
+}
+
+/**
  * Return the next token and advance the stream.
  */
 lexing::LexToken lexing::Lexer::token(void* data){
@@ -119,6 +137,7 @@ lexing::LexToken lexing::Lexer::token(void* data){
 
     do {
         bool found = find_match(next_token, data);
+
         while (!found){
             // No matches
             if (isspace(lexcode_.front())){
@@ -132,6 +151,7 @@ lexing::LexToken lexing::Lexer::token(void* data){
             }
             else {
                 // None of the regex's matched
+                throw LexError(*this);
                 std::ostringstream err;
                 err << "Unexpected character '" << lexcode_.front() << "' did not match the start of any tokens.";
                 throw std::runtime_error(err.str());
@@ -147,10 +167,29 @@ lexing::LexToken lexing::Lexer::token(void* data){
     return next_token;
 }
 
-std::string lexing::LexToken::str() const {
-    std::ostringstream s;
-    s << "{" << "symbol: " << symbol << ", value: '" << value 
-      << "', pos: " << pos << ", lineno: " << lineno << ", colno: "
-      << colno << "}";  
-    return s.str();
+/**
+ * Checks if the stream has reached the end.
+ */
+bool lexing::Lexer::empty() const {
+    return lexcode_.empty();
+}
+
+/**
+ * Getters
+ */ 
+int lexing::Lexer::pos() const { return pos_; }
+int lexing::Lexer::lineno() const { return lineno_; }
+int lexing::Lexer::colno() const { return colno_; }
+const lexing::TokensMapRegex& lexing::Lexer::tokens() const { return tokens_; }
+const std::string& lexing::Lexer::lexcode() const { return lexcode_; }
+
+/************* LexError ************/ 
+
+lexing::LexError::LexError(const Lexer& lexer): std::runtime_error("Lexer error"), lexer_(lexer){}
+
+const char* lexing::LexError::what() const throw(){
+    std::ostringstream err;
+    err << std::runtime_error::what();
+    err << ": Start of string '" << lexer_.lexcode().substr(0, 10) << "' did not match the start of any tokens. Line " << lexer_.lineno() << ", col " << lexer_.colno() << ".";
+    return err.str().c_str();
 }

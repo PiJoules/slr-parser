@@ -52,8 +52,7 @@ namespace lang {
             int lineno_;
 
         public:
-            IndentationError(int lineno): std::runtime_error("Indentation error"),
-                lineno_(lineno){}
+            IndentationError(int lineno);
             virtual const char* what() const throw();
     };
 

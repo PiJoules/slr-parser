@@ -29,13 +29,14 @@ namespace lexing {
     // Same as the above, but maps the token to the string representation of its regex
     typedef std::unordered_map<std::string, std::pair<std::string, TokenCallback>> TokensMap;
 
+    TokensMapRegex to_regex_map(const TokensMap&);
+
     class Lexer {
         private:
             std::string lexcode_;
             int pos_ = 1, lineno_ = 1, colno_ = 1;
             const TokensMapRegex tokens_;
 
-            TokensMapRegex to_regex_map(const TokensMap&) const;
             void advance_pos(char);
             void advance_stream_and_pos(const std::string&);
             void advance_stream_and_pos(char);
@@ -54,6 +55,18 @@ namespace lexing {
             int lineno() const;
             int colno() const;
             const TokensMapRegex& tokens() const;
+            const std::string& lexcode() const;
+    };
+
+    // Runtime error on finding a start of string that does not match 
+    // any regexs provided.
+    class LexError: public std::runtime_error {
+        private:
+            const Lexer& lexer_;
+
+        public:
+            LexError(const Lexer&);
+            virtual const char* what() const throw();
     };
 }
 
