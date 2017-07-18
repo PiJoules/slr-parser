@@ -1,51 +1,158 @@
 #include "parser.h"
 
+/******** ParseRule **********/
+
+/**
+ * Equality between parse rules. Just compare the rule and production.
+ */ 
+bool parsing::ParseRule::operator==(const ParseRule& other) const {
+    return rule == other.rule && production == other.production;
+}
+
+/**
+ * String representation of this parse rule.
+ */
+std::string parsing::ParseRule::str() const {
+    std::ostringstream s;
+    s << rule << " -> ";
+
+    std::size_t len = production.size();
+    int end = static_cast<int>(len) - 1;
+    for (int i = 0; i < end; ++i){
+        s << production[i] << " ";
+    }
+    if (len){
+        s << production.back();
+    }
+
+    return s.str();
+}
+
+/**
+ * Hashing for the ParseRule. Logic is borrowed from python 3.6's tuple hash.
+ */ 
+std::size_t parsing::ParseRuleHasher::operator()(const ParseRule& parse_rule) const {
+    const std::string& rule = parse_rule.rule;
+    const std::vector<std::string>& prod = parse_rule.production;
+    const std::hash<std::string> str_hasher;
+    std::size_t rule_hash = str_hasher(rule);
+
+    std::size_t hash_mult = 1000003;
+    std::size_t prod_hash = 0x345678;
+    std::size_t len = prod.size();
+    for (const std::string& r : prod){
+        prod_hash = (prod_hash ^ str_hasher(r)) * hash_mult;
+        hash_mult += 82520 + len + len;
+    }
+    prod_hash += 97531;
+    return prod_hash ^ rule_hash;
+}
+
+
+/********* LRItem **********/
+
+bool parsing::LRItem::operator==(const LRItem& other) const {
+    return parse_rule == other.parse_rule && pos == other.pos;
+}
+
+/**
+ * String representation of this lr item.
+ */
+std::string parsing::LRItem::str() const {
+    std::ostringstream s;
+    s << parse_rule.rule << " : ";
+
+    // Before dot
+    for (std::size_t i = 0; i < pos; ++i){
+        s << parse_rule.production[i] << " ";
+    }
+
+    s << ". ";
+
+    // After dot 
+    int len = static_cast<int>(parse_rule.production.size());
+    for (int i = pos; i < len; ++i){
+        s << parse_rule.production[i] << " ";
+    }
+
+    return s.str();
+}
+
+/**
+ * Hash will just be the xor between the hash of the parse rule and the position.
+ */
+std::size_t parsing::LRItemHasher::operator()(const LRItem& lr_item) const {
+    ParseRuleHasher hasher;
+    return hasher(lr_item.parse_rule) ^ static_cast<std::size_t>(lr_item.pos);
+}
+
 /**
  * Initialize a closure from an item set and list of productions.
+ * This essentially expands the entire set of lr items by adding other lr items that 
+ * start at position zero into this set.
+ *
+ * until item_set not changing
+ *     for A->a.Bb in item_set:
+ *         item_set.insert(B->.a)
  */
-void parsing::init_closure(parsing::ItemSet& item_set, const std::vector<parsing::ParseRule>& parse_rules){
-    std::size_t last_size;
+void parsing::init_closure(ItemSet& item_set, const std::vector<ParseRule>& parse_rules){
+    // For marking which lr items were already inserted
+    std::unordered_set<LRItem, LRItemHasher> found_items(item_set.begin(), item_set.end());
 
-    do {
-        last_size = item_set.size();
-        for (const LRItem& item : item_set){
-            std::size_t pos = item.pos;  // dot position
-            std::vector<std::string> prod = item.parse_rule.production;  // production list
-            if (pos < prod.size()){
-                std::string next_symbol = prod[pos];
-                
-                // Find all productions that start with the next_symbol
-                // TODO: See if we can optomize this later
-                for (const ParseRule parse_rule : parse_rules){
-                    if (next_symbol == parse_rule.rule){
-                        item_set.insert({parse_rule, 0});
+    std::size_t i = 0;
+    while (i < item_set.size()){
+        const LRItem& item = item_set[i];
+        std::size_t pos = item.pos;  // dot position
+        std::vector<std::string> prod = item.parse_rule.production;  // production list
+
+        // If we have not reached the end of a production
+        if (pos < prod.size()){
+            std::string next_symbol = prod[pos];
+            
+            // Find all productions that start with the next_symbol
+            // TODO: See if we can optomize this later
+            for (const ParseRule parse_rule : parse_rules){
+                if (next_symbol == parse_rule.rule){
+                    LRItem next_item = {parse_rule, 0};
+
+                    // Be sure to check if we have already found this item before
+                    // New items are appended to the end and are always checked
+                    if (found_items.find(next_item) == found_items.end()){
+                        item_set.push_back(next_item);
+                        found_items.insert(next_item);
                     }
                 }
             }
         }
-    } while (item_set.size() != last_size); // while the item set is changing
+
+        ++i;
+    }
 }
 
 /**
- * Move the parser position over by 1.
+ * Advance the position of all lr items in an item set and return the new set.
  */ 
-parsing::ItemSet parsing::move_pos(const parsing::ItemSet& item_set, 
+parsing::ItemSet parsing::move_pos(const ItemSet& item_set, 
                                    const std::string& symbol,
-                                   const std::vector<parsing::ParseRule>& parse_rules){
+                                   const std::vector<ParseRule>& parse_rules){
     ItemSet moved_item_set;
-    for (const auto lr_item : item_set){
+    for (const LRItem lr_item : item_set){
         ParseRule parse_rule = lr_item.parse_rule;
-        const std::vector<std::string>& prod = parse_rule.production;
+        std::vector<std::string>& prod = parse_rule.production;
         std::size_t pos = lr_item.pos;
 
         if (pos < prod.size()){
             if (prod[pos] == symbol){
-                moved_item_set.insert({parse_rule, pos + 1});
+                LRItem advanced_item = {parse_rule, pos + 1};
+                moved_item_set.push_back(advanced_item);
             }
         }
     }
+
+    // Expand the item set
     init_closure(moved_item_set, parse_rules);
-    return ItemSet(moved_item_set);
+
+    return moved_item_set;
 }
 
 /**
@@ -704,46 +811,6 @@ const std::unordered_set<std::string>& parsing::Grammar::follows_stack() const {
     return follows_stack_;
 }
 
-std::string parsing::ParseRule::str() const {
-    std::ostringstream s;
-    s << rule << " -> ";
-
-    std::size_t len = production.size();
-    int end = static_cast<int>(len) - 1;
-    for (int i = 0; i < end; ++i){
-        s << production[i] << " ";
-    }
-    if (len){
-        s << production.back();
-    }
-
-    return s.str();
-}
-
-bool parsing::LRItem::operator==(const LRItem& other) const {
-    return parse_rule == other.parse_rule && pos == other.pos;
-}
-
-std::string parsing::LRItem::str() const {
-    std::ostringstream s;
-    s << parse_rule.rule << " : ";
-
-    // Before dot
-    for (std::size_t i = 0; i < pos; ++i){
-        s << parse_rule.production[i] << " ";
-    }
-
-    s << ". ";
-
-    // After dot 
-    int len = static_cast<int>(parse_rule.production.size());
-    for (int i = pos; i < len; ++i){
-        s << parse_rule.production[i] << " ";
-    }
-
-    return s.str();
-}
-
 
 /********** Nodes ************/
 
@@ -772,41 +839,6 @@ std::vector<std::string> parsing::LexTokenWrapper::lines() const {
 
 /************ Hashes *************/
 
-// Borrowed from python hash
-static std::size_t _HASH_MULTIPLIER = 1000003;
-
-/**
- * Equality between parse rules
- */ 
-bool parsing::ParseRule::operator==(const ParseRule& other) const {
-    return this->rule == other.rule && this->production == other.production;
-}
-
-/**
- * Borrowed from python3.6's tuple hash
- */
-std::size_t parsing::ParseRuleHasher::operator()(const ParseRule& parse_rule) const {
-    const std::string& rule = parse_rule.rule;
-    const std::vector<std::string>& prod = parse_rule.production;
-    const std::hash<std::string> str_hasher;
-    std::size_t rule_hash = str_hasher(rule);
-
-    std::size_t hash_mult = _HASH_MULTIPLIER;
-    std::size_t prod_hash = 0x345678;
-    std::size_t len = prod.size();
-    for (const std::string& r : prod){
-        prod_hash = (prod_hash ^ str_hasher(r)) * hash_mult;
-        hash_mult += 82520 + len + len;
-    }
-    prod_hash += 97531;
-    return prod_hash ^ rule_hash;
-}
-
-std::size_t parsing::ItemHasher::operator()(const LRItem& lr_item) const {
-    ParseRuleHasher hasher;
-    return hasher(lr_item.parse_rule) ^ static_cast<std::size_t>(lr_item.pos);
-}
-
 /**
  * Borrowed from python3.6's frozenset hash
  */ 
@@ -816,7 +848,7 @@ static std::size_t _shuffle_bits(std::size_t h){
 
 std::size_t parsing::ItemSetHasher::operator()(const ItemSet& item_set) const {
     std::size_t hash = 0;
-    ItemHasher item_hasher;
+    LRItemHasher item_hasher;
     for (const auto& lr_item : item_set){
         hash ^= _shuffle_bits(item_hasher(lr_item));  // entry hashes
     }

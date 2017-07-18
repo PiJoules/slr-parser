@@ -29,6 +29,7 @@ namespace lexing {
     // Same as the above, but maps the token to the string representation of its regex
     typedef std::unordered_map<std::string, std::pair<std::string, TokenCallback>> TokensMap;
 
+    // Simple conversion between the token maps.
     TokensMapRegex to_regex_map(const TokensMap&);
 
     class Lexer {

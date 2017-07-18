@@ -1,6 +1,8 @@
 #ifndef _PARSER_H
 #define _PARSER_H
 
+#include <vector>
+#include <functional>
 #include <unordered_set>
 #include <unordered_map>
 #include <iostream>
@@ -17,6 +19,10 @@ namespace parsing {
     // The function called for handling symbols in a production when reducing by a rule
     typedef void* (*ParseCallback)(std::vector<void*>& nodes, void* data);
 
+    // Individual entries created by the user containing the 
+    // - Nonterminal rule to be reduced to 
+    // - The production of symbols that are reduced 
+    // - The callback function handling the reduction
     typedef struct ParseRule ParseRule;
     struct ParseRule {
         std::string rule;
@@ -31,6 +37,9 @@ namespace parsing {
         std::size_t operator()(const ParseRule& parse_rule) const;
     };
 
+    // Items contained in the lr sets. These items contain 
+    // - The parse rule itself
+    // - The position in the production that the parser is in while parsing.
     typedef struct LRItem LRItem;
     struct LRItem {
         ParseRule parse_rule;
@@ -40,19 +49,21 @@ namespace parsing {
         std::string str() const;
     };
 
-    // Parse table generation
-    struct ItemHasher {
+    struct LRItemHasher {
         std::size_t operator()(const LRItem& lr_item) const;
     };
-    // TODO: Create an immutable container type (like tuples/frozensets in python)
-    // so that we don't have to take the hash of a mutable container set at compile time.
-    typedef std::unordered_set<LRItem, ItemHasher> ItemSet;
+
+    // The container holding the lr items. This is not exposed as a set for debugging
+    // purposes to retain order of insertion into the set. We would like to print them 
+    // in order. Internally, the vectors are converted to unordered sets for easy lookup.
+    typedef std::vector<LRItem> ItemSet;
 
     struct ItemSetHasher {
         std::size_t operator()(const ItemSet&) const;
     };
 
     // Deterministic finite automata
+    // This is essentially the set of item sets.
     typedef std::unordered_set<ItemSet, ItemSetHasher> DFA;
 
     typedef struct ParseInstr ParseInstr;
