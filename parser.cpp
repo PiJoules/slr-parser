@@ -205,20 +205,21 @@ parsing::DFA parsing::make_dfa(const std::vector<ParseRule>& parse_rules){
     return dfa;
 }
 
-parsing::Grammar parsing::make_grammar(lexing::Lexer& lexer,
+parsing::Grammar parsing::make_grammar(const std::unordered_set<std::string>& tokens,
                                        const std::vector<ParseRule>& parse_rules,
                                        const PrecedenceList& precedence){
-    Grammar grammar(lexer, parse_rules, precedence);
+    Grammar grammar(tokens, parse_rules, precedence);
     return grammar;
 }
 
 parsing::Parser::Parser(lexing::Lexer& lexer, const Grammar& grammar): 
     lexer_(lexer), grammar_(grammar){}
 
+
 parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules,
                         const PrecedenceList& precedence):
     lexer_(lexer), 
-    grammar_(make_grammar(lexer, parse_rules, precedence)){}
+    grammar_(make_grammar(keys(lexer.tokens()), parse_rules, precedence)){}
 
 
 static void* parse_prime(std::vector<void*>& args, void* data){
@@ -257,35 +258,36 @@ std::vector<parsing::ParseRule> parsing::prepend_prime_rule(std::vector<ParseRul
 /**
  * Initialize the parse table from the production rules.
  */
-parsing::Grammar::Grammar(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules, 
+parsing::Grammar::Grammar(const std::unordered_set<std::string>& tokens, 
+                          const std::vector<ParseRule>& parse_rules, 
                           const PrecedenceList& precedence):
-    lexer_(lexer), 
+    tokens_(tokens), 
     parse_rules_(prepend_prime_rule(parse_rules)), 
     start_nonterminal_(parse_rules_.front().rule),
-    precedence_map_(make_precedence_table(precedence))
+    precedence_map_(make_precedence_table(precedence)),
+    dfa_(make_dfa(parse_rules_))
 {
-    DFA dfa = make_dfa(parse_rules_);
-
     const auto& top_parse_rule = parse_rules_.front();
-    parse_table_.reserve(dfa.size());
-    item_set_map_.reserve(dfa.size());
+    parse_table_.reserve(dfa_.size());
+
+    std::unordered_map<LRItemSet, std::size_t, LRItemSetHasher> item_set_map;
+    item_set_map.reserve(dfa_.size());
 
     // Map the item_sets to their final indeces in the map 
-    std::size_t i = 0;
-    for (const auto& item_set : dfa){
+    for (std::size_t i = 0; i < dfa_.size(); ++i){
+        item_set_map[dfa_[i]] = i;
+
         std::unordered_map<std::string, ParseInstr> action_map;
         parse_table_[i] = action_map;
-        item_set_map_[item_set] = i;
-        ++i;
     }
 
     // Map the production rules to the order in which they appear
-    for (i = 0; i < parse_rules_.size(); ++i){
+    for (std::size_t i = 0; i < parse_rules_.size(); ++i){
         parse_rule_map_[parse_rules_[i]] = i;
     }
 
-    i = 0;
-    for (const auto& item_set : dfa){
+    for (std::size_t i = 0; i < dfa_.size(); ++i){
+        const LRItemSet& item_set = dfa_[i];
         for (const auto& lr_item : item_set){
             const ParseRule& parse_rule = lr_item.parse_rule;
             const std::vector<std::string>& prod = parse_rule.production;
@@ -297,7 +299,7 @@ parsing::Grammar::Grammar(lexing::Lexer& lexer, const std::vector<ParseRule>& pa
                 // a terminal, shift to the jth state which is equivalent to GOTO(I_i, a).
                 const auto& next_symbol = prod[pos];
                 const auto I_j = move_pos(item_set, next_symbol, parse_rules_);
-                int j = item_set_map_.at(I_j);
+                int j = item_set_map.at(I_j);
 
                 if (is_terminal(next_symbol)){
                     // next_symbol is a token 
@@ -341,12 +343,11 @@ parsing::Grammar::Grammar(lexing::Lexer& lexer, const std::vector<ParseRule>& pa
                 }
             }
         }
-        ++i;
     }
 }
 
 bool parsing::Grammar::is_terminal(const std::string& symbol) const {
-    return lexer_.tokens().find(symbol) != lexer_.tokens().end();
+    return tokens_.find(symbol) != tokens_.end();
 }
 
 const std::vector<parsing::ParserConflict>& parsing::Grammar::conflicts() const {
@@ -381,8 +382,8 @@ void parsing::Grammar::check_precedence(
     if (precedence_map_.find(key_existing) != precedence_map_.cend() &&
         precedence_map_.find(key_new) != precedence_map_.cend()){
         // Both have precedence rules. No conflict
-        const auto& prec_existing = precedence_map_[key_existing];
-        const auto& prec_new = precedence_map_[key_new];
+        const auto& prec_existing = precedence_map_.at(key_existing);
+        const auto& prec_new = precedence_map_.at(key_new);
         if (prec_new.first > prec_existing.first){
             // Take the new action over current
             action_table[key_new] = new_instr;
@@ -435,15 +436,10 @@ void parsing::Grammar::check_precedence(
 }
 
 void parsing::Grammar::dump_state(std::size_t state, std::ostream& stream) const {
-    LRItemSet item_sets[item_set_map_.size()];
-    for (auto it = item_set_map_.cbegin(); it != item_set_map_.cend(); ++it){
-        item_sets[it->second] = it->first;
-    }
-        
     stream << "state " << state << std::endl << std::endl;
 
     // Print item sets
-    const auto& item_set = item_sets[state];
+    const auto& item_set = dfa_[state];
     for (const auto& lr_item : item_set){
         stream << "\t" << lr_item.str() << std::endl;
     }

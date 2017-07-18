@@ -67,7 +67,6 @@ namespace parsing {
     // This is essentially the set of item sets. Also implemented as a vector to 
     // retain insertion order for debugging in the grammar dump.
     typedef std::vector<LRItemSet> DFA;
-    //typedef std::unordered_set<LRItemSet, LRItemSetHasher> DFA;
 
     typedef struct ParseInstr ParseInstr;
     struct ParseInstr {
@@ -80,7 +79,7 @@ namespace parsing {
     enum Associativity {
         LEFT_ASSOC,
         RIGHT_ASSOC,
-        // TODO: Ply also implements nonassociativity, but ignoring that for now
+        NONASSOC,
     };
 
     typedef std::vector<std::pair<enum Associativity, std::vector<std::string>>> PrecedenceList;
@@ -102,6 +101,18 @@ namespace parsing {
 
     PrecedenceTable make_precedence_table(const PrecedenceList&);
 
+    /**
+     * Utility function for getting keys from a map.
+     */
+    template <typename T, typename U>
+    std::unordered_set<T> keys(const std::unordered_map<T, U>& m){
+        std::unordered_set<T> s;
+        for (auto it = m.begin(); it != m.end(); ++it){
+            s.insert(it->first);
+        }
+        return s;
+    }
+
 
     /************** Parser ************/ 
 
@@ -110,7 +121,7 @@ namespace parsing {
      */
     class Grammar {
         private:
-            lexing::Lexer& lexer_;
+            const std::unordered_set<std::string> tokens_;
 
             // List of produciton rules 
             // This must be declared first immediately after the lexer b/c of constructor
@@ -126,8 +137,10 @@ namespace parsing {
 
             const PrecedenceTable precedence_map_;
 
-            ParseTable parse_table_;  // map of states to map of strings to parse instructions
-            std::unordered_map<const LRItemSet, int, LRItemSetHasher> item_set_map_;  // map of item sets (states) to their state number
+            const DFA dfa_;
+
+            ParseTable parse_table_;  // map of states to map of strings to parse instructions 
+
             std::unordered_map<const ParseRule, int, ParseRuleHasher> parse_rule_map_;  // map of production rule index to production rule (flipped keys + vals of parse_rules_)
             std::vector<ParserConflict> conflicts_;
 
@@ -144,7 +157,7 @@ namespace parsing {
             std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
 
         public:
-            Grammar(lexing::Lexer&, const std::vector<ParseRule>&,
+            Grammar(const std::unordered_set<std::string>&, const std::vector<ParseRule>&,
                     const PrecedenceList& precedence={{}});
 
             void dump_grammar(std::ostream& stream=std::cerr) const;
@@ -163,7 +176,7 @@ namespace parsing {
             const std::vector<ParseRule>& parse_rules() const;
     };
 
-    Grammar make_grammar(lexing::Lexer&, const std::vector<ParseRule>&,
+    Grammar make_grammar(const std::unordered_set<std::string>&, const std::vector<ParseRule>&,
                          const PrecedenceList& precedence={{}});
 
     class Parser {

@@ -2,7 +2,7 @@
 
 int main(){
     lang::LangLexer lexer(lang::LANG_TOKENS);
-    parsing::Grammar grammar(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
+    parsing::Grammar grammar(parsing::keys(lexer.tokens()), lang::LANG_RULES, lang::LANG_PRECEDENCE);
     grammar.dump_grammar(std::cout);
 
     return 0;
