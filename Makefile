@@ -32,6 +32,7 @@ test: compile_clean test_lexer test_table_generation test_parser
 	$(CPP) $(CPPFLAGS) -O2 -c $< -o $@
 
 compile: $(OBJS) $(EXE_OUTPUTS)
+compile_objs: $(OBJS)
 compile_clean: $(OBJS) clean_exes $(EXE_OUTPUTS)
 
 # Executable binaries from cpp files

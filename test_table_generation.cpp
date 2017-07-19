@@ -97,10 +97,6 @@ void test_rules1(){
     assert(grammar.follows("C") == expected);
     expected = {"a"};
     assert(grammar.follows("D") == expected);
-
-    // empty stacks 
-    assert(grammar.firsts_stack().empty());
-    assert(grammar.follows_stack().empty());
 }
 
 void test_rules2(){
@@ -137,10 +133,6 @@ void test_rules2(){
     assert(grammar.follows("E") == expected);
     expected = {"PLUS", "RPAR", lexing::tokens::END};
     assert(grammar.follows("T") == expected);
-
-    // empty stacks 
-    assert(grammar.firsts_stack().empty());
-    assert(grammar.follows_stack().empty());
 }
 
 void test_rules3(){
@@ -176,10 +168,6 @@ void test_rules3(){
     expected = {lexing::tokens::END, "PLUS", "RPAR", "MULT"};
     assert(grammar.follows("T") == expected);
     assert(grammar.follows("F") == expected);
-
-    // empty stacks 
-    assert(grammar.firsts_stack().empty());
-    assert(grammar.follows_stack().empty());
 }
 
 void test_rules4(){
@@ -196,10 +184,6 @@ void test_rules4(){
     assert(grammar.follows("expr") == expected);
     expected = {lexing::tokens::END};
     assert(grammar.follows("module") == expected);
-
-    // empty stacks 
-    assert(grammar.firsts_stack().empty());
-    assert(grammar.follows_stack().empty());
 }
 
 void test_rules5(){
@@ -225,10 +209,6 @@ void test_rules5(){
     expected = {lexing::tokens::END};
     assert(grammar.follows("S") == expected);
     assert(grammar.follows("X") == expected);
-
-    // empty stacks 
-    assert(grammar.firsts_stack().empty());
-    assert(grammar.follows_stack().empty());
 }
 
 static std::unordered_map<std::string, std::string> RESERVED_NAMES = {
@@ -297,10 +277,6 @@ void test_rules6(){
     expected = {lexing::tokens::END, "DEF", lang::tokens::NEWLINE};
     assert(grammar.follows("module_stmt") == expected);
     assert(grammar.follows("module_stmt_list") == expected);
-
-    // empty stacks 
-    assert(grammar.firsts_stack().empty());
-    assert(grammar.follows_stack().empty());
 }
 
 void test_closure(){

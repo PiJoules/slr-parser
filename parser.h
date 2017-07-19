@@ -79,7 +79,6 @@ namespace parsing {
     enum Associativity {
         LEFT_ASSOC,
         RIGHT_ASSOC,
-        NONASSOC,
     };
 
     typedef std::vector<std::pair<enum Associativity, std::vector<std::string>>> PrecedenceList;
@@ -132,7 +131,7 @@ namespace parsing {
             const std::string start_nonterminal_;
             std::unordered_set<std::string> firsts_stack_;  // for keeping track of recursive calls 
             std::unordered_set<std::string> follows_stack_;
-            std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;  // memoization
+            std::unordered_map<std::string, std::unordered_set<std::string>> firsts_map_;
             std::unordered_map<std::string, std::unordered_set<std::string>> follows_map_;
 
             const PrecedenceTable precedence_map_;
@@ -141,39 +140,36 @@ namespace parsing {
 
             ParseTable parse_table_;  // map of states to map of strings to parse instructions 
 
-            std::unordered_map<const ParseRule, int, ParseRuleHasher> parse_rule_map_;  // map of production rule index to production rule (flipped keys + vals of parse_rules_)
             std::vector<ParserConflict> conflicts_;
 
-            /******* Methods ********/
+            // Methods
             bool is_terminal(const std::string&) const;
-            void init_precedence(const PrecedenceList&);
-            std::string key_for_instr(const ParseInstr&, const std::string&) const;
-            void check_precedence(const ParseInstr&, const ParseInstr&, const std::string&,
-                    std::unordered_map<std::string, ParseInstr>&);
+            std::string token_for_instr(const ParseInstr&, const std::string&) const;
+            void update_with_precedence(const ParseInstr&, const ParseInstr&, const std::string&,
+                                        std::unordered_map<std::string, ParseInstr>&);
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const std::vector<std::string>&) const;
 
             // For creating firsts/follows sets
-            std::unordered_set<std::string> make_nonterminal_firsts(const std::string&);
+            std::unordered_set<std::string> nonterminal_firsts(const std::string&);
 
         public:
             Grammar(const std::unordered_set<std::string>&, const std::vector<ParseRule>&,
                     const PrecedenceList& precedence={{}});
 
-            void dump_grammar(std::ostream& stream=std::cerr) const;
+            void dump(std::ostream& stream=std::cerr) const;
             void dump_state(std::size_t, std::ostream& stream=std::cerr) const;
-            const std::vector<ParserConflict>& conflicts() const;
             
             // Firsts/follows methods 
             std::unordered_set<std::string> firsts(const std::string&);
             std::unordered_set<std::string> follows(const std::string&);
-            const std::unordered_set<std::string>& firsts() const;
-            const std::unordered_set<std::string>& follows() const;
-            const std::unordered_set<std::string>& firsts_stack() const;
-            const std::unordered_set<std::string>& follows_stack() const;
 
+            // Getters
             const ParseTable& parse_table() const;
             const std::vector<ParseRule>& parse_rules() const;
+            const std::vector<ParserConflict>& conflicts() const;
+            const std::unordered_map<std::string, std::unordered_set<std::string>>& firsts() const;
+            const std::unordered_map<std::string, std::unordered_set<std::string>>& follows() const;
     };
 
     Grammar make_grammar(const std::unordered_set<std::string>&, const std::vector<ParseRule>&,
