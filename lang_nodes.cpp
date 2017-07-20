@@ -113,6 +113,22 @@ std::string lang::BinExpr::value_str() const {
 }
 
 /**
+ * Unary expression
+ */ 
+lang::UnaryExpr::UnaryExpr(Expr* expr, UnaryOperator* op): expr_(expr), op_(op){}
+
+lang::UnaryExpr::~UnaryExpr(){
+    delete expr_;
+    delete op_;
+}
+
+std::string lang::UnaryExpr::value_str() const {
+    std::ostringstream s;
+    s << op_->symbol() << expr_->str();
+    return s.str();
+}
+
+/**
  * Name Expression
  */ 
 lang::NameExpr::NameExpr(const std::string& name): name_(name){}

@@ -17,7 +17,7 @@ namespace lang {
 
     class BinOperator: public parsing::Node {
         public:
-            virtual std::string symbol() const { return ""; }
+            virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
                 std::vector<std::string> v = {symbol()};
                 return v;
@@ -38,6 +38,21 @@ namespace lang {
     class Mul: public BinOperator {
         public:
             std::string symbol() const { return "*"; }
+    };
+
+    // TODO: Maybe we can merge this and the binary operator class
+    // if they don't really end up having different logic in the long run.
+    class UnaryOperator: public parsing::Node {
+        public:
+            virtual std::string symbol() const = 0;
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v = {symbol()};
+                return v;
+            }
+    };
+    class USub: public UnaryOperator {
+        public:
+            std::string symbol() const { return "-"; }
     };
 
     class Int: public Expr {
@@ -69,6 +84,17 @@ namespace lang {
             BinExpr(Expr*, BinOperator*, Expr*);
             std::string value_str() const;
             ~BinExpr();
+    };
+
+    class UnaryExpr: public Expr {
+        private: 
+            Expr* expr_;
+            UnaryOperator* op_;
+
+        public:
+            UnaryExpr(Expr*, UnaryOperator*);
+            std::string value_str() const;
+            ~UnaryExpr();
     };
 
     class ExprStmt: public SimpleFuncStmt {

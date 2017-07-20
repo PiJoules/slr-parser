@@ -16,14 +16,14 @@ OBJS = $(SOURCES:.cpp=.o)
 
 TEST_FILES = test_lexer.cpp \
 			 test_table_generation.cpp \
-			 test_parser.cpp
+			 test_lang.cpp
 
 EXE_FILES = $(TEST_FILES) \
 			dump_lang.cpp \
 			#lang.cpp
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: compile_clean test_lexer test_table_generation test_parser 
+test: compile_clean test_lexer test_table_generation test_lang 
 
 .PHONY: test
 
@@ -50,9 +50,9 @@ test_table_generation: $(OBJS) clean_exes test_table_generation.out
 	./test_table_generation.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_table_generation.out || (echo "memory leak"; exit 1); fi 
 
-test_parser: $(OBJS) clean_exes test_parser.out
-	./test_parser.out
-	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_parser.out || (echo "memory leak"; exit 1); fi
+test_lang: $(OBJS) clean_exes test_lang.out
+	./test_lang.out
+	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lang.out || (echo "memory leak"; exit 1); fi
 
 dump_lang: $(OBJS) clean_exes dump_lang.out
 	./dump_lang.out

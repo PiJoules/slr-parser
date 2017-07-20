@@ -92,7 +92,9 @@ namespace parsing {
 
     typedef std::unordered_map<std::size_t, std::unordered_map<std::string, ParseInstr>> ParseTable;
 
+    // Extra functions for handling parse rule vectors
     std::vector<ParseRule> prepend_prime_rule(std::vector<ParseRule>);
+    std::vector<ParseRule> trim_overload_tokens(std::vector<ParseRule>);
 
     void init_closure(LRItemSet&, const std::vector<ParseRule>&);
     LRItemSet move_pos(const LRItemSet&, const std::string&, const std::vector<ParseRule>&);
@@ -125,6 +127,7 @@ namespace parsing {
             // List of produciton rules 
             // This must be declared first immediately after the lexer b/c of constructor
             // member initialization order.
+            const std::vector<ParseRule> parse_rules_with_overloads_;  
             const std::vector<ParseRule> parse_rules_;  
 
             // For Creating first/follow sets 

@@ -38,6 +38,9 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     {"WS", {R"([ ]+)", comment}},
     {lang::tokens::INDENT, {lang::tokens::INDENT, nullptr}},
     {lang::tokens::DEDENT, {lang::tokens::DEDENT, nullptr}},
+
+    // Fictitious tokens 
+    {"UMINUS", {"", nullptr}},
 };
 
 /********** Parser rules ***************/ 
@@ -53,34 +56,43 @@ void* parse_module(std::vector<void*>& args, void* data){
     return module;
 }
 
-// module_stmt_list : module_stmt 
+// module_stmt_list : func_def
 void* parse_module_stmt_list(std::vector<void*>& args, void* data){
-    lang::ModuleStmt* module_stmt = static_cast<lang::ModuleStmt*>(args[0]);
-    std::vector<lang::ModuleStmt*>* module_stmt_list = new std::vector<lang::ModuleStmt*>;
-    module_stmt_list->push_back(module_stmt);
-
-    return module_stmt_list;
-}
-
-// module_stmt_list : module_stmt_list module_stmt
-void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
-    lang::ModuleStmt* module_stmt = static_cast<lang::ModuleStmt*>(args[1]);
-    std::vector<lang::ModuleStmt*>* module_stmt_list = static_cast<std::vector<lang::ModuleStmt*>*>(args[0]);
-    module_stmt_list->push_back(module_stmt);
-
-    return module_stmt_list;
-}
-
-// module_stmt : func_def
-void* parse_module_stmt(std::vector<void*>& args, void* data){
     lang::FuncDef* func_def = static_cast<lang::FuncDef*>(args[0]);
-    return func_def;
+    std::vector<lang::ModuleStmt*>* module_stmt_list = new std::vector<lang::ModuleStmt*>;
+    module_stmt_list->push_back(func_def);
+
+    return module_stmt_list;
 }
 
-// module_stmt : NEWLINE
-void* parse_module_stmt2(std::vector<void*>& args, void* data){
+// module_stmt_list : NEWLINE
+void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
     lang::Newline* newline = static_cast<lang::Newline*>(args[0]);
-    return newline;
+    std::vector<lang::ModuleStmt*>* module_stmt_list = new std::vector<lang::ModuleStmt*>;
+
+    delete newline;
+
+    return module_stmt_list;
+}
+
+// module_stmt_list : module_stmt_list NEWLINE
+void* parse_module_stmt_list3(std::vector<void*>& args, void* data){
+    lang::Newline* newline = static_cast<lang::Newline*>(args[1]);
+    std::vector<lang::ModuleStmt*>* module_stmt_list = static_cast<std::vector<lang::ModuleStmt*>*>(args[0]);
+
+    delete newline;
+
+    return module_stmt_list;
+}
+
+// module_stmt_list : module_stmt_list func_def
+void* parse_module_stmt_list4(std::vector<void*>& args, void* data){
+    lang::FuncDef* func_def = static_cast<lang::FuncDef*>(args[1]);
+    std::vector<lang::ModuleStmt*>* module_stmt_list = static_cast<std::vector<lang::ModuleStmt*>*>(args[0]);
+
+    module_stmt_list->push_back(func_def);
+
+    return module_stmt_list;
 }
 
 // func_def : DEF NAME LPAR RPAR COLON func_suite
@@ -227,6 +239,19 @@ void* parse_bin_div_expr(std::vector<void*>& args, void* data){
     return bin_expr;
 }
 
+// expr : SUB expr %UMINUS
+void* parse_un_sub_expr(std::vector<void*>& args, void* data){
+    parsing::LexTokenWrapper* sub = static_cast<parsing::LexTokenWrapper*>(args[0]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
+
+    lang::USub* op = new lang::USub;
+    lang::UnaryExpr* unary_expr = new lang::UnaryExpr(expr, op);
+
+    delete sub;
+
+    return unary_expr;
+}
+
 // expr : NAME 
 void* parse_name_expr(std::vector<void*>& args, void* data){
     parsing::LexTokenWrapper* name = static_cast<parsing::LexTokenWrapper*>(args[0]);
@@ -250,10 +275,10 @@ void* parse_int_expr(std::vector<void*>& args, void* data){
 const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // Entry point 
     {"module", {"module_stmt_list"}, parse_module},
-    {"module_stmt_list", {"module_stmt"}, parse_module_stmt_list},
-    {"module_stmt_list", {"module_stmt_list", "module_stmt"}, parse_module_stmt_list2},
-    {"module_stmt", {"func_def"}, parse_module_stmt},
-    {"module_stmt", {lang::tokens::NEWLINE}, parse_module_stmt2},
+    {"module_stmt_list", {"func_def"}, parse_module_stmt_list},
+    {"module_stmt_list", {lang::tokens::NEWLINE}, parse_module_stmt_list2},
+    {"module_stmt_list", {"module_stmt_list", lang::tokens::NEWLINE}, parse_module_stmt_list3},
+    {"module_stmt_list", {"module_stmt_list", "func_def"}, parse_module_stmt_list4},
 
     // Functions 
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
@@ -272,6 +297,9 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"expr", {"expr", "MUL", "expr"}, parse_bin_mul_expr},
     {"expr", {"expr", "DIV", "expr"}, parse_bin_div_expr},
 
+    // Unary expressions
+    {"expr", {"SUB", "expr", "%UMINUS"}, parse_un_sub_expr},
+
     // Atoms
     {"expr", {"NAME"}, parse_name_expr},
     {"expr", {"INT"}, parse_int_expr},
@@ -282,4 +310,11 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
 const parsing::PrecedenceList lang::LANG_PRECEDENCE = {
     {parsing::LEFT_ASSOC, {"ADD", "SUB"}},
     {parsing::RIGHT_ASSOC, {"MUL", "DIV"}},
+    {parsing::RIGHT_ASSOC, {"UMINUS"}},
 };
+
+/**************** Grammar ***************/ 
+
+const parsing::Grammar lang::LANG_GRAMMAR(parsing::keys(lang::LANG_TOKENS),
+                                          lang::LANG_RULES,
+                                          lang::LANG_PRECEDENCE);

@@ -1,5 +1,7 @@
 #include "parser.h"
 
+static char PRECEDENCE_OVERIDER = '%';
+
 /******** ParseRule **********/
 
 /**
@@ -136,6 +138,20 @@ std::vector<parsing::ParseRule> parsing::prepend_prime_rule(std::vector<ParseRul
         parse_prime
     };
     parse_rules.insert(parse_rules.begin(), new_top_pr);
+    return parse_rules;
+}
+
+/**
+ * Remove any tokens at the end of each production starting 
+ * with the precedence overider character.
+ */ 
+std::vector<parsing::ParseRule> parsing::trim_overload_tokens(std::vector<ParseRule> parse_rules){
+    for (ParseRule& parse_rule : parse_rules){
+        std::vector<std::string>& prod = parse_rule.production;
+        if (prod.back()[0] == PRECEDENCE_OVERIDER){
+            prod.pop_back();
+        }
+    }
     return parse_rules;
 }
 
@@ -292,9 +308,17 @@ bool parsing::Grammar::is_terminal(const std::string& symbol) const {
 std::string parsing::Grammar::token_for_instr(const ParseInstr& instr, const std::string& lookahead) const {
     std::string key_term;
     if (instr.action == ParseInstr::REDUCE){
+        // Check for last symbol starting with precedence overrider
         std::size_t rule_num = instr.value;
-        const std::vector<std::string>& reduce_prod = parse_rules_[rule_num].production;
-        key_term = rightmost_terminal(reduce_prod);
+        const std::vector<std::string>& reduce_prod = parse_rules_with_overloads_[rule_num].production;
+
+        if (reduce_prod.back()[0] == PRECEDENCE_OVERIDER){
+            // Use this as the token unstead of the rightmost terminal 
+            key_term = reduce_prod.back().substr(1);
+        }
+        else {
+            key_term = rightmost_terminal(reduce_prod);
+        }
     }
     else {
         key_term = lookahead;
@@ -315,7 +339,6 @@ void parsing::Grammar::update_with_precedence(
         const ParseInstr& new_instr,
         const std::string& lookahead,
         std::unordered_map<std::string, ParseInstr>& action_table){
-    // Possible action conlfict. Check for precedence 
     // Tterminal key for existing instr
     const std::string key_existing = token_for_instr(existing_instr, lookahead);
 
@@ -468,7 +491,8 @@ parsing::Grammar::Grammar(const std::unordered_set<std::string>& tokens,
                           const std::vector<ParseRule>& parse_rules, 
                           const PrecedenceList& precedence):
     tokens_(tokens), 
-    parse_rules_(prepend_prime_rule(parse_rules)), 
+    parse_rules_with_overloads_(prepend_prime_rule(parse_rules)),
+    parse_rules_(trim_overload_tokens(parse_rules_with_overloads_)), 
     start_nonterminal_(parse_rules_.front().rule),
     precedence_map_(make_precedence_table(precedence)),
     dfa_(make_dfa(parse_rules_))
@@ -562,8 +586,8 @@ parsing::Grammar::Grammar(const std::unordered_set<std::string>& tokens,
  */
 void parsing::Grammar::dump(std::ostream& stream) const {
     stream << "Grammar" << std::endl << std::endl;
-    for (std::size_t i = 0; i < parse_rules_.size(); ++i){
-        stream << "Rule " << i << ": " << parse_rules_[i].str() << std::endl;
+    for (std::size_t i = 0; i < parse_rules_with_overloads_.size(); ++i){
+        stream << "Rule " << i << ": " << parse_rules_with_overloads_[i].str() << std::endl;
     }
     stream << std::endl;
 
@@ -605,9 +629,9 @@ void parsing::Grammar::dump_state(std::size_t state, std::ostream& stream) const
     // Print parse instructions
     const auto& action_map = parse_table_.at(state);
     for (auto it = action_map.cbegin(); it != action_map.cend(); ++it){
-        const auto& symbol = it->first;
-        const auto& instr = it->second;
-        const auto& action = instr.action;
+        const std::string& symbol = it->first;
+        const ParseInstr& instr = it->second;
+        const ParseInstr::Action& action = instr.action;
 
         int val = instr.value;
         stream << "\t" << symbol << "\t\t";
@@ -914,7 +938,8 @@ std::string parsing::Node::str() const {
         return "";
     }
 
-    std::ostringstream s(node_lines.front());
+    std::ostringstream s;
+    s << node_lines.front();
     for (auto it = node_lines.begin()+1; it < node_lines.end(); ++it){
         s << std::endl << *it;
     }

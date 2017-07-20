@@ -34,30 +34,65 @@ def func():
     assert(lexer.empty());
 }
 
-void test_parser(){
+void test_regular(){
     const std::string code = R"(
 def func():
     x + y
 )";
 
     lang::LangLexer lexer(lang::LANG_TOKENS);
-    parsing::Parser parser(lexer, lang::LANG_RULES, lang::LANG_PRECEDENCE);
-    assert(parser.grammar().conflicts().empty());
+    parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
 
     lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
     assert(lexer.empty());
 
     // Check the nodes
-    assert(module_node->body().size() == 2);  // The first newline and the func def 
+    assert(module_node->body().size() == 1);
+    lang::FuncDef* func_def = static_cast<lang::FuncDef*>(module_node->body()[0]);
+    assert(func_def->suite().size() == 1);
 
-    std::cerr << module_node->str();
+    assert(module_node->str() == "def func():\n    x + y");
+
+    delete module_node;
+}
+
+void test_empty(){
+    const std::string code = "";
+
+    lang::LangLexer lexer(lang::LANG_TOKENS);
+    parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
+    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+
+    assert(module_node->body().empty());
+    assert(module_node->str() == "");
+
+    delete module_node;
+}
+
+void test_fictitios_token(){
+    const std::string code = R"(
+def func():
+    x + -y
+)";
+
+    lang::LangLexer lexer(lang::LANG_TOKENS);
+    parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
+
+    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+    assert(lexer.empty());
+
+    assert(module_node->str() == "def func():\n    x + -y");
 
     delete module_node;
 }
 
 int main(){
+    assert(lang::LANG_GRAMMAR.conflicts().empty());
+
     test_tokens();
-    test_parser();
+    test_regular();
+    test_empty();
+    test_fictitios_token();
 
     return 0;
 }
