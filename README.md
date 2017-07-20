@@ -4,7 +4,7 @@
 
 ## Tests
 
-# Memory Check (Valgrind)
+### Memory Check (Valgrind)
 So running valgrind on any executables generated will show that there are 
 exactly 72704 blocks of still reachable memory in 1 block. Although I am unable to free 
 this, this will not be considered a bug b/c this is a fault of the c++ STL (http://valgrind.org/docs/manual/faq.html#faq.reports).
