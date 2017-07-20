@@ -86,6 +86,26 @@ std::size_t parsing::LRItemHasher::operator()(const LRItem& lr_item) const {
     return hasher(lr_item.parse_rule) ^ static_cast<std::size_t>(lr_item.pos);
 }
 
+
+/**
+ * LRItemSetHasher
+ * Logic borrowed from python3.6's frozenset hash
+ */ 
+static std::size_t _shuffle_bits(std::size_t h){
+    return ((h ^ 89869747UL) ^ (h << 16)) * 3644798167UL;
+}
+
+std::size_t parsing::LRItemSetHasher::operator()(const LRItemSet& item_set) const {
+    std::size_t hash = 0;
+    LRItemHasher item_hasher;
+    for (const auto& lr_item : item_set){
+        hash ^= _shuffle_bits(item_hasher(lr_item));  // entry hashes
+    }
+    hash ^= item_set.size() * 1927868237UL;  // # of active entrues
+    hash = hash * 69069U + 907133923UL;
+    return hash;
+};
+
 /**
  * String representation of the Action in a Parse Instruction.
  */
@@ -710,26 +730,9 @@ const std::vector<parsing::ParserConflict>& parsing::Grammar::conflicts() const 
 const std::unordered_map<std::string, std::unordered_set<std::string>>& parsing::Grammar::firsts() const { return firsts_map_; };
 const std::unordered_map<std::string, std::unordered_set<std::string>>& parsing::Grammar::follows() const { return follows_map_; };
 
-parsing::Grammar parsing::make_grammar(const std::unordered_set<std::string>& tokens,
-                                       const std::vector<ParseRule>& parse_rules,
-                                       const PrecedenceList& precedence){
-    Grammar grammar(tokens, parse_rules, precedence);
-    return grammar;
-}
-
-parsing::Parser::Parser(lexing::Lexer& lexer, const Grammar& grammar): 
-    lexer_(lexer), grammar_(grammar){}
 
 
-parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules,
-                        const PrecedenceList& precedence):
-    lexer_(lexer), 
-    grammar_(make_grammar(keys(lexer.tokens()), parse_rules, precedence)){}
-
-
-const parsing::Grammar& parsing::Parser::grammar() const {
-    return grammar_;
-}
+/**************** Parser ************/
 
 /**
  * All terminal symbols on the stack have the same precedence and associativity.
@@ -776,19 +779,30 @@ void parsing::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 }
 
+
+/**
+ * Lookup of a parse instruction in the parse table with possible parse error getting raised.
+ */
 const parsing::ParseInstr& parsing::Parser::get_instr(std::size_t state, const lexing::LexToken& lookahead){
     const ParseTable& parse_table = grammar_.parse_table();
     if (parse_table.at(state).find(lookahead.symbol) == parse_table.at(state).cend()){
-        // Parse error
-        std::ostringstream err;
-        err << "Unable to handle lookahead '" << lookahead.symbol << "' in state " << state 
-            << ". Line " << lookahead.lineno << ", col " << lookahead.colno << "."
-            << std::endl << std::endl;
-        grammar_.dump_state(state, err);
-        throw std::runtime_error(err.str());
+        throw ParseError(*this, state, lookahead);
     }
     return parse_table.at(state).at(lookahead.symbol);
 }
+
+
+/**
+ * Constructors
+ */
+parsing::Parser::Parser(lexing::Lexer& lexer, const Grammar& grammar): 
+    lexer_(lexer), grammar_(grammar){}
+
+parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& parse_rules,
+                        const PrecedenceList& precedence):
+    lexer_(lexer), 
+    grammar_(Grammar(keys(lexer.tokens()), parse_rules, precedence)){}
+
 
 /**
  * The actual parsing.
@@ -866,8 +880,34 @@ void* parsing::Parser::parse(const std::string& code, void* data){
 }
 
 
+/**
+ * Getters
+ */
+const parsing::Grammar& parsing::Parser::grammar() const { return grammar_; }
+
+
+/************ ParseError ************/
+
+parsing::ParseError::ParseError(const Parser& parser, const std::size_t state, 
+                                const lexing::LexToken& lookahead):
+    std::runtime_error("Parser error"), parser_(parser), state_(state),
+    lookahead_(lookahead){}
+
+const char* parsing::ParseError::what() const throw(){
+    std::ostringstream err;
+    err << ": Unable to handle lookahead '" << lookahead_.symbol << "' in state " << state_ 
+        << ". Line " << lookahead_.lineno << ", col " << lookahead_.colno << "."
+        << std::endl << std::endl;
+    parser_.grammar().dump_state(state_, err);
+    return err.str().c_str();
+}
+
+
 /********** Nodes ************/
 
+/**
+ * String representation of all nodes will just be the joining of its lines.
+ */
 std::string parsing::Node::str() const {
     std::vector<std::string> node_lines = lines();
     if (node_lines.empty()){
@@ -883,30 +923,14 @@ std::string parsing::Node::str() const {
 
 parsing::LexTokenWrapper::LexTokenWrapper(const lexing::LexToken& token): token_(token){}
 
+parsing::LexTokenWrapper& parsing::LexTokenWrapper::operator=(const lexing::LexToken& other){
+    token_ = other;
+    return *this;
+}
+
 lexing::LexToken parsing::LexTokenWrapper::token() const { return token_; }
 
 std::vector<std::string> parsing::LexTokenWrapper::lines() const { 
     std::vector<std::string> v = {token_.value};
     return v;
 }
-
-
-/************ Hashes *************/
-
-/**
- * Borrowed from python3.6's frozenset hash
- */ 
-static std::size_t _shuffle_bits(std::size_t h){
-    return ((h ^ 89869747UL) ^ (h << 16)) * 3644798167UL;
-}
-
-std::size_t parsing::LRItemSetHasher::operator()(const LRItemSet& item_set) const {
-    std::size_t hash = 0;
-    LRItemHasher item_hasher;
-    for (const auto& lr_item : item_set){
-        hash ^= _shuffle_bits(item_hasher(lr_item));  // entry hashes
-    }
-    hash ^= item_set.size() * 1927868237UL;  // # of active entrues
-    hash = hash * 69069U + 907133923UL;
-    return hash;
-};

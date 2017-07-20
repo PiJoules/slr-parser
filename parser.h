@@ -113,7 +113,7 @@ namespace parsing {
     }
 
 
-    /************** Parser ************/ 
+    /************** Grammar ************/ 
 
     /**
      * Class for storing all data structures used for the parser and debugging
@@ -172,8 +172,8 @@ namespace parsing {
             const std::unordered_map<std::string, std::unordered_set<std::string>>& follows() const;
     };
 
-    Grammar make_grammar(const std::unordered_set<std::string>&, const std::vector<ParseRule>&,
-                         const PrecedenceList& precedence={{}});
+
+    /************** Parser ************/ 
 
     class Parser {
         private:
@@ -195,15 +195,28 @@ namespace parsing {
             const Grammar& grammar() const;
     };
 
+    // Runtime error on finding a parse instruction that does not exist 
+    // for a state and lookahead.
+    class ParseError: public std::runtime_error {
+        private:
+            const Parser& parser_;
+            const std::size_t state_;
+            const lexing::LexToken lookahead_;
 
-    /******** Base Nodes ***********/ 
+        public:
+            ParseError(const Parser&, const std::size_t, const lexing::LexToken&);
+            virtual const char* what() const throw();
+    };
 
+
+    /******** Nodes ***********/ 
+
+    // Base node
     class Node {
         public:
-            virtual std::vector<std::string> lines() const {
-                std::vector<std::string> v;
-                return v;
-            };
+            // lines() returns a vector containing strings that represent 
+            // individual lines separated in the code separated by newlines.
+            virtual std::vector<std::string> lines() const = 0;
 
             // The lines joined by newlines
             std::string str() const;
@@ -211,16 +224,14 @@ namespace parsing {
             virtual ~Node(){}
     };
 
+    // Node for wrapping LexTokens when parsing
     class LexTokenWrapper: public Node {
         private:
             lexing::LexToken token_;
 
         public:
             LexTokenWrapper(const lexing::LexToken&);
-            LexTokenWrapper& operator=(const lexing::LexToken& other){
-                token_ = other;
-                return *this;
-            }
+            LexTokenWrapper& operator=(const lexing::LexToken& other);
             lexing::LexToken token() const;
             virtual std::vector<std::string> lines() const;
     };
