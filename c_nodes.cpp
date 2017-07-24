@@ -94,11 +94,8 @@ cnodes::ReturnStmt::ReturnStmt(Expr* expr): expr_(expr){}
 
 cnodes::ReturnStmt::~ReturnStmt(){ delete expr_; }
 
-std::vector<std::string> cnodes::ReturnStmt::lines() const {
-    std::vector<std::string> v;
-    std::string line = "return " + expr_->str() + ";";
-    v.push_back(line);
-    return v;
+std::string cnodes::ReturnStmt::value_str() const {
+    return "return " + expr_->str() + ";";
 }
 
 /**
@@ -146,4 +143,13 @@ std::string cnodes::Call::value_str() const {
 
     line += ")";
     return line;
+}
+
+/**
+ * Simple statement
+ */ 
+std::vector<std::string> cnodes::SimpleStmt::lines() const {
+    std::vector<std::string> v;
+    v.push_back(value_str());
+    return v;
 }
