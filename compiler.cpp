@@ -22,6 +22,7 @@ cppnodes::Module* lang::Compiler::visit_module(Module* module){
     std::vector<Node*> body;
 
     for (ModuleStmt* stmt : module->body()){
+
     }
 }
 
