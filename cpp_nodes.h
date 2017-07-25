@@ -1,9 +1,9 @@
-#ifndef _C_NODES_H
-#define _C_NODES_H
+#ifndef _CPP_NODES_H
+#define _CPP_NODES_H
 
 #include "parser.h"
 
-namespace cnodes {
+namespace cppnodes {
     // Base node representing a whole .c file
     class Module: public parsing::Node {
         private:
@@ -113,17 +113,17 @@ namespace cnodes {
     // Single line macro
     class SimpleMacro: Macro {
         public:
-            std::string value_str() const = 0;
+            virtual std::string value_str() const = 0;
             std::vector<std::string> lines() const;
     };
 
-    // TODO: Implement the second argument for this macro
-    class Define: public SimpleMacro {
+    // Define without the second argument
+    class SimpleDefine: public SimpleMacro {
         private:
             std::string name_;
 
         public:
-            Define(std::string&);
+            SimpleDefine(std::string&);
             std::string value_str() const;
     };
 

@@ -12,20 +12,21 @@ SOURCES = lexer.cpp \
 		  lang_utils.cpp \
 		  lang_rules.cpp \
 		  lang_nodes.cpp \
-		  c_nodes.cpp
+		  cpp_nodes.cpp
 OBJS = $(SOURCES:.cpp=.o)
 
 TEST_FILES = test_lexer.cpp \
 			 test_table_generation.cpp \
 			 test_lang.cpp \
-			 test_cnodes.cpp
+			 test_cppnodes.cpp
 
 EXE_FILES = $(TEST_FILES) \
 			dump_lang.cpp \
-			#lang.cpp
+			compiler.cpp
+
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
-test: compile_clean test_lexer test_table_generation test_lang test_cnodes
+test: compile_clean test_lexer test_table_generation test_lang test_cppnodes
 
 .PHONY: test
 
@@ -57,9 +58,9 @@ test_lang: $(OBJS) clean_exes test_lang.out
 	./test_lang.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lang.out || (echo "memory leak"; exit 1); fi
 
-test_cnodes: $(OBJS) clean_exes test_cnodes.out
-	./test_cnodes.out
-	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_cnodes.out || (echo "memory leak"; exit 1); fi 
+test_cppnodes: $(OBJS) clean_exes test_cppnodes.out
+	./test_cppnodes.out
+	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_cppnodes.out || (echo "memory leak"; exit 1); fi 
 
 dump_lang: $(OBJS) clean_exes dump_lang.out
 	./dump_lang.out

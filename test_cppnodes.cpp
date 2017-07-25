@@ -1,9 +1,9 @@
-#include "c_nodes.h"
+#include "cpp_nodes.h"
 #include <vector>
 #include <cassert>
 #include <iostream>
 
-using namespace cnodes;
+using namespace cppnodes;
 
 void test_func_def(){
     Name* arg = new Name("x");

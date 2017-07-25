@@ -1,19 +1,19 @@
-#include "c_nodes.h"
+#include "cpp_nodes.h"
 
 static const std::string INDENT = "    ";
 
 /**
  * Module
  */
-cnodes::Module::Module(const std::vector<parsing::Node*>& body): body_(body){}
+cppnodes::Module::Module(const std::vector<parsing::Node*>& body): body_(body){}
 
-cnodes::Module::~Module(){
+cppnodes::Module::~Module(){
     for (Node* node : body_){
         delete node;
     }
 }
 
-std::vector<std::string> cnodes::Module::lines() const {
+std::vector<std::string> cppnodes::Module::lines() const {
     std::vector<std::string> v;
     for (Node* node : body_){
         for (std::string& line : node->lines()){
@@ -26,13 +26,13 @@ std::vector<std::string> cnodes::Module::lines() const {
 /**
  * Function definition
  */ 
-cnodes::FuncDef::FuncDef(const std::string& name,
+cppnodes::FuncDef::FuncDef(const std::string& name,
                          const std::string& type, 
                          const std::vector<VarDecl*>& args,
                          const std::vector<parsing::Node*>& body):
     name_(name), type_(type), args_(args), body_(body){}
 
-cnodes::FuncDef::~FuncDef(){
+cppnodes::FuncDef::~FuncDef(){
     for (VarDecl* arg : args_){
         delete arg;
     }
@@ -42,7 +42,7 @@ cnodes::FuncDef::~FuncDef(){
     }
 }
 
-std::vector<std::string> cnodes::FuncDef::lines() const {
+std::vector<std::string> cppnodes::FuncDef::lines() const {
     std::vector<std::string> v;
 
     // Prototype
@@ -77,10 +77,10 @@ std::vector<std::string> cnodes::FuncDef::lines() const {
 /**
  * Regular variable declaration
  */ 
-cnodes::RegVarDecl::RegVarDecl(const char* name, const char* type): name_(name), type_(type){}
-cnodes::RegVarDecl::RegVarDecl(std::string& name, std::string& type): name_(name), type_(type){}
+cppnodes::RegVarDecl::RegVarDecl(const char* name, const char* type): name_(name), type_(type){}
+cppnodes::RegVarDecl::RegVarDecl(std::string& name, std::string& type): name_(name), type_(type){}
 
-std::vector<std::string> cnodes::RegVarDecl::lines() const {
+std::vector<std::string> cppnodes::RegVarDecl::lines() const {
     std::vector<std::string> v;
     std::string line = type_ + " " + name_;
     v.push_back(line);
@@ -90,11 +90,11 @@ std::vector<std::string> cnodes::RegVarDecl::lines() const {
 /**
  * Return statement
  */ 
-cnodes::ReturnStmt::ReturnStmt(Expr* expr): expr_(expr){}
+cppnodes::ReturnStmt::ReturnStmt(Expr* expr): expr_(expr){}
 
-cnodes::ReturnStmt::~ReturnStmt(){ delete expr_; }
+cppnodes::ReturnStmt::~ReturnStmt(){ delete expr_; }
 
-std::string cnodes::ReturnStmt::value_str() const {
+std::string cppnodes::ReturnStmt::value_str() const {
     return "return " + expr_->str() + ";";
 }
 
@@ -104,7 +104,7 @@ std::string cnodes::ReturnStmt::value_str() const {
  * All expressions van be written on one line.
  * The lines returned are just whatever is returned by value_str();
  */  
-std::vector<std::string> cnodes::Expr::lines() const {
+std::vector<std::string> cppnodes::Expr::lines() const {
     std::vector<std::string> v;
     v.push_back(value_str());
     return v;
@@ -113,17 +113,17 @@ std::vector<std::string> cnodes::Expr::lines() const {
 /**
  * Name expression
  */ 
-cnodes::Name::Name(std::string& id): id_(id){}
-cnodes::Name::Name(const char* id): id_(id){}
+cppnodes::Name::Name(std::string& id): id_(id){}
+cppnodes::Name::Name(const char* id): id_(id){}
 
-std::string cnodes::Name::value_str() const { return id_; }
+std::string cppnodes::Name::value_str() const { return id_; }
 
 /**
  * Function call expression
  */ 
-cnodes::Call::Call(Expr* func, std::vector<Expr*>& args): func_(func), args_(args){}
+cppnodes::Call::Call(Expr* func, std::vector<Expr*>& args): func_(func), args_(args){}
 
-cnodes::Call::~Call(){
+cppnodes::Call::~Call(){
     delete func_;
 
     for (Expr* arg : args_){
@@ -131,7 +131,7 @@ cnodes::Call::~Call(){
     }
 }
 
-std::string cnodes::Call::value_str() const {
+std::string cppnodes::Call::value_str() const {
     std::string line = func_->str() + "(";
 
     if (!args_.empty()){
@@ -148,8 +148,44 @@ std::string cnodes::Call::value_str() const {
 /**
  * Simple statement
  */ 
-std::vector<std::string> cnodes::SimpleStmt::lines() const {
+std::vector<std::string> cppnodes::SimpleStmt::lines() const {
     std::vector<std::string> v;
     v.push_back(value_str());
     return v;
+}
+
+/**
+ * Simple macro
+ */  
+std::vector<std::string> cppnodes::SimpleMacro::lines() const {
+    std::vector<std::string> v;
+    v.push_back(value_str());
+    return v;
+}
+
+/**
+ * SimpleDefine macro
+ */ 
+cppnodes::SimpleDefine::SimpleDefine(std::string& name): name_(name){}
+
+std::string cppnodes::SimpleDefine::value_str() const {
+    return "#define " + name_;
+}
+
+/**
+ * Ifndef macro
+ */ 
+cppnodes::Ifndef::Ifndef(std::string& name): name_(name){}
+
+std::string cppnodes::Ifndef::value_str() const {
+    return "#ifndef" + name_;
+}
+
+/**
+ * Endif macro
+ */ 
+cppnodes::Endif::Endif(){}
+
+std::string cppnodes::Endif::value_str() const {
+    return "#endif";
 }
