@@ -5,7 +5,7 @@
 #include "cpp_nodes.h"
 
 namespace lang {
-    class Compiler {
+    class Compiler: NodeVisitor {
         private:
             LangLexer lexer_;
             parsing::Parser parser_;

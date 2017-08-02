@@ -210,34 +210,6 @@ namespace parsing {
             ParseError(const Parser&, const std::size_t, const lexing::LexToken&);
             virtual const char* what() const throw();
     };
-
-
-    /******** Nodes ***********/ 
-
-    // Base node
-    class Node {
-        public:
-            // lines() returns a vector containing strings that represent 
-            // individual lines separated in the code separated by newlines.
-            virtual std::vector<std::string> lines() const = 0;
-
-            // The lines joined by newlines
-            std::string str() const;
-
-            virtual ~Node(){}
-    };
-
-    // Node for wrapping LexTokens when parsing
-    class LexTokenWrapper: public Node {
-        private:
-            lexing::LexToken token_;
-
-        public:
-            LexTokenWrapper(const lexing::LexToken&);
-            LexTokenWrapper& operator=(const lexing::LexToken& other);
-            lexing::LexToken token() const;
-            virtual std::vector<std::string> lines() const;
-    };
 }
 
 #endif

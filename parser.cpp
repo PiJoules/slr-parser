@@ -786,7 +786,7 @@ void parsing::Parser::reduce(
     }
     else {
         // Otherwise, add the wrapper for the rule token
-        result_node = new LexTokenWrapper(rule_token);
+        result_node = new lexing::LexToken(rule_token);
     }
     node_stack.erase(start, node_stack.end());
     node_stack.push_back(result_node);
@@ -861,7 +861,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
         std::cerr << std::endl;
 #endif
 
-        LexTokenWrapper* token_wrapper;
+        lexing::LexToken* stack_token;
         const ParseInstr& instr = get_instr(state, lookahead);
 
         switch (instr.action){
@@ -873,8 +873,9 @@ void* parsing::Parser::parse(const std::string& code, void* data){
                 state_stack.push_back(instr.value);
                 symbol_stack.push_back(lookahead);
 
-                token_wrapper = new LexTokenWrapper(lookahead);
-                node_stack.push_back(token_wrapper);
+                // Copy the lookahead data
+                stack_token = new lexing::LexToken(lookahead);
+                node_stack.push_back(stack_token);
 
                 lookahead = lexer_.token(data);
                 break;
@@ -924,38 +925,4 @@ const char* parsing::ParseError::what() const throw(){
         << std::endl << std::endl;
     parser_.grammar().dump_state(state_, err);
     return err.str().c_str();
-}
-
-
-/********** Nodes ************/
-
-/**
- * String representation of all nodes will just be the joining of its lines.
- */
-std::string parsing::Node::str() const {
-    std::vector<std::string> node_lines = lines();
-    if (node_lines.empty()){
-        return "";
-    }
-
-    std::ostringstream s;
-    s << node_lines.front();
-    for (auto it = node_lines.begin()+1; it < node_lines.end(); ++it){
-        s << std::endl << *it;
-    }
-    return s.str();
-}
-
-parsing::LexTokenWrapper::LexTokenWrapper(const lexing::LexToken& token): token_(token){}
-
-parsing::LexTokenWrapper& parsing::LexTokenWrapper::operator=(const lexing::LexToken& other){
-    token_ = other;
-    return *this;
-}
-
-lexing::LexToken parsing::LexTokenWrapper::token() const { return token_; }
-
-std::vector<std::string> parsing::LexTokenWrapper::lines() const { 
-    std::vector<std::string> v = {token_.value};
-    return v;
 }

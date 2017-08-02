@@ -97,14 +97,14 @@ void* parse_module_stmt_list4(std::vector<void*>& args, void* data){
 
 // func_def : DEF NAME LPAR RPAR COLON func_suite
 void* parse_func_def(std::vector<void*>& args, void* data){
-    parsing::LexTokenWrapper* def = static_cast<parsing::LexTokenWrapper*>(args[0]);
-    parsing::LexTokenWrapper* name = static_cast<parsing::LexTokenWrapper*>(args[1]);
-    parsing::LexTokenWrapper* lpar = static_cast<parsing::LexTokenWrapper*>(args[2]);
-    parsing::LexTokenWrapper* rpar = static_cast<parsing::LexTokenWrapper*>(args[3]);
-    parsing::LexTokenWrapper* colon = static_cast<parsing::LexTokenWrapper*>(args[4]);
+    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
+    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
+    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
+    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
+    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[4]);
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->token().value, *func_suite);
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, *func_suite);
 
     delete def;
     delete name;
@@ -118,10 +118,10 @@ void* parse_func_def(std::vector<void*>& args, void* data){
 
 // func_suite : NEWLINE INDENT func_stmts DEDENT
 void* parse_func_suite(std::vector<void*>& args, void* data){
-    parsing::LexTokenWrapper* newline = static_cast<parsing::LexTokenWrapper*>(args[0]);
-    parsing::LexTokenWrapper* indent = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[0]);
+    lexing::LexToken* indent = static_cast<lexing::LexToken*>(args[1]);
     std::vector<lang::FuncStmt*>* func_stmts = static_cast<std::vector<lang::FuncStmt*>*>(args[2]);
-    parsing::LexTokenWrapper* dedent = static_cast<parsing::LexTokenWrapper*>(args[3]);
+    lexing::LexToken* dedent = static_cast<lexing::LexToken*>(args[3]);
 
     delete newline;
     delete indent;
@@ -151,7 +151,7 @@ void* parse_func_stmts2(std::vector<void*>& args, void* data){
 // func_stmts : func_stmts NEWLINE func_stmt 
 void* parse_func_stmts3(std::vector<void*>& args, void* data){
     lang::FuncStmt* func_stmt = static_cast<lang::FuncStmt*>(args[2]);
-    parsing::LexTokenWrapper* newline = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
     std::vector<lang::FuncStmt*>* func_stmts = static_cast<std::vector<lang::FuncStmt*>*>(args[0]);
     func_stmts->push_back(func_stmt);
 
@@ -163,7 +163,7 @@ void* parse_func_stmts3(std::vector<void*>& args, void* data){
 // func_stmt : simple_func_stmt NEWLINE
 void* parse_func_stmt(std::vector<void*>& args, void* data){
     lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
-    parsing::LexTokenWrapper* newline = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
 
     delete newline;
 
@@ -186,7 +186,7 @@ void* parse_expr_stmt(std::vector<void*>& args, void* data){
 // expr : expr SUB expr 
 void* parse_bin_sub_expr(std::vector<void*>& args, void* data){
     lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    parsing::LexTokenWrapper* op_tok = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
     lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
 
     lang::Sub* op = new lang::Sub;
@@ -200,7 +200,7 @@ void* parse_bin_sub_expr(std::vector<void*>& args, void* data){
 // expr : expr ADD expr 
 void* parse_bin_add_expr(std::vector<void*>& args, void* data){
     lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    parsing::LexTokenWrapper* op_tok = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
     lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
 
     lang::Add* op = new lang::Add;
@@ -214,7 +214,7 @@ void* parse_bin_add_expr(std::vector<void*>& args, void* data){
 // expr : expr MUL expr 
 void* parse_bin_mul_expr(std::vector<void*>& args, void* data){
     lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    parsing::LexTokenWrapper* op_tok = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
     lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
 
     lang::Mul* op = new lang::Mul;
@@ -228,7 +228,7 @@ void* parse_bin_mul_expr(std::vector<void*>& args, void* data){
 // expr : expr DIV expr 
 void* parse_bin_div_expr(std::vector<void*>& args, void* data){
     lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    parsing::LexTokenWrapper* op_tok = static_cast<parsing::LexTokenWrapper*>(args[1]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
     lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
 
     lang::Div* op = new lang::Div;
@@ -241,7 +241,7 @@ void* parse_bin_div_expr(std::vector<void*>& args, void* data){
 
 // expr : SUB expr %UMINUS
 void* parse_un_sub_expr(std::vector<void*>& args, void* data){
-    parsing::LexTokenWrapper* sub = static_cast<parsing::LexTokenWrapper*>(args[0]);
+    lexing::LexToken* sub = static_cast<lexing::LexToken*>(args[0]);
     lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
 
     lang::USub* op = new lang::USub;
@@ -254,8 +254,8 @@ void* parse_un_sub_expr(std::vector<void*>& args, void* data){
 
 // expr : NAME 
 void* parse_name_expr(std::vector<void*>& args, void* data){
-    parsing::LexTokenWrapper* name = static_cast<parsing::LexTokenWrapper*>(args[0]);
-    lang::NameExpr* expr = new lang::NameExpr(name->token().value);
+    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
+    lang::NameExpr* expr = new lang::NameExpr(name->value);
 
     delete name;
 
@@ -264,8 +264,8 @@ void* parse_name_expr(std::vector<void*>& args, void* data){
 
 // expr : INT
 void* parse_int_expr(std::vector<void*>& args, void* data){
-    parsing::LexTokenWrapper* int_tok = static_cast<parsing::LexTokenWrapper*>(args[0]);
-    lang::Int* expr = new lang::Int(int_tok->token().value);
+    lexing::LexToken* int_tok = static_cast<lexing::LexToken*>(args[0]);
+    lang::Int* expr = new lang::Int(int_tok->value);
     
     delete int_tok;
 

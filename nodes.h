@@ -1,13 +1,38 @@
 #ifndef _NODES_H
-#define _NODES_H
+#define _NODES_H 
 
-#include "parser.h"
+#include <vector>
+#include <string>
 
 namespace lang {
-    class ModuleStmt: public parsing::Node {};
-    class FuncStmt: public parsing::Node {};
+    
+    template <typename Node>
+    class NodeVisitor {
+        public:
+            virtual void* visit(Node*) = 0;
+    };
+
+    template <typename DerivedNode>
+    class Node {
+        public:
+            void* accept(NodeVisitor<DerivedNode>& visitor){
+                return visitor.visit(static_cast<DerivedNode*>(this));
+            }
+
+            // lines() returns a vector containing strings that represent 
+            // individual lines separated in the code separated by newlines.
+            virtual std::vector<std::string> lines() const = 0;
+
+            // The lines joined by newlines
+            std::string str() const;
+
+            virtual ~Node(){}
+    };
+
+    class ModuleStmt: public Node<ModuleStmt> {};
+    class FuncStmt: public Node<FuncStmt> {};
     class SimpleFuncStmt: public FuncStmt {};
-    class Expr: public parsing::Node {
+    class Expr: public Node<Expr> {
         public:
             // The string representation of the value this expression holds
             virtual std::string value_str() const;
@@ -15,7 +40,7 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
-    class BinOperator: public parsing::Node {
+    class BinOperator: public Node<BinOperator> {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -42,7 +67,7 @@ namespace lang {
 
     // TODO: Maybe we can merge this and the binary operator class
     // if they don't really end up having different logic in the long run.
-    class UnaryOperator: public parsing::Node {
+    class UnaryOperator: public Node<UnaryOperator> {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -124,7 +149,7 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
-    class Module: public parsing::Node {
+    class Module: public Node<Module> {
         private:
             std::vector<ModuleStmt*> body_;
 

@@ -21,8 +21,7 @@ TEST_FILES = test_lexer.cpp \
 			 test_cppnodes.cpp
 
 EXE_FILES = $(TEST_FILES) \
-			dump_lang.cpp \
-			compiler.cpp
+			dump_lang.cpp 
 
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 

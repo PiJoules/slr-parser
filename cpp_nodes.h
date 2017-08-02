@@ -1,29 +1,29 @@
 #ifndef _CPP_NODES_H
 #define _CPP_NODES_H
 
-#include "parser.h"
+#include "nodes.h"
 
 namespace cppnodes {
     // Base node representing a whole .c file
-    class Module: public parsing::Node {
+    class Module: public lang::Node<Module> {
         private:
-            std::vector<parsing::Node*> body_;
+            std::vector<lang::Node*> body_;
 
         public:
-            Module(const std::vector<parsing::Node*>&);
+            Module(const std::vector<lang::Node*>&);
             std::vector<std::string> lines() const;
             ~Module();
     };
 
     // Base Expression node
-    class Expr: public parsing::Node {
+    class Expr: public lang::Node<Expr> {
         public:
             // All expressions can be written on one line
             virtual std::string value_str() const = 0;
             std::vector<std::string> lines() const;
     };
 
-    class Stmt: public parsing::Node {};
+    class Stmt: public lang::Node<Stmt> {};
 
     // One line statement
     class SimpleStmt: public Stmt {
@@ -36,7 +36,7 @@ namespace cppnodes {
     class CompoundStmt: public Stmt {};
 
     // Variable declaration
-    class VarDecl: public parsing::Node {};
+    class VarDecl: public lang::Node<VarDecl> {};
 
     // int x;
     class RegVarDecl: public VarDecl {
@@ -64,12 +64,12 @@ namespace cppnodes {
             std::string name_;
             std::string type_;
             std::vector<VarDecl*> args_;
-            std::vector<parsing::Node*> body_;
+            std::vector<lang::Node*> body_;
 
         public:
             FuncDef(const std::string&, const std::string&, 
                     const std::vector<VarDecl*>&,
-                    const std::vector<parsing::Node*>&);
+                    const std::vector<lang::Node*>&);
             ~FuncDef();
             std::vector<std::string> lines() const;
     };
@@ -108,7 +108,7 @@ namespace cppnodes {
     /**
      * Macros
      */ 
-    class Macro: public parsing::Node {};
+    class Macro: public lang::Node<Macro> {};
 
     // Single line macro
     class SimpleMacro: Macro {
