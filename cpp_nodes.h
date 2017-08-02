@@ -5,7 +5,7 @@
 
 namespace cppnodes {
     // Base node representing a whole .c file
-    class Module: public lang::Node<Module> {
+    class Module: public lang::Visitable<Module> {
         private:
             std::vector<lang::Node*> body_;
 
@@ -16,14 +16,14 @@ namespace cppnodes {
     };
 
     // Base Expression node
-    class Expr: public lang::Node<Expr> {
+    class Expr: public lang::Visitable<Expr> {
         public:
             // All expressions can be written on one line
             virtual std::string value_str() const = 0;
             std::vector<std::string> lines() const;
     };
 
-    class Stmt: public lang::Node<Stmt> {};
+    class Stmt: public lang::Visitable<Stmt> {};
 
     // One line statement
     class SimpleStmt: public Stmt {
@@ -36,7 +36,7 @@ namespace cppnodes {
     class CompoundStmt: public Stmt {};
 
     // Variable declaration
-    class VarDecl: public lang::Node<VarDecl> {};
+    class VarDecl: public lang::Visitable<VarDecl> {};
 
     // int x;
     class RegVarDecl: public VarDecl {
@@ -108,7 +108,7 @@ namespace cppnodes {
     /**
      * Macros
      */ 
-    class Macro: public lang::Node<Macro> {};
+    class Macro: public lang::Visitable<Macro> {};
 
     // Single line macro
     class SimpleMacro: Macro {

@@ -780,6 +780,7 @@ void parsing::Parser::reduce(
 
     auto start = node_stack.begin() + node_stack.size() - prod.size();
     void* result_node;
+
     if (func){
         std::vector<void*> slice(start, node_stack.end());
         result_node = func(slice, data);
@@ -788,6 +789,7 @@ void parsing::Parser::reduce(
         // Otherwise, add the wrapper for the rule token
         result_node = new lexing::LexToken(rule_token);
     }
+
     node_stack.erase(start, node_stack.end());
     node_stack.push_back(result_node);
     

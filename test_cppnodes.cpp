@@ -17,7 +17,7 @@ void test_func_def(){
     ReturnStmt* ret_stmt = new ReturnStmt(call);
     assert(ret_stmt->str() == "return func(x);");
 
-    std::vector<parsing::Node*> func_body = {ret_stmt};
+    std::vector<lang::Node*> func_body = {ret_stmt};
     RegVarDecl* var_decl = new RegVarDecl("x", "int");
     assert(var_decl->str() == "int x");
     std::vector<VarDecl*> args_list = {var_decl};
@@ -26,7 +26,7 @@ void test_func_def(){
     std::string full_code = "int main(int x){\n    return func(x);\n}";
     assert(funcdef->str() == full_code);
 
-    std::vector<parsing::Node*> module_body = {funcdef};
+    std::vector<lang::Node*> module_body = {funcdef};
     Module* module = new Module(module_body);
 
     assert(funcdef->str() == full_code);

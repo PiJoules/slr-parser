@@ -67,7 +67,7 @@ void* parse_module_stmt_list(std::vector<void*>& args, void* data){
 
 // module_stmt_list : NEWLINE
 void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
-    lang::Newline* newline = static_cast<lang::Newline*>(args[0]);
+    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[0]);
     std::vector<lang::ModuleStmt*>* module_stmt_list = new std::vector<lang::ModuleStmt*>;
 
     delete newline;
@@ -77,7 +77,7 @@ void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
 
 // module_stmt_list : module_stmt_list NEWLINE
 void* parse_module_stmt_list3(std::vector<void*>& args, void* data){
-    lang::Newline* newline = static_cast<lang::Newline*>(args[1]);
+    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
     std::vector<lang::ModuleStmt*>* module_stmt_list = static_cast<std::vector<lang::ModuleStmt*>*>(args[0]);
 
     delete newline;

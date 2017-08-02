@@ -1,4 +1,5 @@
-#include "lang.h"
+#include "nodes.h"
+#include <sstream>
 
 static const std::string INDENT = "    ";
 
@@ -52,16 +53,6 @@ std::vector<std::string> lang::FuncDef::lines() const {
         }
     }
 
-    return v;
-}
-
-/**
- * Newline Module Statement
- */ 
-std::vector<std::string> lang::Newline::lines() const {
-    std::ostringstream out;
-    out << std::endl;
-    std::vector<std::string> v = {out.str()};
     return v;
 }
 

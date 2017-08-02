@@ -5,34 +5,56 @@
 #include <string>
 
 namespace lang {
-    
-    template <typename Node>
+
     class NodeVisitor {
         public:
-            virtual void* visit(Node*) = 0;
+            virtual ~NodeVisitor(){}
     };
 
-    template <typename DerivedNode>
     class Node {
         public:
-            void* accept(NodeVisitor<DerivedNode>& visitor){
-                return visitor.visit(static_cast<DerivedNode*>(this));
-            }
+            virtual void* accept(NodeVisitor&) = 0;
+            virtual ~Node(){}
 
             // lines() returns a vector containing strings that represent 
             // individual lines separated in the code separated by newlines.
             virtual std::vector<std::string> lines() const = 0;
 
             // The lines joined by newlines
-            std::string str() const;
+            std::string str() const {
+                std::string s;
 
-            virtual ~Node(){}
+                const std::vector<std::string>& node_lines = lines();
+                if (!node_lines.empty()){
+                    s += node_lines.front();
+                }
+                for (auto it = node_lines.begin() + 1; it < node_lines.end(); ++it){
+                    s += "\n" + *it;
+                }
+
+                return s;
+            }
+    };
+    
+    template <typename VisitedNode>
+    class Visitor {
+        public:
+            virtual void* visit(VisitedNode*) = 0;
     };
 
-    class ModuleStmt: public Node<ModuleStmt> {};
-    class FuncStmt: public Node<FuncStmt> {};
+    template <typename DerivedNode>
+    class Visitable: public Node {
+        public:
+            void* accept(NodeVisitor& base_visitor){
+                Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
+                return visitor.visit(static_cast<DerivedNode*>(this));
+            }
+    };
+
+    class ModuleStmt: public Visitable<ModuleStmt> {};
+    class FuncStmt: public Visitable<FuncStmt> {};
     class SimpleFuncStmt: public FuncStmt {};
-    class Expr: public Node<Expr> {
+    class Expr: public Visitable<Expr> {
         public:
             // The string representation of the value this expression holds
             virtual std::string value_str() const;
@@ -40,7 +62,7 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
-    class BinOperator: public Node<BinOperator> {
+    class BinOperator: public Visitable<BinOperator> {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -67,7 +89,7 @@ namespace lang {
 
     // TODO: Maybe we can merge this and the binary operator class
     // if they don't really end up having different logic in the long run.
-    class UnaryOperator: public Node<UnaryOperator> {
+    class UnaryOperator: public Visitable<UnaryOperator> {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -144,12 +166,7 @@ namespace lang {
             ~FuncDef();
     };
 
-    class Newline: public ModuleStmt {
-        public:
-            std::vector<std::string> lines() const;
-    };
-
-    class Module: public Node<Module> {
+    class Module: public Visitable<Module> {
         private:
             std::vector<ModuleStmt*> body_;
 

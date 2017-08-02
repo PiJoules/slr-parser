@@ -5,7 +5,7 @@ static const std::string INDENT = "    ";
 /**
  * Module
  */
-cppnodes::Module::Module(const std::vector<parsing::Node*>& body): body_(body){}
+cppnodes::Module::Module(const std::vector<lang::Node*>& body): body_(body){}
 
 cppnodes::Module::~Module(){
     for (Node* node : body_){
@@ -29,7 +29,7 @@ std::vector<std::string> cppnodes::Module::lines() const {
 cppnodes::FuncDef::FuncDef(const std::string& name,
                          const std::string& type, 
                          const std::vector<VarDecl*>& args,
-                         const std::vector<parsing::Node*>& body):
+                         const std::vector<lang::Node*>& body):
     name_(name), type_(type), args_(args), body_(body){}
 
 cppnodes::FuncDef::~FuncDef(){
