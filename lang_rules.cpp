@@ -4,6 +4,7 @@
 
 std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"def", "DEF"},
+    {"return", "RETURN"},
 };
 
 void reserved_name(lexing::LexToken& tok, void* data){
@@ -33,6 +34,7 @@ const lexing::TokensMap lang::LANG_TOKENS = {
 
     // Misc 
     {"DEF", {R"(def)", nullptr}},
+    {"RETURN", {"return", nullptr}},
     {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
     {"WS", {R"([ ]+)", comment}},
@@ -171,6 +173,7 @@ void* parse_func_stmt(std::vector<void*>& args, void* data){
 }
 
 // simple_func_stmt : expr_stmt
+//                  | return_stmt
 void* parse_simple_func_stmt(std::vector<void*>& args, void* data){
     return args[0];
 }
@@ -181,6 +184,18 @@ void* parse_expr_stmt(std::vector<void*>& args, void* data){
     lang::ExprStmt* expr_stmt = new lang::ExprStmt(expr);
     
     return expr_stmt;
+}
+
+// return_stmt : RETURN expr  
+void* parse_return_stmt(std::vector<void*>& args, void* data){
+    lexing::LexToken* return_token = static_cast<lexing::LexToken*>(args[0]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
+
+    delete return_token;
+
+    lang::ReturnStmt* return_stmt = new lang::ReturnStmt(expr);
+
+    return return_stmt;
 }
 
 // expr : expr SUB expr 
@@ -287,9 +302,11 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2},
     {"func_stmt", {"simple_func_stmt", lang::tokens::NEWLINE}, parse_func_stmt},
     {"simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt},
+    {"simple_func_stmt", {"return_stmt"}, parse_simple_func_stmt},
 
     // Simple statements - one line 
     {"expr_stmt", {"expr"}, parse_expr_stmt},
+    {"return_stmt", {"RETURN", "expr"}, parse_return_stmt},
 
     // Binary Expressions
     {"expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr},

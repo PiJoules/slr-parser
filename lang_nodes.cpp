@@ -61,15 +61,24 @@ std::vector<std::string> lang::FuncDef::lines() const {
  */ 
 lang::ExprStmt::ExprStmt(Expr* expr): expr_(expr){}
 
-std::vector<std::string> lang::ExprStmt::lines() const {
-    std::vector<std::string> v;
-    for (const auto& line : expr_->lines()){
-        v.push_back(line);
-    }
-    return v;
+std::string lang::ExprStmt::line() const {
+    return expr_->str();
 }
 
 lang::ExprStmt::~ExprStmt(){
+    delete expr_;
+}
+
+/**
+ * Return statement
+ */
+lang::ReturnStmt::ReturnStmt(Expr* expr): expr_(expr){}
+
+std::string lang::ReturnStmt::line() const {
+    return "return " + expr_->str();
+}
+
+lang::ReturnStmt::~ReturnStmt(){
     delete expr_;
 }
 
@@ -140,3 +149,7 @@ std::string lang::Int::value_str() const {
     s << value_;
     return s.str();
 }
+
+/**
+ * Simple function statement
+ */

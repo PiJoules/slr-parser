@@ -2,6 +2,7 @@
 #define _CPP_NODES_H
 
 #include "nodes.h"
+#include <sstream>
 
 namespace cppnodes {
     // Base node representing a whole .c file
@@ -82,6 +83,19 @@ namespace cppnodes {
             Name(const char*);
             Name(std::string&);
             std::string value_str() const;
+    };
+
+    class Int: public Expr {
+        private:
+            int val_;
+
+        public:
+            Int(int val): val_(val){}
+            std::string value_str() const { 
+                std::ostringstream out;
+                out << val_;
+                return out.str(); 
+            }
     };
 
     class Call: public Expr {

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 namespace lang {
 
@@ -46,14 +47,27 @@ namespace lang {
     class Visitable: public Node {
         public:
             void* accept(NodeVisitor& base_visitor){
+                std::cerr << 1.1 << std::endl;
                 Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
+                std::cerr << 1.2 << std::endl;
                 return visitor.visit(static_cast<DerivedNode*>(this));
             }
     };
 
     class ModuleStmt: public Visitable<ModuleStmt> {};
     class FuncStmt: public Visitable<FuncStmt> {};
-    class SimpleFuncStmt: public FuncStmt {};
+
+    class SimpleFuncStmt: public FuncStmt {
+        public:
+            virtual std::string line() const = 0;
+            
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v;
+                v.push_back(line());
+                return v;
+            };
+    };
+
     class Expr: public Visitable<Expr> {
         public:
             // The string representation of the value this expression holds
@@ -110,6 +124,7 @@ namespace lang {
             Int(const std::string&);
             Int(int);
             std::string value_str() const;
+            int value() const { return value_; }
     };
 
     class NameExpr: public Expr {
@@ -150,8 +165,20 @@ namespace lang {
 
         public:
             ExprStmt(Expr*);
-            std::vector<std::string> lines() const;
+            std::string line() const;
             ~ExprStmt();
+    };
+
+    class ReturnStmt: public SimpleFuncStmt {
+        private:
+            Expr* expr_;
+
+        public:
+            ReturnStmt(Expr*);
+            std::string line() const;
+            ~ReturnStmt();
+
+            Expr* expr() const { return expr_; }
     };
 
     class FuncDef: public ModuleStmt {
@@ -164,6 +191,7 @@ namespace lang {
             const std::vector<FuncStmt*>& suite() const;
             std::vector<std::string> lines() const;
             ~FuncDef();
+            std::string name() const { return func_name_; }
     };
 
     class Module: public Visitable<Module> {

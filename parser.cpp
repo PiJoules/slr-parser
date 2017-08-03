@@ -900,8 +900,10 @@ void* parsing::Parser::parse(const std::string& code, void* data){
                 assert(node_stack.size() == 1);
                 return node_stack.front();
             case ParseInstr::GOTO:
-                // Should not actually end up here since gotos are handled in reduce
-                break;
+                // Should not actually end up here since gotos are handled in reduce 
+                // Though you may end up here if you have found a token that was not declared as a terminal 
+                std::string err = "Check if '" + lookahead.value + "' matches the regex for a valid token.";
+                throw std::runtime_error(err);
         }
     }
 }

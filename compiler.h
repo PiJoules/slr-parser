@@ -5,7 +5,13 @@
 #include "cpp_nodes.h"
 
 namespace lang {
-    class Compiler: NodeVisitor {
+    class Compiler: public NodeVisitor,
+                    public Visitor<Module>,
+                    //public Visitor<ModuleStmt>,
+                    public Visitor<FuncDef>,
+                    public Visitor<ReturnStmt>,
+                    public Visitor<Int>
+    {
         private:
             LangLexer lexer_;
             parsing::Parser parser_;
@@ -14,10 +20,11 @@ namespace lang {
             Compiler();
             cppnodes::Module* compile(std::string);
 
-            cppnodes::Module* visit_module(lang::Module*);
-            cppnodes::FuncDef* visit_funcdef(lang::FuncDef*);
-            cppnodes::ReturnStmt* visit_return(lang::ReturnStmt*);
-            cppnodes::Int visit_int(lang::Int);
+            void* visit(Module*);
+
+            void* visit(FuncDef*);
+            void* visit(ReturnStmt*);
+            void* visit(Int*);
     };
 }
 

@@ -21,7 +21,8 @@ TEST_FILES = test_lexer.cpp \
 			 test_cppnodes.cpp
 
 EXE_FILES = $(TEST_FILES) \
-			dump_lang.cpp 
+			dump_lang.cpp \
+			compiler.cpp
 
 EXE_OUTPUTS = $(EXE_FILES:.cpp=.out)
 
@@ -43,6 +44,9 @@ compile_clean: $(OBJS) clean_exes $(EXE_OUTPUTS)
 
 clean_exes:
 	rm -rf $(EXE_OUTPUTS)
+
+compiler: $(OBJS) clean_exes compiler.out
+	./compiler.out
 
 # Tests
 test_lexer: $(OBJS) clean_exes test_lexer.out
