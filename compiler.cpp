@@ -1,4 +1,7 @@
 #include "compiler.h"
+#include "subprocess.h"
+
+#include <fstream>
 
 lang::Compiler::Compiler(): 
     lexer_(lang::LangLexer(lang::LANG_TOKENS)),
@@ -8,15 +11,9 @@ cppnodes::Module* lang::Compiler::compile(std::string code){
     Module* module_node = static_cast<Module*>(parser_.parse(code));
     assert(lexer_.empty());
 
-    std::cerr << 1 << std::endl;
-
     void* cpp_module_node = module_node->accept(*this);
 
-    std::cerr << 2 << std::endl;
-
     delete module_node;
-
-    std::cerr << 3 << std::endl;
 
     return static_cast<cppnodes::Module*>(cpp_module_node);
 }
@@ -28,9 +25,7 @@ void* lang::Compiler::visit(Module* module){
     std::vector<Node*> body;
 
     for (ModuleStmt* stmt : module->body()){
-        std::cerr << "module stmt accepting..." << std::endl;
         void* cpp_module_stmt = stmt->accept(*this);
-        std::cerr << "module stmt done accepting" << std::endl;
         body.push_back(static_cast<Node*>(cpp_module_stmt));
     }
 
@@ -40,8 +35,14 @@ void* lang::Compiler::visit(Module* module){
 
 void* lang::Compiler::visit(FuncDef* funcdef){
     std::string funcname = funcdef->name();
+    std::vector<FuncStmt*> funcsuite = funcdef->suite();
     std::vector<cppnodes::VarDecl*> cpp_args;
     std::vector<Node*> cpp_body;
+
+    for (FuncStmt* stmt : funcsuite){
+        void* cpp_stmt = stmt->accept(*this);
+        cpp_body.push_back(static_cast<Node*>(cpp_stmt));
+    }
 
     cppnodes::FuncDef* cpp_funcdef = new cppnodes::FuncDef(
             funcname, "int", cpp_args, cpp_body);
@@ -63,19 +64,68 @@ void* lang::Compiler::visit(Int* int_expr){
     return cpp_int;
 }
 
-int main(){
+std::string compile_lang_str(const std::string& code){
     lang::Compiler compiler;
-
-    std::string code = R"(
-def main():
-    return 0
-)";
-
     cppnodes::Module* module = compiler.compile(code);
-
-    std::cerr << module->str() << std::endl;
+    std::string cpp_code = module->str();
 
     delete module;
+
+    return cpp_code;
+}
+
+/**
+ * Compile a single .cpp source
+ */
+std::string compile_cpp_file(const std::string& src){
+    subprocess::Subprocess subproc;
+
+    std::string compiler = "g++";
+    std::string optomization = "-O2";
+
+    std::vector<std::string> cmd = {compiler, optomization, src};
+
+    subprocess::CompletedProcess result = subproc.run(cmd);
+    assert(!result.returncode);
+
+    return "a.out";
+}
+
+std::string read_file(const std::string& filename){
+    std::ifstream f(filename);
+    f.seekg(0, std::ios::end);
+    size_t size = f.tellg();
+    std::string buffer(size, ' ');
+    f.seekg(0);
+    f.read(&buffer[0], size); 
+    f.close();
+    return buffer;
+}
+
+void write_file(const std::string& filename, const std::string& contents){
+    std::ofstream out(filename);
+    out << contents;
+    out.close();
+}
+
+void compile_lang_file(const std::string& src){
+    std::string code = read_file(src);
+    std::string cpp_code = compile_lang_str(code);
+    std::string dest = src + ".cpp";
+    write_file(dest, cpp_code);
+    compile_cpp_file(dest);
+}
+
+int main(int argc, char** argv){
+    //subprocess::Subprocess subproc;
+    //std::vector<std::string> cmd = {"g++", "test_lang_files/test.lang.cpp"};
+    //subprocess::CompletedProcess result = subproc.run(cmd);
+    //std::cerr << "stdout: " << result.stdout << std::endl;
+    //std::cerr << "stderr: " << result.stderr << std::endl;
+    //assert(!result.returncode);
+
+    assert(argc > 1);
+    compile_lang_file(argv[1]);
 
     return 0;
 }

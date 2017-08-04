@@ -7,7 +7,6 @@
 namespace lang {
     class Compiler: public NodeVisitor,
                     public Visitor<Module>,
-                    //public Visitor<ModuleStmt>,
                     public Visitor<FuncDef>,
                     public Visitor<ReturnStmt>,
                     public Visitor<Int>

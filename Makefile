@@ -12,7 +12,9 @@ SOURCES = lexer.cpp \
 		  lang_utils.cpp \
 		  lang_rules.cpp \
 		  lang_nodes.cpp \
-		  cpp_nodes.cpp
+		  cpp_nodes.cpp \
+		  subprocess.cpp
+
 OBJS = $(SOURCES:.cpp=.o)
 
 TEST_FILES = test_lexer.cpp \
@@ -45,8 +47,8 @@ compile_clean: $(OBJS) clean_exes $(EXE_OUTPUTS)
 clean_exes:
 	rm -rf $(EXE_OUTPUTS)
 
-compiler: $(OBJS) clean_exes compiler.out
-	./compiler.out
+compiler: $(OBJS) clean_exes
+	$(CPP) $(CPPFLAGS) compiler.cpp $(OBJS) -o $@
 
 # Tests
 test_lexer: $(OBJS) clean_exes test_lexer.out

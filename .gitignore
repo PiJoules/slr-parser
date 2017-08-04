@@ -1,4 +1,5 @@
-*.dump
+*.dump 
+test_lang_files/*.cpp
 FEATURES.md
 
 # Prerequisites

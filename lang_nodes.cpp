@@ -8,7 +8,7 @@ static const std::string INDENT = "    ";
  */ 
 std::vector<std::string> lang::Module::lines() const {
     std::vector<std::string> v;
-    for (const ModuleStmt* node : body_){
+    for (const Node* node : body_){
         for (const std::string line : node->lines()){
             v.push_back(line);
         }
@@ -17,7 +17,7 @@ std::vector<std::string> lang::Module::lines() const {
 }
 
 lang::Module::~Module(){
-    for (const ModuleStmt* stmt : body_){
+    for (const Node* stmt : body_){
         delete stmt;
     }
 }
@@ -30,7 +30,7 @@ lang::FuncDef::FuncDef(const std::string& func_name, std::vector<FuncStmt*>& fun
     func_suite_(func_suite){}
 
 lang::FuncDef::~FuncDef(){
-    for (const FuncStmt* stmt : func_suite_){
+    for (const Node* stmt : func_suite_){
         delete stmt;
     }
 }
@@ -47,7 +47,7 @@ std::vector<std::string> lang::FuncDef::lines() const {
     line1 << "def " << func_name_ << "():";
     v.push_back(line1.str());
 
-    for (const FuncStmt* stmt : func_suite_){
+    for (const Node* stmt : func_suite_){
         for (std::string& stmt_line : stmt->lines()){
             v.push_back(INDENT + stmt_line);
         }

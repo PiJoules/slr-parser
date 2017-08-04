@@ -3,7 +3,10 @@
 
 #include <vector>
 #include <string>
-#include <iostream>
+
+#include <typeinfo>
+#include <stdexcept>
+#include <sstream>
 
 namespace lang {
 
@@ -44,20 +47,24 @@ namespace lang {
     };
 
     template <typename DerivedNode>
-    class Visitable: public Node {
+    class Visitable: public virtual Node {
         public:
             void* accept(NodeVisitor& base_visitor){
-                std::cerr << 1.1 << std::endl;
-                Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
-                std::cerr << 1.2 << std::endl;
-                return visitor.visit(static_cast<DerivedNode*>(this));
+                try {
+                    Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
+                    return visitor.visit(static_cast<DerivedNode*>(this));
+                } catch (const std::bad_cast& e){
+                    std::ostringstream err;
+                    err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
+                    throw std::runtime_error(err.str());
+                }
             }
     };
 
-    class ModuleStmt: public Visitable<ModuleStmt> {};
-    class FuncStmt: public Visitable<FuncStmt> {};
+    class ModuleStmt: public virtual Node {};
+    class FuncStmt: public virtual Node {};
 
-    class SimpleFuncStmt: public FuncStmt {
+    class SimpleFuncStmt: public virtual FuncStmt {
         public:
             virtual std::string line() const = 0;
             
@@ -68,7 +75,7 @@ namespace lang {
             };
     };
 
-    class Expr: public Visitable<Expr> {
+    class Expr: public virtual Node {
         public:
             // The string representation of the value this expression holds
             virtual std::string value_str() const;
@@ -116,7 +123,7 @@ namespace lang {
             std::string symbol() const { return "-"; }
     };
 
-    class Int: public Expr {
+    class Int: public Expr, public Visitable<Int> {
         private:
             int value_;
 
@@ -127,7 +134,7 @@ namespace lang {
             int value() const { return value_; }
     };
 
-    class NameExpr: public Expr {
+    class NameExpr: public Expr, public Visitable<NameExpr> {
         private:
             std::string name_;
 
@@ -136,7 +143,7 @@ namespace lang {
             std::string value_str() const;
     };
 
-    class BinExpr: public Expr {
+    class BinExpr: public Expr, public Visitable<BinExpr> {
         private:
             Expr* lhs_;
             BinOperator* op_;
@@ -148,7 +155,7 @@ namespace lang {
             ~BinExpr();
     };
 
-    class UnaryExpr: public Expr {
+    class UnaryExpr: public Expr, public Visitable<UnaryExpr> {
         private: 
             Expr* expr_;
             UnaryOperator* op_;
@@ -159,17 +166,17 @@ namespace lang {
             ~UnaryExpr();
     };
 
-    class ExprStmt: public SimpleFuncStmt {
+    class ExprStmt: public SimpleFuncStmt, public Visitable<ExprStmt> {
         private:
             Expr* expr_;
 
         public:
             ExprStmt(Expr*);
-            std::string line() const;
+            std::string line() const override;
             ~ExprStmt();
     };
 
-    class ReturnStmt: public SimpleFuncStmt {
+    class ReturnStmt: public SimpleFuncStmt, public Visitable<ReturnStmt> {
         private:
             Expr* expr_;
 
@@ -181,7 +188,7 @@ namespace lang {
             Expr* expr() const { return expr_; }
     };
 
-    class FuncDef: public ModuleStmt {
+    class FuncDef: public ModuleStmt, public Visitable<FuncDef> {
         private:
             std::string func_name_;
             std::vector<FuncStmt*> func_suite_;
