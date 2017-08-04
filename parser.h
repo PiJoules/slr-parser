@@ -72,6 +72,10 @@ namespace parsing {
     struct ParseInstr {
         enum Action {SHIFT, REDUCE, GOTO, ACCEPT} action;
         int value;
+
+        bool operator==(const ParseInstr& other) const {
+            return action == other.action && value == other.value;
+        }
     };
 
     std::string action_str(const ParseInstr::Action&);
@@ -84,11 +88,13 @@ namespace parsing {
     typedef std::vector<std::pair<enum Associativity, std::vector<std::string>>> PrecedenceList;
     typedef std::unordered_map<std::string, std::pair<std::size_t, enum Associativity>> PrecedenceTable;
 
-    typedef struct {
+    typedef struct ParserConflict ParserConflict;
+    struct ParserConflict {
+        std::size_t state;
         ParseInstr instr1;  // Default chosen instruction will be whatever appeared first in the rules
         ParseInstr instr2;
         std::string lookahead;
-    } ParserConflict;
+    };
 
     typedef std::unordered_map<std::size_t, std::unordered_map<std::string, ParseInstr>> ParseTable;
 
@@ -149,7 +155,7 @@ namespace parsing {
             bool is_terminal(const std::string&) const;
             std::string token_for_instr(const ParseInstr&, const std::string&) const;
             void update_with_precedence(const ParseInstr&, const ParseInstr&, const std::string&,
-                                        std::unordered_map<std::string, ParseInstr>&);
+                                        std::size_t);
             std::string conflict_str(const ParseInstr&, const std::string lookahead = "") const;
             std::string rightmost_terminal(const std::vector<std::string>&) const;
 

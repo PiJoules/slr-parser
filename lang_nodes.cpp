@@ -1,5 +1,6 @@
 #include "nodes.h"
 #include <sstream>
+#include <algorithm>
 
 static const std::string INDENT = "    ";
 
@@ -92,6 +93,30 @@ std::vector<std::string> lang::Expr::lines() const {
 
 std::string lang::Expr::value_str() const {
     return "";
+}
+
+/**
+ * Function Call
+ */ 
+lang::Call::Call(Expr* func): func_(func){}
+lang::Call::Call(Expr* func, const std::vector<Expr*>& args): func_(func), args_(args){}
+
+lang::Call::~Call(){
+    delete func_;
+    for (Expr* arg : args_){
+        delete arg;
+    }
+}
+
+std::string lang::Call::value_str() const {
+    std::string joined_args;
+    if (!args_.empty()){
+        joined_args += args_.front()->value_str();
+    }
+    for (auto it = args_.begin() + 1 ; it < args_.end(); ++it){
+        joined_args += ", " + (*it)->value_str();
+    }
+    return func_->str() + "(" + joined_args + ")";
 }
 
 /**

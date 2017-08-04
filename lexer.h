@@ -36,6 +36,7 @@ namespace lexing {
         private:
             std::string lexcode_;
             int pos_ = 1, lineno_ = 1, colno_ = 1;
+            const TokensMap tokens_map_;
             const TokensMapRegex tokens_;
 
             void advance_pos(char);
@@ -45,7 +46,6 @@ namespace lexing {
 
         public:
             Lexer(const TokensMap&);
-            Lexer(const TokensMapRegex&);
 
             void input(const std::string&);
             virtual LexToken token(void* data);
@@ -55,7 +55,7 @@ namespace lexing {
             int pos() const;
             int lineno() const;
             int colno() const;
-            const TokensMapRegex& tokens() const;
+            const TokensMap& tokens() const;
             const std::string& lexcode() const;
     };
 

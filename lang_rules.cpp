@@ -37,6 +37,7 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     {"RETURN", {"return", nullptr}},
     {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
+    {"COMMA", {R"(\,)", nullptr}},
     {"WS", {R"([ ]+)", comment}},
     {lang::tokens::INDENT, {lang::tokens::INDENT, nullptr}},
     {lang::tokens::DEDENT, {lang::tokens::DEDENT, nullptr}},
@@ -198,6 +199,60 @@ void* parse_return_stmt(std::vector<void*>& args, void* data){
     return return_stmt;
 }
 
+// expr : expr LPAR RPAR 
+void* parse_empty_func_call(std::vector<void*>& args, void* data){
+    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[1]);
+    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[2]);
+
+    delete lpar;
+    delete rpar;
+
+    lang::Call* call = new lang::Call(expr);
+
+    return call;
+}
+
+// expr : expr LPAR call_args RPAR
+void* parse_func_call(std::vector<void*>& args, void* data){
+    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[1]);
+    std::vector<lang::Expr*>* call_args = static_cast<std::vector<lang::Expr*>*>(args[2]);
+    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
+
+    delete lpar;
+    delete rpar;
+
+    lang::Call* call = new lang::Call(expr, *call_args);
+
+    delete call_args;
+
+    return call;
+}
+
+// call_args : call_arg  
+void* parse_call_one_arg(std::vector<void*>& args, void* data){
+    lang::Expr* call_arg = static_cast<lang::Expr*>(args[0]);
+
+    std::vector<lang::Expr*>* call_args = new std::vector<lang::Expr*>;
+    call_args->push_back(call_arg);
+
+    return call_args;
+}
+
+// call_args : call_args COMMA call_arg
+void* parse_call_args(std::vector<void*>& args, void* data){
+    std::vector<lang::Expr*>* call_args = static_cast<std::vector<lang::Expr*>*>(args[0]);
+    lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* call_arg = static_cast<lang::Expr*>(args[2]);
+
+    delete comma;
+
+    call_args->push_back(call_arg);
+
+    return call_args;
+}
+
 // expr : expr SUB expr 
 void* parse_bin_sub_expr(std::vector<void*>& args, void* data){
     lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
@@ -308,6 +363,12 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"expr_stmt", {"expr"}, parse_expr_stmt},
     {"return_stmt", {"RETURN", "expr"}, parse_return_stmt},
 
+    // Function calls 
+    {"expr", {"expr", "LPAR", "RPAR"}, parse_empty_func_call},
+    {"expr", {"expr", "LPAR", "call_args", "RPAR"}, parse_func_call},
+    {"call_args", {"call_arg"}, parse_call_one_arg},
+    {"call_args", {"call_args", "COMMA", "call_arg"}, parse_call_args},
+
     // Binary Expressions
     {"expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr},
     {"expr", {"expr", "ADD", "expr"}, parse_bin_add_expr},
@@ -328,6 +389,9 @@ const parsing::PrecedenceList lang::LANG_PRECEDENCE = {
     {parsing::LEFT_ASSOC, {"ADD", "SUB"}},
     {parsing::RIGHT_ASSOC, {"MUL", "DIV"}},
     {parsing::RIGHT_ASSOC, {"UMINUS"}},
+
+    // Function call
+    {parsing::LEFT_ASSOC, {"LPAR"}},
 };
 
 /**************** Grammar ***************/ 

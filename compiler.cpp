@@ -117,13 +117,6 @@ void compile_lang_file(const std::string& src){
 }
 
 int main(int argc, char** argv){
-    //subprocess::Subprocess subproc;
-    //std::vector<std::string> cmd = {"g++", "test_lang_files/test.lang.cpp"};
-    //subprocess::CompletedProcess result = subproc.run(cmd);
-    //std::cerr << "stdout: " << result.stdout << std::endl;
-    //std::cerr << "stderr: " << result.stderr << std::endl;
-    //assert(!result.returncode);
-
     assert(argc > 1);
     compile_lang_file(argv[1]);
 

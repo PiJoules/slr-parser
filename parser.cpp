@@ -338,7 +338,14 @@ void parsing::Grammar::update_with_precedence(
         const ParseInstr& existing_instr,
         const ParseInstr& new_instr,
         const std::string& lookahead,
-        std::unordered_map<std::string, ParseInstr>& action_table){
+        std::size_t state){
+    // Check if both are the same first 
+    if (existing_instr == new_instr){
+        return;
+    }
+
+    std::unordered_map<std::string, ParseInstr>& action_table = parse_table_[state];
+
     // Tterminal key for existing instr
     const std::string key_existing = token_for_instr(existing_instr, lookahead);
 
@@ -384,6 +391,7 @@ void parsing::Grammar::update_with_precedence(
             else {
                 // Both are reduce. Cannot resolve this, so add it as a conflict.
                 conflicts_.push_back({
+                    state,
                     existing_instr,
                     new_instr,
                     lookahead,
@@ -394,6 +402,7 @@ void parsing::Grammar::update_with_precedence(
     else {
         // Conflict
         conflicts_.push_back({
+            state,
             existing_instr,
             new_instr,
             lookahead,
@@ -539,7 +548,7 @@ parsing::Grammar::Grammar(const std::unordered_set<std::string>& tokens,
                     ParseInstr shift_instr = {parsing::ParseInstr::Action::SHIFT, j};
                     if (existing_it != action_table.cend()){
                         // Possible action conlfict. Check for precedence 
-                        update_with_precedence(existing_it->second, shift_instr, next_symbol, action_table);
+                        update_with_precedence(existing_it->second, shift_instr, next_symbol, i);
                     }
                     else {
                         // No conflict. Fill with shift
@@ -566,7 +575,7 @@ parsing::Grammar::Grammar(const std::unordered_set<std::string>& tokens,
                     for (const std::string& follow : follows(rule)){
                         if (action_table.find(follow) != action_table.cend()){
                             // Possible conflict 
-                            update_with_precedence(action_table[follow], instr, follow, action_table);
+                            update_with_precedence(action_table[follow], instr, follow, i);
                         }
                         else {
                             action_table[follow] = instr;
@@ -600,13 +609,15 @@ void parsing::Grammar::dump(std::ostream& stream) const {
     // Conflicts  
     stream << "Conflicts (" << conflicts_.size() << ")" << std::endl << std::endl;
     for (const ParserConflict& conflict : conflicts_){
+        std::size_t state = conflict.state;
         const ParseInstr& chosen = conflict.instr1;
         const ParseInstr& other = conflict.instr2;
         const std::string& lookahead = conflict.lookahead;
 
         const ParseInstr::Action& act1 = chosen.action;
         const ParseInstr::Action& act2 = other.action;
-        stream << action_str(act1) << "/" << action_str(act2) << " conflict (defaulting to " 
+        stream << action_str(act1) << "/" << action_str(act2) << " conflict in state " << state
+               << " (defaulting to " 
                << action_str(act1) << ")" << std::endl;
         stream << "- " << conflict_str(chosen, lookahead) << std::endl;
         stream << "- " << conflict_str(other, lookahead) << std::endl;

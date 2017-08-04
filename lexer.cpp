@@ -25,8 +25,10 @@ lexing::TokensMapRegex lexing::to_regex_map(const TokensMap& token_map){
         const std::string& regex_str = it->second.first;
         const TokenCallback& callback = it->second.second;
         
-        std::regex reg(regex_str);
-        regex_map[token] = {reg, callback};
+        if (!regex_str.empty()){
+            std::regex reg(regex_str);
+            regex_map[token] = {reg, callback};
+        }
     }
 
     return regex_map;
@@ -118,9 +120,8 @@ bool lexing::Lexer::find_match(LexToken& next_token, void* data){
 
 /**
  * Constructors
- */
-lexing::Lexer::Lexer(const TokensMapRegex& tokens): tokens_(tokens){}
-lexing::Lexer::Lexer(const TokensMap& tokens): tokens_(to_regex_map(tokens)){}
+ */ 
+lexing::Lexer::Lexer(const TokensMap& tokens): tokens_map_(tokens), tokens_(to_regex_map(tokens)){}
 
 /**
  * Feed a string into the code stream.
@@ -180,7 +181,7 @@ bool lexing::Lexer::empty() const {
 int lexing::Lexer::pos() const { return pos_; }
 int lexing::Lexer::lineno() const { return lineno_; }
 int lexing::Lexer::colno() const { return colno_; }
-const lexing::TokensMapRegex& lexing::Lexer::tokens() const { return tokens_; }
+const lexing::TokensMap& lexing::Lexer::tokens() const { return tokens_map_; }
 const std::string& lexing::Lexer::lexcode() const { return lexcode_; }
 
 /************* LexError ************/ 

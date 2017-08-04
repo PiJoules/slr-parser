@@ -83,6 +83,22 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
+    class Call: public Expr, public Visitable<Call> {
+        private:
+            Expr* func_;
+            std::vector<Expr*> args_;
+
+        public:
+            Call(Expr*);
+            Call(Expr*, const std::vector<Expr*>&);
+            ~Call();
+
+            Expr* func() const { return func_; }
+            const std::vector<Expr*>& args() const { return args_; }
+
+            std::string value_str() const override;
+    };
+
     class BinOperator: public Visitable<BinOperator> {
         public:
             virtual std::string symbol() const = 0;
