@@ -99,6 +99,19 @@ std::string cppnodes::ReturnStmt::value_str() const {
 }
 
 /**
+ * Expression statement
+ */ 
+cppnodes::ExprStmt::ExprStmt(Expr* expr): expr_(expr){}
+
+cppnodes::ExprStmt::~ExprStmt(){
+    delete expr_;
+}
+
+std::string cppnodes::ExprStmt::value_str() const {
+    return expr_->str() + ";";
+}
+
+/**
  * Expression
  *
  * All expressions van be written on one line.
@@ -113,10 +126,19 @@ std::vector<std::string> cppnodes::Expr::lines() const {
 /**
  * Name expression
  */ 
-cppnodes::Name::Name(std::string& id): id_(id){}
+cppnodes::Name::Name(const std::string& id): id_(id){}
 cppnodes::Name::Name(const char* id): id_(id){}
 
 std::string cppnodes::Name::value_str() const { return id_; }
+
+/**
+ * String literal
+ */ 
+cppnodes::String::String(const std::string& value): value_(value){}
+
+std::string cppnodes::String::value_str() const {
+    return "\"" + value_ + "\"";
+}
 
 /**
  * Function call expression

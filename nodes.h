@@ -157,6 +157,17 @@ namespace lang {
         public:
             NameExpr(const std::string&);
             std::string value_str() const;
+            std::string name() const { return name_; }
+    };
+
+    class String: public Expr, public Visitable<String> {
+        private:
+            std::string value_;
+
+        public:
+            String(const std::string&);
+            std::string value_str() const;
+            std::string value() const { return value_; }
     };
 
     class BinExpr: public Expr, public Visitable<BinExpr> {
@@ -190,6 +201,7 @@ namespace lang {
             ExprStmt(Expr*);
             std::string line() const override;
             ~ExprStmt();
+            Expr* expr() const { return expr_; }
     };
 
     class ReturnStmt: public SimpleFuncStmt, public Visitable<ReturnStmt> {

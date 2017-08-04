@@ -59,6 +59,40 @@ void* lang::Compiler::visit(ReturnStmt* returnstmt){
     return cpp_return;
 }
 
+void* lang::Compiler::visit(ExprStmt* expr_stmt){
+    Expr* expr = expr_stmt->expr();
+
+    cppnodes::Expr* cpp_expr = static_cast<cppnodes::Expr*>(expr->accept(*this));
+    cppnodes::ExprStmt* cpp_expr_stmt = new cppnodes::ExprStmt(cpp_expr);
+
+    return cpp_expr_stmt;
+}
+
+void* lang::Compiler::visit(Call* call){
+    Expr* func = call->func();
+    cppnodes::Expr* cpp_func = static_cast<cppnodes::Expr*>(func->accept(*this));
+
+    std::vector<Expr*> args = call->args();
+    std::vector<cppnodes::Expr*> cpp_args;
+    for (Expr* arg : args){
+        cppnodes::Expr* cpp_arg = static_cast<cppnodes::Expr*>(arg->accept(*this));
+        cpp_args.push_back(cpp_arg);
+    }
+
+    cppnodes::Call* cpp_call = new cppnodes::Call(cpp_func, cpp_args);
+    return cpp_call;
+}
+
+void* lang::Compiler::visit(String* str){
+    cppnodes::String* cpp_str = new cppnodes::String(str->value());
+    return cpp_str;
+}
+
+void* lang::Compiler::visit(NameExpr* name){
+    cppnodes::Name* cpp_name = new cppnodes::Name(name->name());
+    return cpp_name;
+}
+
 void* lang::Compiler::visit(Int* int_expr){
     cppnodes::Int* cpp_int = new cppnodes::Int(int_expr->value());
     return cpp_int;
@@ -86,7 +120,10 @@ std::string compile_cpp_file(const std::string& src){
     std::vector<std::string> cmd = {compiler, optomization, src};
 
     subprocess::CompletedProcess result = subproc.run(cmd);
-    assert(!result.returncode);
+
+    if (result.returncode){
+        throw std::runtime_error(result.stderr);
+    }
 
     return "a.out";
 }

@@ -17,10 +17,16 @@ void comment(lexing::LexToken& tok, void* data){
     tok.symbol = lexing::tokens::COMMENT;
 }
 
+void trim_string_quotes(lexing::LexToken& tok, void* data){
+    assert(tok.value.size() >= 2);
+    tok.value = tok.value.substr(1, tok.value.size()-2);
+}
+
 const lexing::TokensMap lang::LANG_TOKENS = {
     // Values
     {"INT", {R"(\d+)", nullptr}},
     {"NAME", {R"([a-zA-Z_][a-zA-Z0-9_]*)", reserved_name}},
+    {"STRING", {R"(\"[^\"\\]*(\\.[^\"\\]*)*\")", trim_string_quotes}},
 
     // Binary operators
     {"ADD", {R"(\+)", nullptr}},
@@ -342,6 +348,18 @@ void* parse_int_expr(std::vector<void*>& args, void* data){
     return expr;
 }
 
+// expr : STRING
+// with the quotes trimmed off
+void* parse_string_expr(std::vector<void*>& args, void* data){
+    lexing::LexToken* str = static_cast<lexing::LexToken*>(args[0]);
+
+    lang::String* expr = new lang::String(str->value);
+
+    delete str;
+
+    return expr;
+}
+
 const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // Entry point 
     {"module", {"module_stmt_list"}, parse_module},
@@ -366,8 +384,8 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // Function calls 
     {"expr", {"expr", "LPAR", "RPAR"}, parse_empty_func_call},
     {"expr", {"expr", "LPAR", "call_args", "RPAR"}, parse_func_call},
-    {"call_args", {"call_arg"}, parse_call_one_arg},
-    {"call_args", {"call_args", "COMMA", "call_arg"}, parse_call_args},
+    {"call_args", {"expr"}, parse_call_one_arg},
+    {"call_args", {"call_args", "COMMA", "expr"}, parse_call_args},
 
     // Binary Expressions
     {"expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr},
@@ -381,6 +399,7 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // Atoms
     {"expr", {"NAME"}, parse_name_expr},
     {"expr", {"INT"}, parse_int_expr},
+    {"expr", {"STRING"}, parse_string_expr},
 };
 
 /**************** Associativity ***************/ 

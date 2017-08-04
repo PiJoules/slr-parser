@@ -163,6 +163,14 @@ std::string lang::NameExpr::value_str() const {
 }
 
 /**
+ * String literal
+ */ 
+lang::String::String(const std::string& value): value_(value){}
+std::string lang::String::value_str() const {
+    return "\"" + value_ + "\"";
+}
+
+/**
  * Int expression
  */ 
 lang::Int::Int(int value): value_(value){}

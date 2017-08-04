@@ -81,7 +81,7 @@ namespace cppnodes {
 
         public:
             Name(const char*);
-            Name(std::string&);
+            Name(const std::string&);
             std::string value_str() const;
     };
 
@@ -96,6 +96,15 @@ namespace cppnodes {
                 out << val_;
                 return out.str(); 
             }
+    };
+
+    class String: public Expr {
+        private:
+            std::string value_;
+
+        public:
+            String(const std::string&);
+            std::string value_str() const;
     };
 
     class Call: public Expr {
@@ -116,6 +125,16 @@ namespace cppnodes {
         public:
             ReturnStmt(Expr* expr);
             ~ReturnStmt();
+            std::string value_str() const;
+    };
+
+    class ExprStmt: public SimpleStmt {
+        private:
+            Expr* expr_;
+
+        public:
+            ExprStmt(Expr*);
+            ~ExprStmt();
             std::string value_str() const;
     };
 

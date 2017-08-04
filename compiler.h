@@ -9,6 +9,10 @@ namespace lang {
                     public Visitor<Module>,
                     public Visitor<FuncDef>,
                     public Visitor<ReturnStmt>,
+                    public Visitor<ExprStmt>,
+                    public Visitor<Call>,
+                    public Visitor<String>,
+                    public Visitor<NameExpr>,
                     public Visitor<Int>
     {
         private:
@@ -22,7 +26,13 @@ namespace lang {
             void* visit(Module*);
 
             void* visit(FuncDef*);
+
             void* visit(ReturnStmt*);
+            void* visit(ExprStmt*);
+
+            void* visit(Call*);
+            void* visit(String*);
+            void* visit(NameExpr*);
             void* visit(Int*);
     };
 }
