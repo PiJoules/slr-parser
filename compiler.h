@@ -4,7 +4,14 @@
 #include "lang.h"
 #include "cpp_nodes.h"
 
+#include <unordered_map>
+#include <unordered_set>
+
 namespace lang {
+    // Mapping variable name to library name
+    extern const std::unordered_map<std::string, std::string> LIB_VARIABLES;
+    extern const std::unordered_set<std::string> LIB_SOURCES;
+
     class Compiler: public NodeVisitor,
                     public Visitor<Module>,
                     public Visitor<FuncDef>,
@@ -18,6 +25,8 @@ namespace lang {
         private:
             LangLexer lexer_;
             parsing::Parser parser_;
+
+            std::unordered_set<std::string> include_libs_;
 
         public:
             Compiler();

@@ -23,6 +23,10 @@ std::vector<std::string> cppnodes::Module::lines() const {
     return v;
 }
 
+void cppnodes::Module::prepend(Node* node){
+    body_.insert(body_.begin(), node);
+}
+
 /**
  * Function definition
  */ 
@@ -183,6 +187,14 @@ std::vector<std::string> cppnodes::SimpleMacro::lines() const {
     std::vector<std::string> v;
     v.push_back(value_str());
     return v;
+}
+
+/**
+ * Local Include
+ */ 
+cppnodes::Include::Include(std::string& name): name_(name){}
+std::string cppnodes::Include::value_str() const {
+    return "#include \"" + name_ + "\"";
 }
 
 /**

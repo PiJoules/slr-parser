@@ -2,6 +2,17 @@
 #include "subprocess.h"
 
 #include <fstream>
+#include <unordered_map>
+
+
+const std::unordered_map<std::string, std::string> lang::LIB_VARIABLES = {
+    {"print", "lang_io.h"},
+};
+
+const std::unordered_set<std::string> lang::LIB_SOURCES = {
+    "lang_io.cpp",
+};
+
 
 lang::Compiler::Compiler(): 
     lexer_(lang::LangLexer(lang::LANG_TOKENS)),
@@ -11,11 +22,18 @@ cppnodes::Module* lang::Compiler::compile(std::string code){
     Module* module_node = static_cast<Module*>(parser_.parse(code));
     assert(lexer_.empty());
 
-    void* cpp_module_node = module_node->accept(*this);
+    void* result = module_node->accept(*this);
+    cppnodes::Module* cpp_module = static_cast<cppnodes::Module*>(result);
+
+    // Add any included libs 
+    for (std::string lib : include_libs_){
+        cppnodes::Include* include = new cppnodes::Include(lib);
+        cpp_module->prepend(include);
+    }
 
     delete module_node;
 
-    return static_cast<cppnodes::Module*>(cpp_module_node);
+    return cpp_module;
 }
 
 /**
@@ -90,6 +108,13 @@ void* lang::Compiler::visit(String* str){
 
 void* lang::Compiler::visit(NameExpr* name){
     cppnodes::Name* cpp_name = new cppnodes::Name(name->name());
+
+    // Check for builtin libraries that should be included based on used expressions  
+    auto found_lib = LIB_VARIABLES.find(name->name());
+    if (found_lib != LIB_VARIABLES.end()){
+        include_libs_.insert(found_lib->second);
+    }
+
     return cpp_name;
 }
 
@@ -116,8 +141,12 @@ std::string compile_cpp_file(const std::string& src){
 
     std::string compiler = "g++";
     std::string optomization = "-O2";
+    std::string standard = "c++11";
 
-    std::vector<std::string> cmd = {compiler, optomization, src};
+    std::vector<std::string> cmd = {
+        compiler, optomization, "-std=" + standard, "-I", "lang_include/", "-L", "lang_include/", src
+    };
+    //cmd.insert(cmd.end(), lang::LIB_SOURCES.begin(), lang::LIB_SOURCES.end());
 
     subprocess::CompletedProcess result = subproc.run(cmd);
 

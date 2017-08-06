@@ -14,6 +14,8 @@ namespace cppnodes {
             Module(const std::vector<lang::Node*>&);
             std::vector<std::string> lines() const;
             ~Module();
+
+            void prepend(Node*);
     };
 
     // Base Expression node
@@ -144,10 +146,19 @@ namespace cppnodes {
     class Macro: public lang::Visitable<Macro> {};
 
     // Single line macro
-    class SimpleMacro: Macro {
+    class SimpleMacro: public Macro {
         public:
             virtual std::string value_str() const = 0;
             std::vector<std::string> lines() const;
+    };
+
+    class Include: public SimpleMacro {
+        private:
+            std::string name_;
+
+        public:
+            Include(std::string&);
+            std::string value_str() const;
     };
 
     // Define without the second argument
