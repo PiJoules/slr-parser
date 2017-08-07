@@ -44,6 +44,13 @@ namespace lang {
             void* visit(NameExpr*);
             void* visit(Int*);
     };
+
+    // Language cmd interface 
+    std::string compile_cpp_file(const std::string& src);
+    std::string read_file(const std::string& filename);
+    void write_file(const std::string& filename, const std::string& contents);
+    std::string compile_lang_file(const std::string& src);
+    void run_lang_file(const std::string& src);
 }
 
 #endif

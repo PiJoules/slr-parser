@@ -136,7 +136,7 @@ std::string compile_lang_str(const std::string& code){
 /**
  * Compile a single .cpp source
  */
-std::string compile_cpp_file(const std::string& src){
+std::string lang::compile_cpp_file(const std::string& src){
     subprocess::Subprocess subproc;
 
     std::string compiler = "g++";
@@ -146,7 +146,6 @@ std::string compile_cpp_file(const std::string& src){
     std::vector<std::string> cmd = {
         compiler, optomization, "-std=" + standard, "-I", "lang_include/", "-L", "lang_include/", src
     };
-    //cmd.insert(cmd.end(), lang::LIB_SOURCES.begin(), lang::LIB_SOURCES.end());
 
     subprocess::CompletedProcess result = subproc.run(cmd);
 
@@ -157,7 +156,7 @@ std::string compile_cpp_file(const std::string& src){
     return "a.out";
 }
 
-std::string read_file(const std::string& filename){
+std::string lang::read_file(const std::string& filename){
     std::ifstream f(filename);
     f.seekg(0, std::ios::end);
     size_t size = f.tellg();
@@ -168,23 +167,29 @@ std::string read_file(const std::string& filename){
     return buffer;
 }
 
-void write_file(const std::string& filename, const std::string& contents){
+void lang::write_file(const std::string& filename, const std::string& contents){
     std::ofstream out(filename);
     out << contents;
     out.close();
 }
 
-void compile_lang_file(const std::string& src){
+std::string lang::compile_lang_file(const std::string& src){
     std::string code = read_file(src);
     std::string cpp_code = compile_lang_str(code);
     std::string dest = src + ".cpp";
     write_file(dest, cpp_code);
-    compile_cpp_file(dest);
+    return compile_cpp_file(dest);
 }
 
-int main(int argc, char** argv){
-    assert(argc > 1);
-    compile_lang_file(argv[1]);
+void lang::run_lang_file(const std::string& src){
+    std::string exe_file = compile_lang_file(src);
 
-    return 0;
+    subprocess::Subprocess subproc;
+    std::vector<std::string> cmd = {"./" + exe_file};
+
+    subprocess::CompletedProcess result = subproc.run(cmd);
+
+    if (result.returncode){
+        throw std::runtime_error(result.stderr);
+    }
 }
