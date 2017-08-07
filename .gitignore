@@ -1,7 +1,8 @@
 *.dump 
 test_lang_files/*.cpp 
 *.py
-FEATURES.md
+FEATURES.md 
+language 
 
 # Prerequisites
 *.d

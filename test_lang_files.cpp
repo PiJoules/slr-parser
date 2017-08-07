@@ -15,6 +15,7 @@ void test_fib(){
 
 int main(){
     test_hello_world();
+    test_fib();
 
     return 0;
 }

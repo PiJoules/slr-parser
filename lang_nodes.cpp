@@ -26,13 +26,19 @@ lang::Module::~Module(){
 /**
  * FuncDef Module statement
  */ 
-lang::FuncDef::FuncDef(const std::string& func_name, std::vector<FuncStmt*>& func_suite):
+lang::FuncDef::FuncDef(const std::string& func_name, 
+                       const std::vector<VarDecl*>& args,
+                       std::vector<FuncStmt*>& func_suite):
     func_name_(func_name),
+    args_(args),
     func_suite_(func_suite){}
 
 lang::FuncDef::~FuncDef(){
     for (const Node* stmt : func_suite_){
         delete stmt;
+    }
+    for (const Node* arg : args_){
+        delete arg;
     }
 }
 

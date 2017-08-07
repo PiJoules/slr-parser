@@ -216,17 +216,62 @@ namespace lang {
             Expr* expr() const { return expr_; }
     };
 
+    class TypeDecl: public virtual Node {
+        public:
+            virtual std::string value_str() const = 0;
+            
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v;
+                v.push_back(value_str());
+                return v;
+            };
+    };
+
+    class NameTypeDecl: public TypeDecl, public Visitable<NameTypeDecl> {
+        private:
+            std::string name_;
+
+        public:
+            NameTypeDecl(std::string& name): name_(name){}
+            std::string name() const { return name_; }
+            std::string value_str() const override { return name_; }
+    };
+
+    class VarDecl: public Visitable<VarDecl> {
+        private:
+            std::string name_;
+            TypeDecl* type_;
+
+        public:
+            VarDecl(std::string& name, TypeDecl* type): name_(name), type_(type){}
+            ~VarDecl(){
+                delete type_;
+            }
+
+            std::string name() const { return name_; }
+            TypeDecl* type() const { return type_; }
+
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v;
+                std::string line = name_ + ": " + type_->value_str();
+                return v;
+            }
+    };
+
     class FuncDef: public ModuleStmt, public Visitable<FuncDef> {
         private:
             std::string func_name_;
+            std::vector<VarDecl*> args_;
             std::vector<FuncStmt*> func_suite_;
 
         public:
-            FuncDef(const std::string&, std::vector<FuncStmt*>&);
-            const std::vector<FuncStmt*>& suite() const;
+            FuncDef(const std::string&, const std::vector<VarDecl*>&, std::vector<FuncStmt*>&);
             std::vector<std::string> lines() const;
             ~FuncDef();
+
+            const std::vector<FuncStmt*>& suite() const;
             std::string name() const { return func_name_; }
+            const std::vector<VarDecl*>& args() const { return args_; }
     };
 
     class Module: public Visitable<Module> {
