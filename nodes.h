@@ -233,6 +233,7 @@ namespace lang {
 
         public:
             NameTypeDecl(std::string& name): name_(name){}
+            NameTypeDecl(const char* name): name_(name){}
             std::string name() const { return name_; }
             std::string value_str() const override { return name_; }
     };
@@ -262,15 +263,18 @@ namespace lang {
         private:
             std::string func_name_;
             std::vector<VarDecl*> args_;
+            TypeDecl* return_type_;
             std::vector<FuncStmt*> func_suite_;
 
         public:
-            FuncDef(const std::string&, const std::vector<VarDecl*>&, std::vector<FuncStmt*>&);
+            FuncDef(const std::string&, const std::vector<VarDecl*>&, TypeDecl*, 
+                    std::vector<FuncStmt*>&);
             std::vector<std::string> lines() const;
             ~FuncDef();
 
-            const std::vector<FuncStmt*>& suite() const;
+            const std::vector<FuncStmt*>& suite() const { return func_suite_; }
             std::string name() const { return func_name_; }
+            TypeDecl* return_type() const { return return_type_; }
             const std::vector<VarDecl*>& args() const { return args_; }
     };
 

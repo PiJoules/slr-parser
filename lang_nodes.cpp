@@ -4,6 +4,25 @@
 
 static const std::string INDENT = "    ";
 
+static std::string join(const std::vector<std::string>& v, const std::string& delim) {
+    std::string s;
+    
+    if (!v.empty()){
+        s += v.front() + delim;
+    }
+
+    for (auto it = v.begin() + 1; it < v.end(); ++it){
+        s += delim + *it;
+    }
+
+    return s;
+}
+
+static std::string join(const std::vector<std::string>& v, const char* delim) {
+    std::string delim_s(delim);
+    return join(v, delim_s);
+}
+
 /**
  * Module
  */ 
@@ -28,9 +47,11 @@ lang::Module::~Module(){
  */ 
 lang::FuncDef::FuncDef(const std::string& func_name, 
                        const std::vector<VarDecl*>& args,
+                       TypeDecl* return_type,
                        std::vector<FuncStmt*>& func_suite):
     func_name_(func_name),
     args_(args),
+    return_type_(return_type),
     func_suite_(func_suite){}
 
 lang::FuncDef::~FuncDef(){
@@ -40,18 +61,28 @@ lang::FuncDef::~FuncDef(){
     for (const Node* arg : args_){
         delete arg;
     }
-}
-
-const std::vector<lang::FuncStmt*>& lang::FuncDef::suite() const {
-    return func_suite_;
+    delete return_type_;
 }
 
 std::vector<std::string> lang::FuncDef::lines() const {
     std::vector<std::string> v;
 
-    // TODO: Handle arguments in the string also
     std::ostringstream line1;
-    line1 << "def " << func_name_ << "():";
+    line1 << "def " << func_name_ << "(";
+
+    // Func args  
+    std::vector<std::string> arg_strs;
+    for (VarDecl* arg : args_){
+        arg_strs.push_back(arg->str());
+    }
+    line1 << join(arg_strs, ", ");
+    line1 << ") -> ";
+
+    // Return type 
+    line1 << return_type_->value_str();
+
+    line1 << ":";
+
     v.push_back(line1.str());
 
     for (const Node* stmt : func_suite_){

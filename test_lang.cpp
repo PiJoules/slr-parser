@@ -51,7 +51,7 @@ def func():
     lang::FuncDef* func_def = static_cast<lang::FuncDef*>(module_node->body()[0]);
     assert(func_def->suite().size() == 1);
 
-    assert(module_node->str() == "def func():\n    x + y");
+    assert(module_node->str() == "def func() -> int:\n    x + y");
 
     delete module_node;
 }
@@ -81,7 +81,7 @@ def func():
     lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
     assert(lexer.empty());
 
-    assert(module_node->str() == "def func():\n    x + -y");
+    assert(module_node->str() == "def func() -> int:\n    x + -y");
 
     delete module_node;
 }

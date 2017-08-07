@@ -1,5 +1,7 @@
 #include "lang.h"
 
+#define DEFAULT_FUNC_RETURN_TYPE new lang::NameTypeDecl("int")
+
 /****************** Lexer tokens *****************/
 
 std::unordered_map<std::string, std::string> RESERVED_NAMES = {
@@ -30,9 +32,11 @@ const lexing::TokensMap lang::LANG_TOKENS = {
 
     // Binary operators
     {"ADD", {R"(\+)", nullptr}},
-    {"SUB", {R"(-)", nullptr}},
+    {"SUB", {R"(-(?!>))", nullptr}},
     {"MUL", {R"(\*)", nullptr}},
     {"DIV", {R"(\\)", nullptr}},
+
+    {"ARROW", {R"(\-\>)", nullptr}},
 
     // Containers 
     {"LPAR", {R"(\()", nullptr}},
@@ -162,13 +166,40 @@ void* parse_func_def(std::vector<void*>& args, void* data){
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
 
     std::vector<lang::VarDecl*> func_args;
+    lang::TypeDecl* return_type = DEFAULT_FUNC_RETURN_TYPE;
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, *func_suite);
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, return_type, *func_suite);
 
     delete def;
     delete name;
     delete lpar;
     delete rpar;
+    delete colon;
+    delete func_suite;
+
+    return func_def;
+}
+
+// func_def : DEF NAME LPAR RPAR ARROW type_decl COLON func_suite
+void* parse_func_def_with_return(std::vector<void*>& args, void* data){
+    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
+    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
+    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
+    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
+    lexing::LexToken* arrow = static_cast<lexing::LexToken*>(args[4]);
+    lang::TypeDecl* type_decl = static_cast<lang::TypeDecl*>(args[5]);
+    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[6]);
+    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[7]);
+
+    std::vector<lang::VarDecl*> func_args;
+
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, type_decl, *func_suite);
+
+    delete def;
+    delete name;
+    delete lpar;
+    delete rpar;
+    delete arrow;
     delete colon;
     delete func_suite;
 
@@ -185,13 +216,40 @@ void* parse_func_def_with_args(std::vector<void*>& args, void* data){
     lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[5]);
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[6]);
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, *func_args, *func_suite);
+    lang::TypeDecl* return_type = DEFAULT_FUNC_RETURN_TYPE;
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, *func_args, return_type, *func_suite);
 
     delete def;
     delete name;
     delete lpar;
     delete func_args;
     delete rpar;
+    delete colon;
+    delete func_suite;
+
+    return func_def;
+}
+
+// func_def : DEF NAME LPAR var_decl_list RPAR ARROW type_decl COLON func_suite  
+void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data){
+    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
+    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
+    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
+    std::vector<lang::VarDecl*>* func_args = static_cast<std::vector<lang::VarDecl*>*>(args[3]);
+    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[4]);
+    lexing::LexToken* arrow = static_cast<lexing::LexToken*>(args[5]);
+    lang::TypeDecl* type_decl = static_cast<lang::TypeDecl*>(args[6]);
+    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[7]);
+    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[8]);
+    
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, *func_args, type_decl, *func_suite);
+
+    delete def;
+    delete name;
+    delete lpar;
+    delete func_args;
+    delete rpar;
+    delete arrow;
     delete colon;
     delete func_suite;
 
@@ -448,7 +506,10 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
 
     // Functions 
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
+    {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_return},
     {"func_def", {"DEF", "NAME", "LPAR", "var_decl_list", "RPAR", "COLON", "func_suite"}, parse_func_def_with_args},
+    {"func_def", {"DEF", "NAME", "LPAR", "var_decl_list", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_args_with_return},
+
     {"func_suite", {lang::tokens::NEWLINE, lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite},
     {"func_stmts", {"func_stmt"}, parse_func_stmts},
     {"func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2},
