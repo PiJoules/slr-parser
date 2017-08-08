@@ -49,9 +49,9 @@ clean_exes:
 	rm -f $(EXE_OUTPUTS)
 
 clean_language:
-	rm -f language
+	rm -f language_exe
 
-language: $(OBJS) clean_language
+language_exe: $(OBJS) clean_language
 	$(CPP) $(CPPFLAGS) language.cpp $(OBJS) -o $@
 
 # Tests 

@@ -37,13 +37,16 @@ namespace lang {
                     public Visitor<Lt>,
                     public Visitor<Gt>,
                     public Visitor<Lte>,
-                    public Visitor<Gte>
+                    public Visitor<Gte>,
+
+                    public Visitor<NameTypeDecl>
     {
         private:
             LangLexer lexer_;
             parsing::Parser parser_;
 
             std::unordered_set<std::string> include_libs_;
+            std::string cached_type_name_;
 
         public:
             Compiler();
@@ -80,6 +83,8 @@ namespace lang {
             void* visit(Gt*);
             void* visit(Lte*);
             void* visit(Gte*);
+
+            void* visit(NameTypeDecl*);
     };
 
     // Language cmd interface 

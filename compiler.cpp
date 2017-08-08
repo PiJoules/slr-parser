@@ -16,7 +16,9 @@ const std::unordered_set<std::string> lang::LIB_SOURCES = {
 
 lang::Compiler::Compiler(): 
     lexer_(lang::LangLexer(lang::LANG_TOKENS)),
-    parser_(parsing::Parser(lexer_, lang::LANG_GRAMMAR)){}
+    parser_(parsing::Parser(lexer_, lang::LANG_GRAMMAR))
+{
+}
 
 cppnodes::Module* lang::Compiler::compile(std::string code){
     Module* module_node = static_cast<Module*>(parser_.parse(code));
@@ -83,8 +85,10 @@ void* lang::Compiler::visit(ReturnStmt* returnstmt){
 }
 
 void* lang::Compiler::visit(VarDecl* var_decl){
-    std::string name = var_decl->name();
+    cached_type_name_ = var_decl->name();
     lang::TypeDecl* type_decl = var_decl->type();
+    cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(type_decl->accept(*this));
+    return cpp_var_decl;
 }
 
 void* lang::Compiler::visit(IfStmt* if_stmt){
@@ -213,6 +217,14 @@ void* lang::Compiler::visit(Gte* op){
     cppnodes::Gte* cpp_op = new cppnodes::Gte;
     return cpp_op;
 }
+
+void* lang::Compiler::visit(NameTypeDecl* name_type_decl){
+    std::string type_name = name_type_decl->name();
+    cppnodes::RegVarDecl* cpp_var_decl = new cppnodes::RegVarDecl(cached_type_name_, type_name);
+    return cpp_var_decl;
+}
+
+/************ Cmd line interface **************/
 
 std::string compile_lang_str(const std::string& code){
     lang::Compiler compiler;

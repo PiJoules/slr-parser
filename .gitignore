@@ -2,7 +2,7 @@
 test_lang_files/*.cpp
 *.py
 FEATURES.md 
-language
+language_exe
 
 # Prerequisites
 *.d
