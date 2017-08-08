@@ -7,6 +7,7 @@
 std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"def", "DEF"},
     {"return", "RETURN"},
+    {"if", "IF"},
 };
 
 void reserved_name(lexing::LexToken& tok, void* data){
@@ -31,12 +32,22 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     {"STRING", {R"(\"[^\"\\]*(\\.[^\"\\]*)*\")", trim_string_quotes}},
 
     // Binary operators
+    // Arithmetic
     {"ADD", {R"(\+)", nullptr}},
     {"SUB", {R"(-(?!>))", nullptr}},
     {"MUL", {R"(\*)", nullptr}},
     {"DIV", {R"(\\)", nullptr}},
 
+    // Member access
     {"ARROW", {R"(\-\>)", nullptr}},
+
+    // Comparison 
+    {"EQ", {R"(\=\=)", nullptr}},
+    {"NE", {R"(\!\=)", nullptr}},
+    {"LT", {R"(<(?!\=))", nullptr}},
+    {"GT", {R"(>(?!\=))", nullptr}},
+    {"LTE", {R"(\<\=)", nullptr}},
+    {"GTE", {R"(\>\=)", nullptr}},
 
     // Containers 
     {"LPAR", {R"(\()", nullptr}},
@@ -45,6 +56,7 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     // Misc 
     {"DEF", {R"(def)", nullptr}},
     {"RETURN", {"return", nullptr}},
+    {"IF", {"if", nullptr}},
     {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
     {"COMMA", {R"(\,)", nullptr}},
@@ -301,7 +313,7 @@ void* parse_func_stmts3(std::vector<void*>& args, void* data){
 }
 
 // func_stmt : simple_func_stmt NEWLINE
-void* parse_func_stmt(std::vector<void*>& args, void* data){
+void* parse_func_stmt_simple(std::vector<void*>& args, void* data){
     lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
     lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
 
@@ -310,9 +322,19 @@ void* parse_func_stmt(std::vector<void*>& args, void* data){
     return simple_func_stmt;
 }
 
+// func_stmt : compound_func_stmt
+void* parse_func_stmt_compound(std::vector<void*>& args, void* data){
+    return args[0];
+}
+
 // simple_func_stmt : expr_stmt
 //                  | return_stmt
 void* parse_simple_func_stmt(std::vector<void*>& args, void* data){
+    return args[0];
+}
+
+// compound_func_stmt : if_stmt 
+void* parse_compound_func_stmt_if(std::vector<void*>& args, void* data){
     return args[0];
 }
 
@@ -334,6 +356,22 @@ void* parse_return_stmt(std::vector<void*>& args, void* data){
     lang::ReturnStmt* return_stmt = new lang::ReturnStmt(expr);
 
     return return_stmt;
+}
+
+// if_stmt : IF expr COLON func_suite 
+void* parse_if_stmt(std::vector<void*>& args, void* data){
+    lexing::LexToken* if_tok = static_cast<lexing::LexToken*>(args[0]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
+    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[2]);
+    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[3]);
+
+    lang::IfStmt* if_stmt = new lang::IfStmt(expr, *func_suite);
+
+    delete if_tok;
+    delete colon;
+    delete func_suite;
+
+    return if_stmt;
 }
 
 // expr : expr LPAR RPAR 
@@ -446,6 +484,90 @@ void* parse_bin_div_expr(std::vector<void*>& args, void* data){
     return bin_expr;
 }
 
+// expr : expr EQ expr 
+void* parse_bin_eq_expr(std::vector<void*>& args, void* data){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Eq* op = new lang::Eq;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr NE expr 
+void* parse_bin_ne_expr(std::vector<void*>& args, void* data){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Ne* op = new lang::Ne;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr LT expr 
+void* parse_bin_lt_expr(std::vector<void*>& args, void* data){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Lt* op = new lang::Lt;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr GT expr 
+void* parse_bin_gt_expr(std::vector<void*>& args, void* data){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Gt* op = new lang::Gt;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr LTE expr 
+void* parse_bin_lte_expr(std::vector<void*>& args, void* data){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Lte* op = new lang::Lte;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
+// expr : expr GTE expr 
+void* parse_bin_gte_expr(std::vector<void*>& args, void* data){
+    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+
+    lang::Gte* op = new lang::Gte;
+    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
+
+    delete op_tok;
+
+    return bin_expr;
+}
+
 // expr : SUB expr %UMINUS
 void* parse_un_sub_expr(std::vector<void*>& args, void* data){
     lexing::LexToken* sub = static_cast<lexing::LexToken*>(args[0]);
@@ -513,13 +635,19 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"func_suite", {lang::tokens::NEWLINE, lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite},
     {"func_stmts", {"func_stmt"}, parse_func_stmts},
     {"func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2},
-    {"func_stmt", {"simple_func_stmt", lang::tokens::NEWLINE}, parse_func_stmt},
+    {"func_stmt", {"simple_func_stmt", lang::tokens::NEWLINE}, parse_func_stmt_simple},
+    {"func_stmt", {"compound_func_stmt"}, parse_func_stmt_compound},
     {"simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt},
     {"simple_func_stmt", {"return_stmt"}, parse_simple_func_stmt},
+    {"compound_func_stmt", {"if_stmt"}, parse_compound_func_stmt_if},
 
     // Simple statements - one line 
     {"expr_stmt", {"expr"}, parse_expr_stmt},
     {"return_stmt", {"RETURN", "expr"}, parse_return_stmt},
+
+    // Compound statements - multiple lines 
+    // TODO: The rest of the ladder
+    {"if_stmt", {"IF", "expr", "COLON", "func_suite"}, parse_if_stmt},
 
     // Function calls 
     {"expr", {"expr", "LPAR", "RPAR"}, parse_empty_func_call},
@@ -533,6 +661,13 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"expr", {"expr", "MUL", "expr"}, parse_bin_mul_expr},
     {"expr", {"expr", "DIV", "expr"}, parse_bin_div_expr},
 
+    {"expr", {"expr", "EQ", "expr"}, parse_bin_eq_expr},
+    {"expr", {"expr", "NE", "expr"}, parse_bin_ne_expr},
+    {"expr", {"expr", "LT", "expr"}, parse_bin_lt_expr},
+    {"expr", {"expr", "GT", "expr"}, parse_bin_gt_expr},
+    {"expr", {"expr", "LTE", "expr"}, parse_bin_lte_expr},
+    {"expr", {"expr", "GTE", "expr"}, parse_bin_gte_expr},
+
     // Unary expressions
     {"expr", {"SUB", "expr", "%UMINUS"}, parse_un_sub_expr},
 
@@ -545,9 +680,22 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
 /**************** Associativity ***************/ 
 
 const parsing::PrecedenceList lang::LANG_PRECEDENCE = {
+    // 7
+    {parsing::LEFT_ASSOC, {"EQ", "NE"}},
+
+    // 6
+    {parsing::LEFT_ASSOC, {"LT", "GT", "LTE", "GTE"}},
+
+    // 4
     {parsing::LEFT_ASSOC, {"ADD", "SUB"}},
+
+    // 3
     {parsing::RIGHT_ASSOC, {"MUL", "DIV"}},
+
+    // 2
     {parsing::RIGHT_ASSOC, {"UMINUS"}},
+
+    // 1
 
     // Function call
     {parsing::LEFT_ASSOC, {"LPAR"}},

@@ -16,11 +16,28 @@ namespace lang {
                     public Visitor<Module>,
                     public Visitor<FuncDef>,
                     public Visitor<ReturnStmt>,
+                    public Visitor<VarDecl>,
+
                     public Visitor<ExprStmt>,
+                    public Visitor<IfStmt>,
+
                     public Visitor<Call>,
+                    public Visitor<BinExpr>,
                     public Visitor<String>,
                     public Visitor<NameExpr>,
-                    public Visitor<Int>
+                    public Visitor<Int>,
+
+                    public Visitor<Add>, 
+                    public Visitor<Sub>,
+                    public Visitor<Mul>,
+                    public Visitor<Div>,
+
+                    public Visitor<Eq>, 
+                    public Visitor<Ne>,
+                    public Visitor<Lt>,
+                    public Visitor<Gt>,
+                    public Visitor<Lte>,
+                    public Visitor<Gte>
     {
         private:
             LangLexer lexer_;
@@ -34,15 +51,35 @@ namespace lang {
 
             void* visit(Module*);
 
-            void* visit(FuncDef*);
-
+            // Simple stmts
             void* visit(ReturnStmt*);
             void* visit(ExprStmt*);
+            void* visit(VarDecl*);
+
+            // Compound stmts
+            void* visit(FuncDef*);
+            void* visit(IfStmt*);
 
             void* visit(Call*);
+            void* visit(BinExpr*);
+
+            // Atoms
             void* visit(String*);
             void* visit(NameExpr*);
             void* visit(Int*);
+
+            // Binary operators  
+            void* visit(Add*);
+            void* visit(Sub*);
+            void* visit(Mul*);
+            void* visit(Div*);
+
+            void* visit(Eq*);
+            void* visit(Ne*);
+            void* visit(Lt*);
+            void* visit(Gt*);
+            void* visit(Lte*);
+            void* visit(Gte*);
     };
 
     // Language cmd interface 

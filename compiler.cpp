@@ -57,6 +57,11 @@ void* lang::Compiler::visit(FuncDef* funcdef){
     std::vector<cppnodes::VarDecl*> cpp_args;
     std::vector<Node*> cpp_body;
 
+    for (VarDecl* decl : funcdef->args()){
+        cppnodes::VarDecl* cpp_decl = static_cast<cppnodes::VarDecl*>(decl->accept(*this));
+        cpp_args.push_back(cpp_decl);
+    }
+
     for (FuncStmt* stmt : funcsuite){
         void* cpp_stmt = stmt->accept(*this);
         cpp_body.push_back(static_cast<Node*>(cpp_stmt));
@@ -75,6 +80,28 @@ void* lang::Compiler::visit(ReturnStmt* returnstmt){
     cppnodes::ReturnStmt* cpp_return = new cppnodes::ReturnStmt(cpp_expr);
 
     return cpp_return;
+}
+
+void* lang::Compiler::visit(VarDecl* var_decl){
+    std::string name = var_decl->name();
+    lang::TypeDecl* type_decl = var_decl->type();
+}
+
+void* lang::Compiler::visit(IfStmt* if_stmt){
+    Expr* cond = if_stmt->cond();
+    std::vector<FuncStmt*> body = if_stmt->body();
+
+    cppnodes::Expr* cpp_cond = static_cast<cppnodes::Expr*>(cond->accept(*this));
+
+    std::vector<Node*> cpp_body;
+    for (FuncStmt* stmt : body){
+        void* cpp_stmt = stmt->accept(*this);
+        cpp_body.push_back(static_cast<Node*>(cpp_stmt));
+    }
+
+    cppnodes::IfStmt* cpp_if_stmt = new cppnodes::IfStmt(cpp_cond, cpp_body);
+
+    return cpp_if_stmt;
 }
 
 void* lang::Compiler::visit(ExprStmt* expr_stmt){
@@ -101,6 +128,20 @@ void* lang::Compiler::visit(Call* call){
     return cpp_call;
 }
 
+void* lang::Compiler::visit(BinExpr* bin_expr){
+    Expr* lhs = bin_expr->lhs();
+    BinOperator* op = bin_expr->op();
+    Expr* rhs = bin_expr->rhs();
+
+    cppnodes::Expr* cpp_lhs = static_cast<cppnodes::Expr*>(lhs->accept(*this));
+    cppnodes::BinOperator* cpp_op = static_cast<cppnodes::BinOperator*>(op->accept(*this));
+    cppnodes::Expr* cpp_rhs = static_cast<cppnodes::Expr*>(rhs->accept(*this));
+
+    cppnodes::BinExpr* cpp_bin_expr = new cppnodes::BinExpr(cpp_lhs, cpp_op, cpp_rhs);
+
+    return cpp_bin_expr;
+}
+
 void* lang::Compiler::visit(String* str){
     cppnodes::String* cpp_str = new cppnodes::String(str->value());
     return cpp_str;
@@ -121,6 +162,56 @@ void* lang::Compiler::visit(NameExpr* name){
 void* lang::Compiler::visit(Int* int_expr){
     cppnodes::Int* cpp_int = new cppnodes::Int(int_expr->value());
     return cpp_int;
+}
+
+void* lang::Compiler::visit(Add* op){
+    cppnodes::Add* cpp_op = new cppnodes::Add;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Sub* op){
+    cppnodes::Sub* cpp_op = new cppnodes::Sub;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Mul* op){
+    cppnodes::Mul* cpp_op = new cppnodes::Mul;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Div* op){
+    cppnodes::Div* cpp_op = new cppnodes::Div;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Eq* op){
+    cppnodes::Eq* cpp_op = new cppnodes::Eq;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Ne* op){
+    cppnodes::Ne* cpp_op = new cppnodes::Ne;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Lt* op){
+    cppnodes::Lt* cpp_op = new cppnodes::Lt;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Gt* op){
+    cppnodes::Gt* cpp_op = new cppnodes::Gt;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Lte* op){
+    cppnodes::Lte* cpp_op = new cppnodes::Lte;
+    return cpp_op;
+}
+
+void* lang::Compiler::visit(Gte* op){
+    cppnodes::Gte* cpp_op = new cppnodes::Gte;
+    return cpp_op;
 }
 
 std::string compile_lang_str(const std::string& code){

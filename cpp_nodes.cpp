@@ -28,12 +28,32 @@ void cppnodes::Module::prepend(Node* node){
 }
 
 /**
+ * If stmt 
+ */ 
+std::vector<std::string> cppnodes::IfStmt::lines() const {
+    std::vector<std::string> stmt_lines;
+
+    std::string line1 = "if (" + cond_->value_str() + "){";
+    stmt_lines.push_back(line1);
+
+    for (Node* stmt : body_){
+        for (std::string& stmt_line : stmt->lines()){
+            stmt_lines.push_back(INDENT + stmt_line);
+        }
+    }
+
+    stmt_lines.push_back("}");
+
+    return stmt_lines;
+}
+
+/**
  * Function definition
  */ 
 cppnodes::FuncDef::FuncDef(const std::string& name,
-                         const std::string& type, 
-                         const std::vector<VarDecl*>& args,
-                         const std::vector<lang::Node*>& body):
+                           const std::string& type, 
+                           const std::vector<VarDecl*>& args,
+                           const std::vector<lang::Node*>& body):
     name_(name), type_(type), args_(args), body_(body){}
 
 cppnodes::FuncDef::~FuncDef(){

@@ -56,6 +56,7 @@ namespace lang {
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
+                    err << "Check if your Visitor implementation both inherits from 'Visitor<your node>' and implements 'void* visit(your node*)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
@@ -83,6 +84,25 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
+    class IfStmt: public FuncStmt, public Visitable<IfStmt> {
+        private:
+            Expr* cond_;
+            std::vector<FuncStmt*> body_;
+
+        public:
+            IfStmt(Expr* cond, std::vector<FuncStmt*>& body): cond_(cond), body_(body){}
+            ~IfStmt(){
+                for (FuncStmt* stmt : body_){
+                    delete stmt;
+                }
+                delete cond_;
+            }
+            std::vector<std::string> lines() const override;
+
+            Expr* cond() const { return cond_; }
+            const std::vector<FuncStmt*> body() const { return body_; }
+    };
+
     class Call: public Expr, public Visitable<Call> {
         private:
             Expr* func_;
@@ -99,7 +119,7 @@ namespace lang {
             std::string value_str() const override;
     };
 
-    class BinOperator: public Visitable<BinOperator> {
+    class BinOperator: public virtual Node {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -107,21 +127,46 @@ namespace lang {
                 return v;
             }
     };
-    class Add: public BinOperator {
+    class Add: public BinOperator, public Visitable<Add> {
         public:
             std::string symbol() const { return "+"; }
     };
-    class Sub: public BinOperator {
+    class Sub: public BinOperator, public Visitable<Sub> {
         public:
             std::string symbol() const { return "-"; }
     };
-    class Div: public BinOperator {
+    class Div: public BinOperator, public Visitable<Div> {
         public:
             std::string symbol() const { return "/"; }
     };
-    class Mul: public BinOperator {
+    class Mul: public BinOperator, public Visitable<Mul> {
         public:
             std::string symbol() const { return "*"; }
+    };
+    
+    class Eq: public BinOperator, public Visitable<Eq> {
+        public:
+            std::string symbol() const { return "=="; }
+    };
+    class Ne: public BinOperator, public Visitable<Ne> {
+        public:
+            std::string symbol() const { return "!="; }
+    };
+    class Lt: public BinOperator, public Visitable<Lt> {
+        public:
+            std::string symbol() const { return "<"; }
+    };
+    class Gt: public BinOperator, public Visitable<Gt> {
+        public:
+            std::string symbol() const { return ">"; }
+    };
+    class Lte: public BinOperator, public Visitable<Lte> {
+        public:
+            std::string symbol() const { return "<="; }
+    };
+    class Gte: public BinOperator, public Visitable<Gte> {
+        public:
+            std::string symbol() const { return ">="; }
     };
 
     // TODO: Maybe we can merge this and the binary operator class
@@ -180,6 +225,10 @@ namespace lang {
             BinExpr(Expr*, BinOperator*, Expr*);
             std::string value_str() const;
             ~BinExpr();
+
+            Expr* lhs() const { return lhs_; }
+            BinOperator* op() const { return op_; }
+            Expr* rhs() const { return rhs_; }
     };
 
     class UnaryExpr: public Expr, public Visitable<UnaryExpr> {

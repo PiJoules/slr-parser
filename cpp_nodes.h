@@ -38,6 +38,25 @@ namespace cppnodes {
     // Multi line statement
     class CompoundStmt: public Stmt {};
 
+    class IfStmt: public CompoundStmt {
+        private:
+            Expr* cond_;
+            std::vector<Node*> body_;
+
+        public:
+            IfStmt(Expr* cond, std::vector<Node*>& body): cond_(cond), body_(body){}
+            ~IfStmt(){
+                for (Node* stmt : body_){
+                    delete stmt;
+                }
+                delete cond_;
+            }
+            std::vector<std::string> lines() const override;
+
+            Expr* cond() const { return cond_; }
+            const std::vector<Node*> body() const { return body_; }
+    };
+
     // Variable declaration
     class VarDecl: public lang::Visitable<VarDecl> {};
 
@@ -118,6 +137,79 @@ namespace cppnodes {
             Call(Expr*, std::vector<Expr*>&);
             ~Call();
             std::string value_str() const;
+    };
+
+    class BinOperator: public lang::Visitable<BinOperator> {
+        public:
+            virtual std::string symbol() const = 0;
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v = {symbol()};
+                return v;
+            }
+    };
+    class Add: public BinOperator {
+        public:
+            std::string symbol() const { return "+"; }
+    };
+    class Sub: public BinOperator {
+        public:
+            std::string symbol() const { return "-"; }
+    };
+    class Div: public BinOperator {
+        public:
+            std::string symbol() const { return "/"; }
+    };
+    class Mul: public BinOperator {
+        public:
+            std::string symbol() const { return "*"; }
+    };
+    
+    class Eq: public BinOperator {
+        public:
+            std::string symbol() const { return "=="; }
+    };
+    class Ne: public BinOperator {
+        public:
+            std::string symbol() const { return "!="; }
+    };
+    class Lt: public BinOperator {
+        public:
+            std::string symbol() const { return "<"; }
+    };
+    class Gt: public BinOperator {
+        public:
+            std::string symbol() const { return ">"; }
+    };
+    class Lte: public BinOperator {
+        public:
+            std::string symbol() const { return "<="; }
+    };
+    class Gte: public BinOperator {
+        public:
+            std::string symbol() const { return ">="; }
+    };
+
+    class BinExpr: public Expr {
+        private:
+            Expr* lhs_;
+            BinOperator* op_;
+            Expr* rhs_;
+
+        public:
+            BinExpr(Expr* lhs, BinOperator* op, Expr* rhs): lhs_(lhs), op_(op), rhs_(rhs){}
+            std::string value_str() const override {
+                std::string s = lhs_->str() + " " + op_->symbol() + " " + rhs_->str();
+                return s;
+            }
+            ~BinExpr(){
+                delete lhs_;
+                delete op_;
+                delete rhs_;
+            }
+
+            Expr* lhs() const { return lhs_; }
+            BinOperator* op() const { return op_; }
+            Expr* rhs() const { return rhs_; }
     };
 
     class ReturnStmt: public SimpleStmt {

@@ -221,5 +221,19 @@ std::string lang::Int::value_str() const {
 }
 
 /**
- * Simple function statement
- */
+ * If statement
+ */ 
+std::vector<std::string> lang::IfStmt::lines() const {
+    std::vector<std::string> stmt_lines;
+
+    std::string line1 = "if " + cond_->value_str() + ":";
+    stmt_lines.push_back(line1);
+
+    for (FuncStmt* stmt : body_){
+        for (std::string& stmt_line : stmt->lines()){
+            stmt_lines.push_back(INDENT + stmt_line);
+        }
+    }
+
+    return stmt_lines;
+}

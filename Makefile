@@ -46,55 +46,55 @@ compile_clean: $(OBJS) clean_exes $(EXE_OUTPUTS)
 	$(CPP) $(CPPFLAGS) $< $(OBJS) -o $@
 
 clean_exes:
-	rm -rf $(EXE_OUTPUTS)
+	rm -f $(EXE_OUTPUTS)
 
 clean_language:
-	rm language
+	rm -f language
 
 language: $(OBJS) clean_language
 	$(CPP) $(CPPFLAGS) language.cpp $(OBJS) -o $@
 
 # Tests 
 clean_test_lexer:
-	rm -rf test_lexer.out
+	rm -f test_lexer.out
 
 test_lexer: $(OBJS) clean_test_lexer test_lexer.out
 	./test_lexer.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lexer.out || (echo "memory leak"; exit 1); fi 
 
 clean_test_table_generation:
-	rm -rf test_table_generation.out
+	rm -f test_table_generation.out
 
 test_table_generation: $(OBJS) clean_test_table_generation test_table_generation.out
 	./test_table_generation.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_table_generation.out || (echo "memory leak"; exit 1); fi  
 
 clean_test_lang:
-	rm -rf test_lang.out
+	rm -f test_lang.out
 
 test_lang: $(OBJS) clean_test_lang test_lang.out
 	./test_lang.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lang.out || (echo "memory leak"; exit 1); fi
 
 clean_test_cppnodes:
-	rm -rf test_cppnodes.out
+	rm -f test_cppnodes.out
 
 test_cppnodes: $(OBJS) clean_test_cppnodes test_cppnodes.out
 	./test_cppnodes.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_cppnodes.out || (echo "memory leak"; exit 1); fi  
 
 clean_test_lang_files:
-	rm -rf test_lang_files.out
+	rm -f test_lang_files.out
 
 test_lang_files: $(OBJS) clean_test_lang_files test_lang_files.out
 	./test_lang_files.out
 	if [ -x "$$(command -v valgrind)" ]; then $(MEMCHECK) ./test_lang_files.out || (echo "memory leak"; exit 1); fi  
 
 clean_dump_lang:
-	rm -rf dump_lang.out
+	rm -f dump_lang.out
 
 dump_lang: $(OBJS) clean_dump_lang dump_lang.out
 	./dump_lang.out
 
 clean:
-	rm -rf *.o *.out
+	rm -f *.o *.out
