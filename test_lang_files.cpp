@@ -13,9 +13,15 @@ void test_fib(){
     lang::run_lang_file(filename);
 }
 
+void test_read_input(){
+    std::string filename = "test_lang_files/read_input.lang";
+    lang::run_lang_file(filename);
+}
+
 int main(){
     test_hello_world();
     test_fib();
+    test_read_input();
 
     return 0;
 }

@@ -86,9 +86,22 @@ void* lang::Compiler::visit(ReturnStmt* returnstmt){
 
 void* lang::Compiler::visit(VarDecl* var_decl){
     cached_type_name_ = var_decl->name();
-    lang::TypeDecl* type_decl = var_decl->type();
+    TypeDecl* type_decl = var_decl->type();
     cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(type_decl->accept(*this));
     return cpp_var_decl;
+}
+
+void* lang::Compiler::visit(Assign* assign){
+    std::string varname = assign->varname();
+    Expr* expr = assign->expr();
+
+    TypeDecl* expr_type = infer(expr);
+    cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(expr_type->accept(*this));
+    cppnodes::Expr* cpp_expr = static_cast<cppnodes::Expr*>(expr->accept(*this));
+
+    cppnodes::Assign* cpp_assign = new cppnodes::Assign(cpp_var_decl, cpp_expr);
+
+    return cpp_assign;
 }
 
 void* lang::Compiler::visit(IfStmt* if_stmt){

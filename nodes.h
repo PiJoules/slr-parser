@@ -84,6 +84,25 @@ namespace lang {
             std::vector<std::string> lines() const;
     };
 
+    class Assign: public ModuleStmt, public SimpleFuncStmt, public Visitable<Assign> {
+        private:
+            std::string varname_;
+            Expr* expr_;
+
+        public:
+            Assign(std::string& name, Expr* expr): varname_(name), expr_(expr){}
+            Assign(const char* name, Expr* expr): varname_(name), expr_(expr){}
+            ~Assign(){
+                delete expr_;
+            }
+
+            std::string varname() const { return varname_; }
+            Expr* expr() const { return expr_; }
+            std::string line() const {
+                return varname_ + " = " + expr_->value_str();
+            }
+    };
+
     class IfStmt: public FuncStmt, public Visitable<IfStmt> {
         private:
             Expr* cond_;

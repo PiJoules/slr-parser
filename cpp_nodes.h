@@ -232,6 +232,25 @@ namespace cppnodes {
             std::string value_str() const;
     };
 
+    class Assign: public SimpleStmt {
+        private:
+            VarDecl* var_decl_;
+            Expr* expr_;
+
+        public:
+            Assign(VarDecl* var_decl, Expr* expr): var_decl_(var_decl), expr_(expr){}
+            ~Assign(){
+                delete var_decl_;
+                delete expr_;
+            }
+
+            VarDecl* var_decl() const { return var_decl_; }
+            Expr* expr() const { return expr_; }
+            std::string value_str() const { 
+                return var_decl_->str() + " = " + expr_->value_str() + ";";
+            }
+    };
+
     /**
      * Macros
      */ 

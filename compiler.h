@@ -17,6 +17,7 @@ namespace lang {
                     public Visitor<FuncDef>,
                     public Visitor<ReturnStmt>,
                     public Visitor<VarDecl>,
+                    public Visitor<Assign>,
 
                     public Visitor<ExprStmt>,
                     public Visitor<IfStmt>,
@@ -58,6 +59,7 @@ namespace lang {
             void* visit(ReturnStmt*);
             void* visit(ExprStmt*);
             void* visit(VarDecl*);
+            void* visit(Assign*);
 
             // Compound stmts
             void* visit(FuncDef*);

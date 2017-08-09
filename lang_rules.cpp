@@ -49,6 +49,9 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     {"LTE", {R"(\<\=)", nullptr}},
     {"GTE", {R"(\>\=)", nullptr}},
 
+    // Assignment 
+    {"ASSIGN", {R"(=(?![=]))", nullptr}},
+
     // Containers 
     {"LPAR", {R"(\()", nullptr}},
     {"RPAR", {R"(\))", nullptr}},
@@ -157,6 +160,43 @@ void* parse_var_decl(std::vector<void*>& args, void* data){
     return var_decl;
 }
 
+// var_assign_list : var_assign 
+void* parse_var_assign_list_one_assign(std::vector<void*>& args, void* data){
+    lang::Assign* var_assign = static_cast<lang::Assign*>(args[0]);
+    std::vector<lang::Assign*>* var_assign_list = new std::vector<lang::Assign*>;
+
+    var_assign_list->push_back(var_assign);
+
+    return var_assign_list;
+}
+
+// var_assign_list : var_assign_list COMMA var_assign 
+void* parse_var_assign_list(std::vector<void*>& args, void* data){
+    std::vector<lang::Assign*>* var_assign_list = static_cast<std::vector<lang::Assign*>*>(args[0]);
+    lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
+    lang::Assign* var_assign = static_cast<lang::Assign*>(args[2]);
+
+    var_assign_list->push_back(var_assign);
+
+    delete comma;
+
+    return var_assign_list;
+}
+
+// var_assign : NAME ASSIGN expr
+void* parse_var_assign(std::vector<void*>& args, void* data){
+    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
+    lexing::LexToken* assign = static_cast<lexing::LexToken*>(args[1]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[2]);
+
+    lang::Assign* var_assign = new lang::Assign(name->value, expr);
+
+    delete name;
+    delete assign;
+
+    return var_assign;
+}
+
 // type_decl : NAME 
 void* parse_type_decl_name(std::vector<void*>& args, void* data){
     lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
@@ -218,7 +258,7 @@ void* parse_func_def_with_return(std::vector<void*>& args, void* data){
     return func_def;
 }
 
-// func_def : DEF NAME LPAR var_decl_list RPAR COLON func_suite 
+// func_def : DEF NAME LPAR arg_list RPAR COLON func_suite 
 void* parse_func_def_with_args(std::vector<void*>& args, void* data){
     lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
     lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
@@ -242,7 +282,7 @@ void* parse_func_def_with_args(std::vector<void*>& args, void* data){
     return func_def;
 }
 
-// func_def : DEF NAME LPAR var_decl_list RPAR ARROW type_decl COLON func_suite  
+// func_def : DEF NAME LPAR arg_list RPAR ARROW type_decl COLON func_suite  
 void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data){
     lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
     lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
@@ -266,6 +306,16 @@ void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data)
     delete func_suite;
 
     return func_def;
+}
+
+// arg_list : var_decl_list 
+void* parse_arg_list_only_var_decls(std::vector<void*>& args, void* data){
+    return args[0];
+}
+
+// arg_list : var_assign_list
+void* parse_arg_list_only_kwarg_decls(std::vector<void*>& args, void* data){
+    return args[0];
 }
 
 // func_suite : NEWLINE INDENT func_stmts DEDENT
@@ -329,6 +379,7 @@ void* parse_func_stmt_compound(std::vector<void*>& args, void* data){
 
 // simple_func_stmt : expr_stmt
 //                  | return_stmt
+//                  | var_assign
 void* parse_simple_func_stmt(std::vector<void*>& args, void* data){
     return args[0];
 }
@@ -621,16 +672,27 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"module_stmt_list", {"module_stmt_list", lang::tokens::NEWLINE}, parse_module_stmt_list3},
     {"module_stmt_list", {"module_stmt_list", "func_def"}, parse_module_stmt_list4},
 
-    {"var_decl_list", {"var_decl"}, parse_var_decl_list_one_arg},
-    {"var_decl_list", {"var_decl_list", "COMMA", "var_decl"}, parse_var_decl_list},
-    {"var_decl", {"NAME", "COLON", "type_decl"}, parse_var_decl},
-    {"type_decl", {"NAME"}, parse_type_decl_name},
-
     // Functions 
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_return},
-    {"func_def", {"DEF", "NAME", "LPAR", "var_decl_list", "RPAR", "COLON", "func_suite"}, parse_func_def_with_args},
-    {"func_def", {"DEF", "NAME", "LPAR", "var_decl_list", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_args_with_return},
+    {"func_def", {"DEF", "NAME", "LPAR", "arg_list", "RPAR", "COLON", "func_suite"}, parse_func_def_with_args},
+    {"func_def", {"DEF", "NAME", "LPAR", "arg_list", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_args_with_return},
+
+    {"arg_list", {"var_decl_list"}, parse_arg_list_only_var_decls},
+    {"arg_list", {"var_assign_list"}, parse_arg_list_only_kwarg_decls},
+
+    // List of variable declarations
+    {"var_decl_list", {"var_decl"}, parse_var_decl_list_one_arg},
+    {"var_decl_list", {"var_decl_list", "COMMA", "var_decl"}, parse_var_decl_list},
+    {"var_decl", {"NAME", "COLON", "type_decl"}, parse_var_decl},
+
+    // List of variable assignments 
+    {"var_assign_list", {"var_assign"}, parse_var_assign_list_one_assign},
+    {"var_assign_list", {"var_assign_list", "COMMA", "var_assign"}, parse_var_assign_list},
+    {"var_assign", {"NAME", "ASSIGN", "expr"}, parse_var_assign},
+
+    // Type declarations
+    {"type_decl", {"NAME"}, parse_type_decl_name},
 
     {"func_suite", {lang::tokens::NEWLINE, lang::tokens::INDENT, "func_stmts", lang::tokens::DEDENT}, parse_func_suite},
     {"func_stmts", {"func_stmt"}, parse_func_stmts},
@@ -639,6 +701,7 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"func_stmt", {"compound_func_stmt"}, parse_func_stmt_compound},
     {"simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt},
     {"simple_func_stmt", {"return_stmt"}, parse_simple_func_stmt},
+    {"simple_func_stmt", {"var_assign"}, parse_simple_func_stmt},
     {"compound_func_stmt", {"if_stmt"}, parse_compound_func_stmt_if},
 
     // Simple statements - one line 
