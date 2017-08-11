@@ -7,9 +7,11 @@
 #include <typeinfo>
 #include <stdexcept>
 #include <sstream>
+#include <initializer_list>
+
+#include "utils.h"
 
 namespace lang {
-
     class NodeVisitor {
         public:
             virtual ~NodeVisitor(){}
@@ -76,12 +78,52 @@ namespace lang {
             };
     };
 
+    // The type of an object
+    class TypeDecl: public virtual Node {
+        public:
+            virtual std::string value_str() const = 0;
+            
+            std::vector<std::string> lines() const {
+                std::vector<std::string> v;
+                v.push_back(value_str());
+                return v;
+            };
+    };
+
+    class BaseInferer {
+        public:
+            virtual ~BaseInferer(){}
+    };
+
     class Expr: public virtual Node {
         public:
             // The string representation of the value this expression holds
             virtual std::string value_str() const;
+            virtual TypeDecl* type(BaseInferer&) = 0;
 
             std::vector<std::string> lines() const;
+    };
+
+    template <typename VisitedExpr>
+    class Inferer {
+        public:
+            virtual TypeDecl* infer(VisitedExpr*) = 0;
+    };
+
+    template <typename DerivedExpr>
+    class VisitableExpr: public virtual Expr {
+        public:
+            TypeDecl* type(BaseInferer& base_inferer){
+                try {
+                    Inferer<DerivedExpr>& inferer = dynamic_cast<Inferer<DerivedExpr>&>(base_inferer);
+                    return inferer.infer(static_cast<DerivedExpr*>(this));
+                } catch (const std::bad_cast& e){
+                    std::ostringstream err;
+                    err << "Bad cast thrown in: " << typeid(DerivedExpr).name() << std::endl;
+                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'TypeDecl* infer(your expr*)'." << std::endl;
+                    throw std::runtime_error(err.str());
+                }
+            }
     };
 
     class Assign: public ModuleStmt, public SimpleFuncStmt, public Visitable<Assign> {
@@ -122,7 +164,7 @@ namespace lang {
             const std::vector<FuncStmt*> body() const { return body_; }
     };
 
-    class Call: public Expr, public Visitable<Call> {
+    class Call: public VisitableExpr<Call>, public Visitable<Call> {
         private:
             Expr* func_;
             std::vector<Expr*> args_;
@@ -203,7 +245,7 @@ namespace lang {
             std::string symbol() const { return "-"; }
     };
 
-    class Int: public Expr, public Visitable<Int> {
+    class Int: public VisitableExpr<Int>, public Visitable<Int> {
         private:
             int value_;
 
@@ -214,7 +256,7 @@ namespace lang {
             int value() const { return value_; }
     };
 
-    class NameExpr: public Expr, public Visitable<NameExpr> {
+    class NameExpr: public VisitableExpr<NameExpr>, public Visitable<NameExpr> {
         private:
             std::string name_;
 
@@ -224,7 +266,7 @@ namespace lang {
             std::string name() const { return name_; }
     };
 
-    class String: public Expr, public Visitable<String> {
+    class String: public VisitableExpr<String>, public Visitable<String> {
         private:
             std::string value_;
 
@@ -234,7 +276,7 @@ namespace lang {
             std::string value() const { return value_; }
     };
 
-    class BinExpr: public Expr, public Visitable<BinExpr> {
+    class BinExpr: public VisitableExpr<BinExpr>, public Visitable<BinExpr> {
         private:
             Expr* lhs_;
             BinOperator* op_;
@@ -250,7 +292,7 @@ namespace lang {
             Expr* rhs() const { return rhs_; }
     };
 
-    class UnaryExpr: public Expr, public Visitable<UnaryExpr> {
+    class UnaryExpr: public VisitableExpr<UnaryExpr>, public Visitable<UnaryExpr> {
         private: 
             Expr* expr_;
             UnaryOperator* op_;
@@ -284,15 +326,10 @@ namespace lang {
             Expr* expr() const { return expr_; }
     };
 
-    class TypeDecl: public virtual Node {
+    // Variable arguments collector
+    class StarArgsType: public TypeDecl, public Visitable<StarArgsType> {
         public:
-            virtual std::string value_str() const = 0;
-            
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v;
-                v.push_back(value_str());
-                return v;
-            };
+            std::string value_str() const { return "*"; }
     };
 
     class NameTypeDecl: public TypeDecl, public Visitable<NameTypeDecl> {
@@ -304,6 +341,40 @@ namespace lang {
             NameTypeDecl(const char* name): name_(name){}
             std::string name() const { return name_; }
             std::string value_str() const override { return name_; }
+    };
+
+    class FuncTypeDecl: public TypeDecl, public Visitable<FuncTypeDecl> {
+        private:
+            TypeDecl* return_type_;
+            std::vector<TypeDecl*> args_;
+
+        public:
+            FuncTypeDecl(TypeDecl* return_type, std::vector<TypeDecl*>& args): 
+                return_type_(return_type), args_(args){}
+            FuncTypeDecl(TypeDecl* return_type, std::initializer_list<TypeDecl*> args): 
+                return_type_(return_type), args_(args){}
+
+            ~FuncTypeDecl(){
+                delete return_type_;
+                for (TypeDecl* t : args_){
+                    delete t;
+                }
+            }
+
+            TypeDecl* return_type() const { return return_type_; }
+            const std::vector<TypeDecl*>& args() const { return args_; }
+
+            std::string value_str() const {
+                std::string line = "(";
+
+                std::vector<std::string> v;
+                for (TypeDecl* decl : args_){
+                    v.push_back(decl->value_str());
+                }
+
+                line += join(v, ", ") + ") -> " + return_type_->value_str();
+                return line;
+            }
     };
 
     class VarDecl: public Visitable<VarDecl> {

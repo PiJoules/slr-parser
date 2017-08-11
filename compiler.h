@@ -8,9 +8,45 @@
 #include <unordered_set>
 
 namespace lang {
-    // Mapping variable name to library name
-    extern const std::unordered_map<std::string, std::string> LIB_VARIABLES;
-    extern const std::unordered_set<std::string> LIB_SOURCES;
+    // Mapping variable name to library 
+    typedef struct LibData LibData;
+    struct LibData {
+        std::string lib_filename;
+        std::unordered_map<std::string, TypeDecl*> lib_var_types;
+    };
+    extern const std::unordered_map<std::string, LibData> LIB_DATA;
+
+    class Scope {
+        private:
+            std::unordered_map<std::string, TypeDecl*> varnames_;
+
+        public:
+            Scope(){}
+            Scope(const Scope& scope){
+                varnames_ = scope.varnames();
+            }
+
+            void add_var(const std::string& varname, TypeDecl* type){
+                assert(varnames_.find(varname) == varnames_.end());
+                varnames_[varname] = type;
+            }
+            void check_var_exists(const std::string& varname) const {
+                auto found = varnames_.find(varname);
+                if (found == varnames_.end()){
+                    throw std::runtime_error("Unknown variable '" + varname + "'");
+                }
+            }
+            TypeDecl* var_type(const std::string& varname) const { 
+                auto found = varnames_.find(varname);
+                if (found == varnames_.end()){
+                    throw std::runtime_error("Unknown variable '" + varname + "'");
+                }
+                else {
+                    return found->second;
+                }
+            }
+            const std::unordered_map<std::string, TypeDecl*>& varnames () const { return varnames_; }
+    };
 
     class Compiler: public NodeVisitor,
                     public Visitor<Module>,
@@ -40,7 +76,12 @@ namespace lang {
                     public Visitor<Lte>,
                     public Visitor<Gte>,
 
-                    public Visitor<NameTypeDecl>
+                    public Visitor<NameTypeDecl>,
+
+                    // Inference
+                    public BaseInferer,
+                    public Inferer<Call>,
+                    public Inferer<NameExpr>
     {
         private:
             LangLexer lexer_;
@@ -49,9 +90,27 @@ namespace lang {
             std::unordered_set<std::string> include_libs_;
             std::string cached_type_name_;
 
+            void import_builtin_lib(const LibData& lib);  // Done to global scope 
+
+            // Scope stack 
+            std::vector<Scope> scope_stack_ = {};
+            Scope& global_scope() { return scope_stack_.front(); }
+            Scope& current_scope() { return scope_stack_.back(); }
+            void enter_scope(){ 
+                Scope new_scope = scope_stack_.back();
+                scope_stack_.push_back(new_scope); 
+            }
+            void exit_scope(){ scope_stack_.pop_back(); }
+
+            FuncTypeDecl* funcdef_type(FuncDef*) const;
+
         public:
             Compiler();
             cppnodes::Module* compile(std::string);
+
+            TypeDecl* infer(Expr* expr){
+                return expr->type(*this);
+            }
 
             void* visit(Module*);
 
@@ -87,6 +146,10 @@ namespace lang {
             void* visit(Gte*);
 
             void* visit(NameTypeDecl*);
+
+            // Inference
+            TypeDecl* infer(Call*);
+            TypeDecl* infer(NameExpr*);
     };
 
     // Language cmd interface 

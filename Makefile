@@ -14,7 +14,8 @@ SOURCES = lexer.cpp \
 		  lang_nodes.cpp \
 		  cpp_nodes.cpp \
 		  subprocess.cpp \
-		  compiler.cpp
+		  compiler.cpp \
+		  utils.cpp
 
 OBJS = $(SOURCES:.cpp=.o)
 

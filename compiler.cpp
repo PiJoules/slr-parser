@@ -5,19 +5,39 @@
 #include <unordered_map>
 
 
-const std::unordered_map<std::string, std::string> lang::LIB_VARIABLES = {
-    {"print", "lang_io.h"},
+#define NONE_TYPE new lang::NameTypeDecl("NoneType")
+#define STR_TYPE new lang::NameTypeDecl("str")
+
+
+static const lang::LibData IOLib = {
+    "lang_io.h",
+    {
+        {"print", new lang::FuncTypeDecl(NONE_TYPE, {new lang::StarArgsType})},
+        {"input", new lang::FuncTypeDecl(STR_TYPE, {STR_TYPE})},
+    },
 };
 
-const std::unordered_set<std::string> lang::LIB_SOURCES = {
-    "lang_io.cpp",
-};
+void lang::Compiler::import_builtin_lib(const LibData& lib){
+    // Record the library
+    include_libs_.insert(lib.lib_filename);
 
+    // Add all known variables  
+    const std::unordered_map<std::string, TypeDecl*>& var_types = lib.lib_var_types;
+    Scope& global = global_scope();
+    for (auto it = var_types.begin(); it != var_types.end(); ++it){
+        global.add_var(it->first, it->second);
+    }
+}
 
 lang::Compiler::Compiler(): 
     lexer_(lang::LangLexer(lang::LANG_TOKENS)),
     parser_(parsing::Parser(lexer_, lang::LANG_GRAMMAR))
 {
+    Scope global_scope;
+    scope_stack_.push_back(global_scope);
+
+    // Add all builtin libs at start
+    import_builtin_lib(IOLib);
 }
 
 cppnodes::Module* lang::Compiler::compile(std::string code){
@@ -53,13 +73,35 @@ void* lang::Compiler::visit(Module* module){
     return cpp_module;
 }
 
+lang::FuncTypeDecl* lang::Compiler::funcdef_type(FuncDef* funcdef) const {
+    TypeDecl* ret_type = funcdef->return_type();
+    std::vector<TypeDecl*> args;
+
+    for (VarDecl* arg : funcdef->args()){
+        args.push_back(arg->type());
+    }
+    
+    FuncTypeDecl* func_type = new FuncTypeDecl(ret_type, args);
+    return func_type;
+}
+
 void* lang::Compiler::visit(FuncDef* funcdef){
-    std::string funcname = funcdef->name();
+    std::string func_name = funcdef->name();
     std::vector<FuncStmt*> funcsuite = funcdef->suite();
     std::vector<cppnodes::VarDecl*> cpp_args;
     std::vector<Node*> cpp_body;
 
+    // Add this function to the current scope 
+    FuncTypeDecl* func_type = funcdef_type(funcdef);
+    current_scope().add_var(func_name, func_type);
+
+    // Entering a new scope
+    enter_scope();
+
     for (VarDecl* decl : funcdef->args()){
+        // Save the arguments locally
+        current_scope().add_var(decl->name(), decl->type());
+
         cppnodes::VarDecl* cpp_decl = static_cast<cppnodes::VarDecl*>(decl->accept(*this));
         cpp_args.push_back(cpp_decl);
     }
@@ -70,7 +112,10 @@ void* lang::Compiler::visit(FuncDef* funcdef){
     }
 
     cppnodes::FuncDef* cpp_funcdef = new cppnodes::FuncDef(
-            funcname, "int", cpp_args, cpp_body);
+            func_name, "int", cpp_args, cpp_body);
+
+    // Exiting scope
+    exit_scope();
 
     return cpp_funcdef;
 }
@@ -85,9 +130,12 @@ void* lang::Compiler::visit(ReturnStmt* returnstmt){
 }
 
 void* lang::Compiler::visit(VarDecl* var_decl){
-    cached_type_name_ = var_decl->name();
     TypeDecl* type_decl = var_decl->type();
+
+    cached_type_name_ = var_decl->name();
     cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(type_decl->accept(*this));
+    cached_type_name_.clear();
+
     return cpp_var_decl;
 }
 
@@ -96,7 +144,13 @@ void* lang::Compiler::visit(Assign* assign){
     Expr* expr = assign->expr();
 
     TypeDecl* expr_type = infer(expr);
+
+    current_scope().add_var(varname, expr_type);
+
+    cached_type_name_ = varname;
     cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(expr_type->accept(*this));
+    cached_type_name_.clear();
+
     cppnodes::Expr* cpp_expr = static_cast<cppnodes::Expr*>(expr->accept(*this));
 
     cppnodes::Assign* cpp_assign = new cppnodes::Assign(cpp_var_decl, cpp_expr);
@@ -165,14 +219,8 @@ void* lang::Compiler::visit(String* str){
 }
 
 void* lang::Compiler::visit(NameExpr* name){
+    current_scope().check_var_exists(name->name());
     cppnodes::Name* cpp_name = new cppnodes::Name(name->name());
-
-    // Check for builtin libraries that should be included based on used expressions  
-    auto found_lib = LIB_VARIABLES.find(name->name());
-    if (found_lib != LIB_VARIABLES.end()){
-        include_libs_.insert(found_lib->second);
-    }
-
     return cpp_name;
 }
 
@@ -233,8 +281,19 @@ void* lang::Compiler::visit(Gte* op){
 
 void* lang::Compiler::visit(NameTypeDecl* name_type_decl){
     std::string type_name = name_type_decl->name();
+    assert(!cached_type_name_.empty());
     cppnodes::RegVarDecl* cpp_var_decl = new cppnodes::RegVarDecl(cached_type_name_, type_name);
     return cpp_var_decl;
+}
+
+lang::TypeDecl* lang::Compiler::infer(Call* call){
+    Expr* func = call->func();
+    FuncTypeDecl* func_type = static_cast<FuncTypeDecl*>(infer(func));
+    return func_type->return_type();
+}
+
+lang::TypeDecl* lang::Compiler::infer(NameExpr* name_expr){
+    return current_scope().var_type(name_expr->name());
 }
 
 /************ Cmd line interface **************/
