@@ -1,13 +1,18 @@
 #include "compiler.h"
 #include "subprocess.h"
+#include "utils.h"
 
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 
 
 #define NONE_TYPE new lang::NameTypeDecl("NoneType")
 #define STR_TYPE new lang::NameTypeDecl("str")
 
+static const std::vector<std::string> LANG_SRCS = {
+    "lang_io.cpp",
+};
 
 static const lang::LibData IOLib = {
     "lang_io.h",
@@ -321,6 +326,7 @@ std::string lang::compile_cpp_file(const std::string& src){
     std::vector<std::string> cmd = {
         compiler, optomization, "-std=" + standard, "-I", "lang_include/", "-L", "lang_include/", src
     };
+    cmd.insert(cmd.end(), LANG_SRCS.begin(), LANG_SRCS.end());
 
     subprocess::CompletedProcess result = subproc.run(cmd);
 

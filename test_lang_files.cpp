@@ -15,7 +15,8 @@ void test_fib(){
 
 void test_read_input(){
     std::string filename = "test_lang_files/read_input.lang";
-    lang::run_lang_file(filename);
+    // TODO: Have this accept stdin to test input()
+    lang::compile_lang_file(filename);
 }
 
 int main(){

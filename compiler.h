@@ -18,7 +18,7 @@ namespace lang {
 
     class Scope {
         private:
-            std::unordered_map<std::string, TypeDecl*> varnames_;
+            std::unordered_map<std::string, TypeDecl> varnames_;
 
         public:
             Scope(){}
