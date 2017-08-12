@@ -7,30 +7,40 @@
 #include <unordered_set>
 
 
-#define NONE_TYPE new lang::NameTypeDecl("NoneType")
-#define STR_TYPE new lang::NameTypeDecl("str")
+#define NONE_TYPE new lang::NameType("NoneType")
+#define STR_TYPE new lang::NameType("str")
 
 static const std::vector<std::string> LANG_SRCS = {
-    "lang_io.cpp",
+    "lang_include/lang_io.cpp",
 };
 
-static const lang::LibData IOLib = {
-    "lang_io.h",
-    {
-        {"print", new lang::FuncTypeDecl(NONE_TYPE, {new lang::StarArgsType})},
-        {"input", new lang::FuncTypeDecl(STR_TYPE, {STR_TYPE})},
-    },
-};
+
+lang::LibData lang::create_io_lib(){
+    return {
+        "lang_io.h",
+        {
+            {"print", new lang::FuncType(NONE_TYPE, {new lang::StarArgsType})},
+            {"input", new lang::FuncType(STR_TYPE, {STR_TYPE})},
+        },
+    };
+}
 
 void lang::Compiler::import_builtin_lib(const LibData& lib){
     // Record the library
-    include_libs_.insert(lib.lib_filename);
+    include_libs_[lib.lib_filename] = lib;
 
     // Add all known variables  
-    const std::unordered_map<std::string, TypeDecl*>& var_types = lib.lib_var_types;
+    const std::unordered_map<std::string, LangType*>& var_types = lib.lib_var_types;
     Scope& global = global_scope();
     for (auto it = var_types.begin(); it != var_types.end(); ++it){
         global.add_var(it->first, it->second);
+    }
+}
+
+void lang::free_builtin_lib(const LibData& lib){
+    const std::unordered_map<std::string, LangType*>& var_types = lib.lib_var_types;
+    for (auto it = var_types.begin(); it != var_types.end(); ++it){
+        delete it->second;
     }
 }
 
@@ -42,7 +52,13 @@ lang::Compiler::Compiler():
     scope_stack_.push_back(global_scope);
 
     // Add all builtin libs at start
-    import_builtin_lib(IOLib);
+    import_builtin_lib(create_io_lib());
+}
+
+lang::Compiler::~Compiler(){
+    for (auto it = include_libs_.begin(); it != include_libs_.end(); ++it){
+        free_builtin_lib(it->second);
+    }
 }
 
 cppnodes::Module* lang::Compiler::compile(std::string code){
@@ -52,8 +68,9 @@ cppnodes::Module* lang::Compiler::compile(std::string code){
     void* result = module_node->accept(*this);
     cppnodes::Module* cpp_module = static_cast<cppnodes::Module*>(result);
 
-    // Add any included libs 
-    for (std::string lib : include_libs_){
+    // Add any included builtin libs 
+    for (auto it = include_libs_.begin(); it != include_libs_.end(); ++it){
+        std::string lib = it->first;
         cppnodes::Include* include = new cppnodes::Include(lib);
         cpp_module->prepend(include);
     }
@@ -324,7 +341,7 @@ std::string lang::compile_cpp_file(const std::string& src){
     std::string standard = "c++11";
 
     std::vector<std::string> cmd = {
-        compiler, optomization, "-std=" + standard, "-I", "lang_include/", "-L", "lang_include/", src
+        compiler, optomization, "-std=" + standard, "-I", "lang_include/", src,
     };
     cmd.insert(cmd.end(), LANG_SRCS.begin(), LANG_SRCS.end());
 

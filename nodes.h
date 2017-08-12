@@ -95,11 +95,21 @@ namespace lang {
             virtual ~BaseInferer(){}
     };
 
+    class LangType {
+        public:
+            virtual TypeDecl* as_type_decl() const = 0;
+            virtual ~LangType(){}
+            virtual bool equals(const LangType&) const = 0;
+
+            bool operator==(const LangType& other) const { return equals(other); }
+            bool operator!=(const LangType& other) const { return !(*this == other); }
+    };
+
     class Expr: public virtual Node {
         public:
             // The string representation of the value this expression holds
-            virtual std::string value_str() const;
-            virtual TypeDecl* type(BaseInferer&) = 0;
+            virtual std::string value_str() const = 0;
+            virtual LangType* type(BaseInferer&) = 0;
 
             std::vector<std::string> lines() const;
     };
@@ -107,20 +117,20 @@ namespace lang {
     template <typename VisitedExpr>
     class Inferer {
         public:
-            virtual TypeDecl* infer(VisitedExpr*) = 0;
+            virtual LangType* infer(VisitedExpr*) = 0;
     };
 
     template <typename DerivedExpr>
     class VisitableExpr: public virtual Expr {
         public:
-            TypeDecl* type(BaseInferer& base_inferer){
+            LangType* type(BaseInferer& base_inferer){
                 try {
                     Inferer<DerivedExpr>& inferer = dynamic_cast<Inferer<DerivedExpr>&>(base_inferer);
                     return inferer.infer(static_cast<DerivedExpr*>(this));
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedExpr).name() << std::endl;
-                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'TypeDecl* infer(your expr*)'." << std::endl;
+                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'LangType* infer(your expr*)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
@@ -326,10 +336,19 @@ namespace lang {
             Expr* expr() const { return expr_; }
     };
 
-    // Variable arguments collector
-    class StarArgsType: public TypeDecl, public Visitable<StarArgsType> {
+    // Variable arguments collector 
+    class StarArgsTypeDecl: public TypeDecl, public Visitable<StarArgsTypeDecl> {
         public:
-            std::string value_str() const { return "*"; }
+            std::string value_str() const override { return "*"; }
+    };
+
+    class StarArgsType: public LangType {
+        public:
+            TypeDecl* as_type_decl() const override { return new StarArgsTypeDecl; }
+            bool equals(const LangType& other) const {
+                const StarArgsType* other_star_args = dynamic_cast<const StarArgsType*>(&other);
+                return other_star_args;
+            }
     };
 
     class NameTypeDecl: public TypeDecl, public Visitable<NameTypeDecl> {
@@ -337,10 +356,36 @@ namespace lang {
             std::string name_;
 
         public:
-            NameTypeDecl(std::string& name): name_(name){}
+            NameTypeDecl(const std::string& name): name_(name){}
             NameTypeDecl(const char* name): name_(name){}
             std::string name() const { return name_; }
             std::string value_str() const override { return name_; }
+    };
+
+    class NameType: public LangType {
+        private:
+            std::string name_;
+
+        public:
+            NameType(std::string& name): name_(name){}
+            NameType(const char* name): name_(name){}
+
+            std::string name() const { return name_; }
+
+            TypeDecl* as_type_decl() const {
+                NameTypeDecl* type_decl = new NameTypeDecl(name_);
+                return type_decl;
+            }
+
+            bool equals(const LangType& other) const {
+                const NameType* other_name = dynamic_cast<const NameType*>(&other);
+                if (other_name){
+                    return name_ == other_name->name();
+                }
+                else {
+                    return false;
+                }
+            }
     };
 
     class FuncTypeDecl: public TypeDecl, public Visitable<FuncTypeDecl> {
@@ -374,6 +419,57 @@ namespace lang {
 
                 line += join(v, ", ") + ") -> " + return_type_->value_str();
                 return line;
+            }
+    };
+
+    class FuncType: public LangType {
+        private:
+            LangType* return_type_;
+            std::vector<LangType*> args_;
+
+        public:
+            FuncType(LangType* return_type, std::vector<LangType*>& args):
+                return_type_(return_type), args_(args){}
+            FuncType(LangType* return_type, std::initializer_list<LangType*> args):
+                return_type_(return_type), args_(args){}
+            ~FuncType(){
+                delete return_type_;
+                for (LangType* t : args_){
+                    delete t;
+                }
+            }
+
+            LangType* return_type() const { return return_type_; }
+            const std::vector<LangType*>& args() const { return args_; }
+
+            TypeDecl* as_type_decl() const {
+                std::vector<TypeDecl*> args;
+                for (LangType* arg : args_){
+                    args.push_back(arg->as_type_decl());
+                }
+                return new FuncTypeDecl(return_type_->as_type_decl(), args);
+            }
+
+            bool equals(const LangType& other) const {
+                const FuncType* other_func = dynamic_cast<const FuncType*>(&other);
+                if (other_func){
+                    // Check return type
+                    if (*return_type_ == *(other_func->return_type())){
+                        // Check arguments
+                        const std::vector<LangType*>& other_args = other_func->args();
+                        if (args_.size() == other_args.size()){
+                            for (std::size_t i = 0; i < args_.size(); ++i){
+                                if (*(args_[i]) != *(other_args[i])){
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                }
+                else {
+                    return false;
+                }
             }
     };
 
