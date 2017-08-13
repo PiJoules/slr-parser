@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <initializer_list>
+#include <memory>
 
 #include "utils.h"
 
@@ -78,10 +79,13 @@ namespace lang {
             };
     };
 
+    class LangType;
+
     // The type of an object
     class TypeDecl: public virtual Node {
         public:
             virtual std::string value_str() const = 0;
+            virtual std::shared_ptr<LangType> as_type() const = 0;
             
             std::vector<std::string> lines() const {
                 std::vector<std::string> v;
@@ -109,7 +113,7 @@ namespace lang {
         public:
             // The string representation of the value this expression holds
             virtual std::string value_str() const = 0;
-            virtual LangType* type(BaseInferer&) = 0;
+            virtual std::shared_ptr<LangType> type(BaseInferer&) = 0;
 
             std::vector<std::string> lines() const;
     };
@@ -117,20 +121,20 @@ namespace lang {
     template <typename VisitedExpr>
     class Inferer {
         public:
-            virtual LangType* infer(VisitedExpr*) = 0;
+            virtual std::shared_ptr<LangType> infer(VisitedExpr*) = 0;
     };
 
     template <typename DerivedExpr>
     class VisitableExpr: public virtual Expr {
         public:
-            LangType* type(BaseInferer& base_inferer){
+            std::shared_ptr<LangType> type(BaseInferer& base_inferer){
                 try {
                     Inferer<DerivedExpr>& inferer = dynamic_cast<Inferer<DerivedExpr>&>(base_inferer);
                     return inferer.infer(static_cast<DerivedExpr*>(this));
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedExpr).name() << std::endl;
-                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'LangType* infer(your expr*)'." << std::endl;
+                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'std::shared_ptr<LangType> infer(your expr*)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
@@ -336,10 +340,11 @@ namespace lang {
             Expr* expr() const { return expr_; }
     };
 
-    // Variable arguments collector 
+    // Variable arguments collector  
     class StarArgsTypeDecl: public TypeDecl, public Visitable<StarArgsTypeDecl> {
         public:
             std::string value_str() const override { return "*"; }
+            std::shared_ptr<LangType> as_type() const override;
     };
 
     class StarArgsType: public LangType {
@@ -360,6 +365,7 @@ namespace lang {
             NameTypeDecl(const char* name): name_(name){}
             std::string name() const { return name_; }
             std::string value_str() const override { return name_; }
+            std::shared_ptr<LangType> as_type() const override;
     };
 
     class NameType: public LangType {
@@ -367,7 +373,7 @@ namespace lang {
             std::string name_;
 
         public:
-            NameType(std::string& name): name_(name){}
+            NameType(const std::string& name): name_(name){}
             NameType(const char* name): name_(name){}
 
             std::string name() const { return name_; }
@@ -398,6 +404,7 @@ namespace lang {
                 return_type_(return_type), args_(args){}
             FuncTypeDecl(TypeDecl* return_type, std::initializer_list<TypeDecl*> args): 
                 return_type_(return_type), args_(args){}
+            std::shared_ptr<LangType> as_type() const override;
 
             ~FuncTypeDecl(){
                 delete return_type_;
@@ -424,27 +431,21 @@ namespace lang {
 
     class FuncType: public LangType {
         private:
-            LangType* return_type_;
-            std::vector<LangType*> args_;
+            std::shared_ptr<LangType> return_type_;
+            std::vector<std::shared_ptr<LangType>> args_;
 
         public:
-            FuncType(LangType* return_type, std::vector<LangType*>& args):
+            FuncType(std::shared_ptr<LangType> return_type, std::vector<std::shared_ptr<LangType>>& args):
                 return_type_(return_type), args_(args){}
-            FuncType(LangType* return_type, std::initializer_list<LangType*> args):
+            FuncType(std::shared_ptr<LangType> return_type, std::initializer_list<std::shared_ptr<LangType>> args):
                 return_type_(return_type), args_(args){}
-            ~FuncType(){
-                delete return_type_;
-                for (LangType* t : args_){
-                    delete t;
-                }
-            }
 
-            LangType* return_type() const { return return_type_; }
-            const std::vector<LangType*>& args() const { return args_; }
+            std::shared_ptr<LangType> return_type() const { return return_type_; }
+            const std::vector<std::shared_ptr<LangType>>& args() const { return args_; }
 
             TypeDecl* as_type_decl() const {
                 std::vector<TypeDecl*> args;
-                for (LangType* arg : args_){
+                for (std::shared_ptr<LangType> arg : args_){
                     args.push_back(arg->as_type_decl());
                 }
                 return new FuncTypeDecl(return_type_->as_type_decl(), args);
@@ -456,7 +457,7 @@ namespace lang {
                     // Check return type
                     if (*return_type_ == *(other_func->return_type())){
                         // Check arguments
-                        const std::vector<LangType*>& other_args = other_func->args();
+                        const std::vector<std::shared_ptr<LangType>>& other_args = other_func->args();
                         if (args_.size() == other_args.size()){
                             for (std::size_t i = 0; i < args_.size(); ++i){
                                 if (*(args_[i]) != *(other_args[i])){
@@ -498,7 +499,7 @@ namespace lang {
         private:
             std::string func_name_;
             std::vector<VarDecl*> args_;
-            TypeDecl* return_type_;
+            TypeDecl* return_type_decl_;
             std::vector<FuncStmt*> func_suite_;
 
         public:
@@ -509,7 +510,7 @@ namespace lang {
 
             const std::vector<FuncStmt*>& suite() const { return func_suite_; }
             std::string name() const { return func_name_; }
-            TypeDecl* return_type() const { return return_type_; }
+            TypeDecl* return_type_decl() const { return return_type_decl_; }
             const std::vector<VarDecl*>& args() const { return args_; }
     };
 

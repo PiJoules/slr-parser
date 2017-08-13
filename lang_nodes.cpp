@@ -33,7 +33,7 @@ lang::FuncDef::FuncDef(const std::string& func_name,
                        std::vector<FuncStmt*>& func_suite):
     func_name_(func_name),
     args_(args),
-    return_type_(return_type),
+    return_type_decl_(return_type),
     func_suite_(func_suite){}
 
 lang::FuncDef::~FuncDef(){
@@ -43,7 +43,7 @@ lang::FuncDef::~FuncDef(){
     for (const Node* arg : args_){
         delete arg;
     }
-    delete return_type_;
+    delete return_type_decl_;
 }
 
 std::vector<std::string> lang::FuncDef::lines() const {
@@ -61,7 +61,7 @@ std::vector<std::string> lang::FuncDef::lines() const {
     line1 << ") -> ";
 
     // Return type 
-    line1 << return_type_->value_str();
+    line1 << return_type_decl_->value_str();
 
     line1 << ":";
 
@@ -218,4 +218,18 @@ std::vector<std::string> lang::IfStmt::lines() const {
     }
 
     return stmt_lines;
+}
+
+std::shared_ptr<lang::LangType> lang::StarArgsTypeDecl::as_type() const { 
+    return std::shared_ptr<LangType>(new StarArgsType); 
+}
+std::shared_ptr<lang::LangType> lang::NameTypeDecl::as_type() const { 
+    return std::shared_ptr<LangType>(new NameType(name_)); 
+}
+std::shared_ptr<lang::LangType> lang::FuncTypeDecl::as_type() const {
+    std::vector<std::shared_ptr<LangType>> args;
+    for (TypeDecl* arg : args_){
+        args.push_back(arg->as_type());
+    }
+    return std::shared_ptr<LangType>(new FuncType(return_type_->as_type(), args));
 }

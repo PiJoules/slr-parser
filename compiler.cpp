@@ -7,8 +7,9 @@
 #include <unordered_set>
 
 
-#define NONE_TYPE new lang::NameType("NoneType")
-#define STR_TYPE new lang::NameType("str")
+#define NONE_TYPE std::shared_ptr<lang::LangType>(new lang::NameType("NoneType"))
+#define STR_TYPE std::shared_ptr<lang::LangType>(new lang::NameType("str"))
+#define STAR_ARGS_TYPE std::shared_ptr<lang::LangType>(new lang::StarArgsType)
 
 static const std::vector<std::string> LANG_SRCS = {
     "lang_include/lang_io.cpp",
@@ -19,8 +20,15 @@ lang::LibData lang::create_io_lib(){
     return {
         "lang_io.h",
         {
-            {"print", new lang::FuncType(NONE_TYPE, {new lang::StarArgsType})},
-            {"input", new lang::FuncType(STR_TYPE, {STR_TYPE})},
+            {"print", 
+                std::shared_ptr<lang::LangType>(
+                    new lang::FuncType(
+                        NONE_TYPE,
+                        {STAR_ARGS_TYPE}
+                    )
+                )
+            },
+            {"input", std::shared_ptr<lang::LangType>(new lang::FuncType(STR_TYPE, {STR_TYPE}))},
         },
     };
 }
@@ -30,17 +38,10 @@ void lang::Compiler::import_builtin_lib(const LibData& lib){
     include_libs_[lib.lib_filename] = lib;
 
     // Add all known variables  
-    const std::unordered_map<std::string, LangType*>& var_types = lib.lib_var_types;
+    const std::unordered_map<std::string, std::shared_ptr<LangType>>& var_types = lib.lib_var_types;
     Scope& global = global_scope();
     for (auto it = var_types.begin(); it != var_types.end(); ++it){
         global.add_var(it->first, it->second);
-    }
-}
-
-void lang::free_builtin_lib(const LibData& lib){
-    const std::unordered_map<std::string, LangType*>& var_types = lib.lib_var_types;
-    for (auto it = var_types.begin(); it != var_types.end(); ++it){
-        delete it->second;
     }
 }
 
@@ -56,9 +57,8 @@ lang::Compiler::Compiler():
 }
 
 lang::Compiler::~Compiler(){
-    for (auto it = include_libs_.begin(); it != include_libs_.end(); ++it){
-        free_builtin_lib(it->second);
-    }
+    assert(scope_stack_.size() == 1);
+    scope_stack_.pop_back();
 }
 
 cppnodes::Module* lang::Compiler::compile(std::string code){
@@ -95,16 +95,16 @@ void* lang::Compiler::visit(Module* module){
     return cpp_module;
 }
 
-lang::FuncTypeDecl* lang::Compiler::funcdef_type(FuncDef* funcdef) const {
-    TypeDecl* ret_type = funcdef->return_type();
-    std::vector<TypeDecl*> args;
+std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef* funcdef) const {
+    TypeDecl* ret_type_decl = funcdef->return_type_decl();
+    std::shared_ptr<LangType> ret_type = ret_type_decl->as_type();
+    std::vector<std::shared_ptr<LangType>> args;
 
     for (VarDecl* arg : funcdef->args()){
-        args.push_back(arg->type());
+        args.push_back(arg->type()->as_type());
     }
     
-    FuncTypeDecl* func_type = new FuncTypeDecl(ret_type, args);
-    return func_type;
+    return std::shared_ptr<FuncType>(new FuncType(ret_type, args));
 }
 
 void* lang::Compiler::visit(FuncDef* funcdef){
@@ -114,7 +114,7 @@ void* lang::Compiler::visit(FuncDef* funcdef){
     std::vector<Node*> cpp_body;
 
     // Add this function to the current scope 
-    FuncTypeDecl* func_type = funcdef_type(funcdef);
+    std::shared_ptr<FuncType> func_type = funcdef_type(funcdef);
     current_scope().add_var(func_name, func_type);
 
     // Entering a new scope
@@ -122,7 +122,7 @@ void* lang::Compiler::visit(FuncDef* funcdef){
 
     for (VarDecl* decl : funcdef->args()){
         // Save the arguments locally
-        current_scope().add_var(decl->name(), decl->type());
+        current_scope().add_var(decl->name(), decl->type()->as_type());
 
         cppnodes::VarDecl* cpp_decl = static_cast<cppnodes::VarDecl*>(decl->accept(*this));
         cpp_args.push_back(cpp_decl);
@@ -165,13 +165,16 @@ void* lang::Compiler::visit(Assign* assign){
     std::string varname = assign->varname();
     Expr* expr = assign->expr();
 
-    TypeDecl* expr_type = infer(expr);
+    std::shared_ptr<LangType> expr_type = infer(expr);
+    TypeDecl* expr_type_decl = expr_type->as_type_decl();
 
     current_scope().add_var(varname, expr_type);
 
     cached_type_name_ = varname;
-    cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(expr_type->accept(*this));
+    cppnodes::VarDecl* cpp_var_decl = static_cast<cppnodes::VarDecl*>(expr_type_decl->accept(*this));
     cached_type_name_.clear();
+
+    delete expr_type_decl;
 
     cppnodes::Expr* cpp_expr = static_cast<cppnodes::Expr*>(expr->accept(*this));
 
@@ -308,13 +311,14 @@ void* lang::Compiler::visit(NameTypeDecl* name_type_decl){
     return cpp_var_decl;
 }
 
-lang::TypeDecl* lang::Compiler::infer(Call* call){
+std::shared_ptr<lang::LangType> lang::Compiler::infer(Call* call){
     Expr* func = call->func();
-    FuncTypeDecl* func_type = static_cast<FuncTypeDecl*>(infer(func));
+    std::shared_ptr<LangType> result = infer(func);
+    std::shared_ptr<FuncType> func_type = std::static_pointer_cast<FuncType>(result);
     return func_type->return_type();
 }
 
-lang::TypeDecl* lang::Compiler::infer(NameExpr* name_expr){
+std::shared_ptr<lang::LangType> lang::Compiler::infer(NameExpr* name_expr){
     return current_scope().var_type(name_expr->name());
 }
 
@@ -348,7 +352,10 @@ std::string lang::compile_cpp_file(const std::string& src){
     subprocess::CompletedProcess result = subproc.run(cmd);
 
     if (result.returncode){
-        throw std::runtime_error(result.stderr);
+        std::ostringstream err;
+        err << "Error when compiling generated c++ code from lang:" << std::endl << std::endl;
+        err << result.stderr;
+        throw std::runtime_error(err.str());
     }
 
     return "a.out";

@@ -6,17 +6,17 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <memory>
 
 namespace lang {
     // Mapping variable name to library 
     typedef struct LibData LibData;
     struct LibData {
         std::string lib_filename;
-        std::unordered_map<std::string, LangType*> lib_var_types;
+        std::unordered_map<std::string, std::shared_ptr<LangType>> lib_var_types;
     };
 
     LibData create_io_lib();
-    void free_builtin_lib(const LibData&);
 
     /**
      * NOTE: The scope only holds pointers to TypeDecls created outside of it,
@@ -24,27 +24,25 @@ namespace lang {
      */
     class Scope {
         private:
-            std::unordered_map<std::string, LangType*> varnames_;
+            std::unordered_map<std::string, std::shared_ptr<LangType>> varnames_;
 
         public:
             Scope(){}
-            Scope(const Scope& scope){
-                varnames_ = scope.varnames();
-            }
+            Scope(const Scope& scope): varnames_(scope.varnames()){}
 
             /**
              * TypeDecls can be added to the scope through:
              * - Importing the builtin libs at start 
              * - Creation of a new type (func/class defs)
              */
-            void add_var(const std::string& varname, LangType* type){
+            void add_var(const std::string& varname, std::shared_ptr<LangType> type){
                 auto found_var = varnames_.find(varname);
                 if (found_var == varnames_.end()){
                     varnames_[varname] = type;
                 }
                 else {
                     // Check types match
-                    assert(*(found_var->second) == *type);
+                    assert(*(found_var->second.get()) == *(type.get()));
                 }
             }
             void check_var_exists(const std::string& varname) const {
@@ -53,7 +51,7 @@ namespace lang {
                     throw std::runtime_error("Unknown variable '" + varname + "'");
                 }
             }
-            LangType* var_type(const std::string& varname) const { 
+            std::shared_ptr<LangType> var_type(const std::string& varname) const { 
                 auto found = varnames_.find(varname);
                 if (found == varnames_.end()){
                     throw std::runtime_error("Unknown variable '" + varname + "'");
@@ -62,7 +60,14 @@ namespace lang {
                     return found->second;
                 }
             }
-            const std::unordered_map<std::string, LangType*>& varnames () const { return varnames_; }
+            //const std::unordered_map<std::string, std::shared_ptr<LangType>>& varnames () const { return varnames_; }
+            std::unordered_map<std::string, std::shared_ptr<LangType>> varnames () const { 
+                std::unordered_map<std::string, std::shared_ptr<LangType>> varnames_cpy;
+                for (auto it = varnames_.begin(); it != varnames_.end(); ++it){
+                    varnames_cpy[it->first] = it->second;
+                }
+                return varnames_cpy; 
+            }
     };
 
     class Compiler: public NodeVisitor,
@@ -119,14 +124,14 @@ namespace lang {
             }
             void exit_scope(){ scope_stack_.pop_back(); }
 
-            FuncTypeDecl* funcdef_type(FuncDef*) const;
+            std::shared_ptr<FuncType> funcdef_type(FuncDef*) const;
 
         public:
             Compiler();
             ~Compiler();
             cppnodes::Module* compile(std::string);
 
-            LangType* infer(Expr* expr){
+            std::shared_ptr<LangType> infer(Expr* expr){
                 return expr->type(*this);
             }
 
@@ -166,8 +171,8 @@ namespace lang {
             void* visit(NameTypeDecl*);
 
             // Inference
-            LangType* infer(Call*);
-            LangType* infer(NameExpr*);
+            std::shared_ptr<LangType> infer(Call*);
+            std::shared_ptr<LangType> infer(NameExpr*);
     };
 
     // Language cmd interface 
