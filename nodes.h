@@ -9,6 +9,7 @@
 #include <sstream>
 #include <initializer_list>
 #include <memory>
+#include <iostream>
 
 #include "utils.h"
 
@@ -55,7 +56,18 @@ namespace lang {
             void* accept(NodeVisitor& base_visitor){
                 try {
                     Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
-                    return visitor.visit(static_cast<DerivedNode*>(this));
+
+#ifdef DEBUG
+                    std::cerr << "visiting " << typeid(DerivedNode).name() << std::endl;
+#endif
+
+                    void* result = visitor.visit(static_cast<DerivedNode*>(this));
+
+#ifdef DEBUG 
+                    std::cerr << "leaving " << typeid(DerivedNode).name() << std::endl;
+#endif
+
+                    return result;
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
@@ -68,7 +80,7 @@ namespace lang {
     class ModuleStmt: public virtual Node {};
     class FuncStmt: public virtual Node {};
 
-    class SimpleFuncStmt: public virtual FuncStmt {
+    class SimpleNode: public virtual Node {
         public:
             virtual std::string line() const = 0;
             
@@ -78,6 +90,8 @@ namespace lang {
                 return v;
             };
     };
+
+    class SimpleFuncStmt: public virtual FuncStmt, public virtual SimpleNode {};
 
     class LangType;
 
@@ -432,12 +446,14 @@ namespace lang {
     class FuncType: public LangType {
         private:
             std::shared_ptr<LangType> return_type_;
-            std::vector<std::shared_ptr<LangType>> args_;
+            std::vector<std::shared_ptr<LangType>> pos_args_;
 
         public:
-            FuncType(std::shared_ptr<LangType> return_type, std::vector<std::shared_ptr<LangType>>& args):
+            FuncType(std::shared_ptr<LangType> return_type, 
+                    std::vector<std::shared_ptr<LangType>>& args):
                 return_type_(return_type), args_(args){}
-            FuncType(std::shared_ptr<LangType> return_type, std::initializer_list<std::shared_ptr<LangType>> args):
+            FuncType(std::shared_ptr<LangType> return_type, 
+                    std::initializer_list<std::shared_ptr<LangType>> args):
                 return_type_(return_type), args_(args){}
 
             std::shared_ptr<LangType> return_type() const { return return_type_; }
@@ -474,7 +490,7 @@ namespace lang {
             }
     };
 
-    class VarDecl: public Visitable<VarDecl> {
+    class VarDecl: public SimpleFuncStmt, public Visitable<VarDecl> {
         private:
             std::string name_;
             TypeDecl* type_;
@@ -488,30 +504,79 @@ namespace lang {
             std::string name() const { return name_; }
             TypeDecl* type() const { return type_; }
 
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v;
-                std::string line = name_ + ": " + type_->value_str();
-                return v;
+            std::string line() const {
+                return name_ + ": " + type_->value_str();
             }
+    };
+
+    class FuncArgs: public SimpleNode, public Visitable<FuncArgs> {
+        private:
+            std::vector<VarDecl*> pos_args_;
+            std::string varargs_name_;
+            std::vector<Assign*> keyword_args_;
+            std::string kwargs_name_;
+
+        public:
+            FuncArgs(const std::vector<VarDecl*>& pos_args,
+                     const std::string& varargs_name, // *args
+                     const std::vector<Assign*>& keyword_args,
+                     const std::string& kwargs_name // **kwargs 
+                     ):
+                pos_args_(pos_args),
+                varargs_name_(varargs_name),
+                keyword_args_(keyword_args),
+                kwargs_name_(kwargs_name){}
+            FuncArgs(const std::initializer_list<VarDecl*>& pos_args,
+                     const std::string& varargs_name, // *args
+                     const std::initializer_list<Assign*>& keyword_args,
+                     const std::string& kwargs_name // **kwargs 
+                     ):
+                pos_args_(pos_args),
+                varargs_name_(varargs_name),
+                keyword_args_(keyword_args),
+                kwargs_name_(kwargs_name){}
+            FuncArgs(){}
+
+            ~FuncArgs(){
+                for (VarDecl* arg : pos_args_){ delete arg; }
+                for (Assign* arg : keyword_args_){ delete arg; }
+            }
+
+            const std::vector<VarDecl*>& pos_args() const { return pos_args_; }
+            const std::vector<Assign*>& keyword_args() const { return keyword_args_; }
+            std::string varargs_name() const { return varargs_name_; }
+            std::string kwargs_name() const { return varargs_name_; }
+            bool has_varargs() const { return !varargs_name_.empty(); }
+            bool has_kwargs() const { return !kwargs_name_.empty(); }
+
+            std::string line() const override;
     };
 
     class FuncDef: public ModuleStmt, public Visitable<FuncDef> {
         private:
             std::string func_name_;
-            std::vector<VarDecl*> args_;
+            FuncArgs* args_;
             TypeDecl* return_type_decl_;
             std::vector<FuncStmt*> func_suite_;
 
         public:
-            FuncDef(const std::string&, const std::vector<VarDecl*>&, TypeDecl*, 
-                    std::vector<FuncStmt*>&);
+            FuncDef(const std::string& func_name, 
+                    FuncArgs* args,
+                    TypeDecl* return_type_decl, 
+                    std::vector<FuncStmt*>& func_suite):
+                func_name_(func_name),
+                args_(args),
+                return_type_decl_(return_type_decl),
+                func_suite_(func_suite){}
+
             std::vector<std::string> lines() const;
+
             ~FuncDef();
 
             const std::vector<FuncStmt*>& suite() const { return func_suite_; }
             std::string name() const { return func_name_; }
             TypeDecl* return_type_decl() const { return return_type_decl_; }
-            const std::vector<VarDecl*>& args() const { return args_; }
+            FuncArgs* args() const { return args_; }
     };
 
     class Module: public Visitable<Module> {

@@ -96,13 +96,22 @@ void* lang::Compiler::visit(Module* module){
 }
 
 std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef* funcdef) const {
+    std::cerr << 1.1 << std::endl;
     TypeDecl* ret_type_decl = funcdef->return_type_decl();
+    std::cerr << 1.2 << std::endl;
     std::shared_ptr<LangType> ret_type = ret_type_decl->as_type();
+    std::cerr << 1.3 << std::endl;
     std::vector<std::shared_ptr<LangType>> args;
 
     for (VarDecl* arg : funcdef->args()){
-        args.push_back(arg->type()->as_type());
+        std::cerr << 1.31 << std::endl;
+        TypeDecl* type_decl = arg->type();
+        std::cerr << 1.32 << std::endl;
+        std::shared_ptr<LangType> type = type_decl->as_type();
+        std::cerr << 1.33 << std::endl;
+        args.push_back(type);
     }
+    std::cerr << 1.4 << std::endl;
     
     return std::shared_ptr<FuncType>(new FuncType(ret_type, args));
 }
@@ -113,8 +122,10 @@ void* lang::Compiler::visit(FuncDef* funcdef){
     std::vector<cppnodes::VarDecl*> cpp_args;
     std::vector<Node*> cpp_body;
 
-    // Add this function to the current scope 
+    // Add this function to the current scope  
+    std::cerr << 1 << std::endl;
     std::shared_ptr<FuncType> func_type = funcdef_type(funcdef);
+    std::cerr << 2 << std::endl;
     current_scope().add_var(func_name, func_type);
 
     // Entering a new scope
@@ -127,6 +138,7 @@ void* lang::Compiler::visit(FuncDef* funcdef){
         cppnodes::VarDecl* cpp_decl = static_cast<cppnodes::VarDecl*>(decl->accept(*this));
         cpp_args.push_back(cpp_decl);
     }
+    std::cerr << 3 << std::endl;
 
     for (FuncStmt* stmt : funcsuite){
         void* cpp_stmt = stmt->accept(*this);

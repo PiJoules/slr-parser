@@ -25,40 +25,49 @@ lang::Module::~Module(){
 }
 
 /**
+ * Function args
+ */ 
+std::string lang::FuncArgs::line() const {
+    // Func positional args  
+    std::vector<std::string> arg_strs;
+    for (VarDecl* arg : pos_args_){
+        arg_strs.push_back(arg->line());
+    }
+
+    // varargs 
+    if (has_varargs()){
+        arg_strs.push_back("*" + varargs_name_);
+    }
+
+    // keyword args
+    for (Assign* arg : keyword_args_){
+        arg_strs.push_back(arg->line());
+    }
+
+    // kwargs
+    if (has_kwargs()){
+        arg_strs.push_back("**" + kwargs_name_);
+    }
+
+    return join(arg_strs, ", ");
+}
+
+/**
  * FuncDef Module statement
  */ 
-lang::FuncDef::FuncDef(const std::string& func_name, 
-                       const std::vector<VarDecl*>& args,
-                       TypeDecl* return_type,
-                       std::vector<FuncStmt*>& func_suite):
-    func_name_(func_name),
-    args_(args),
-    return_type_decl_(return_type),
-    func_suite_(func_suite){}
-
 lang::FuncDef::~FuncDef(){
+    delete args_;
+    delete return_type_decl_;
     for (const Node* stmt : func_suite_){
         delete stmt;
     }
-    for (const Node* arg : args_){
-        delete arg;
-    }
-    delete return_type_decl_;
 }
 
 std::vector<std::string> lang::FuncDef::lines() const {
     std::vector<std::string> v;
 
     std::ostringstream line1;
-    line1 << "def " << func_name_ << "(";
-
-    // Func args  
-    std::vector<std::string> arg_strs;
-    for (VarDecl* arg : args_){
-        arg_strs.push_back(arg->str());
-    }
-    line1 << join(arg_strs, ", ");
-    line1 << ") -> ";
+    line1 << "def " << func_name_ << "(" << args_->line() << ") -> ";
 
     // Return type 
     line1 << return_type_decl_->value_str();

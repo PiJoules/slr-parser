@@ -217,7 +217,7 @@ void* parse_func_def(std::vector<void*>& args, void* data){
     lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[4]);
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
 
-    std::vector<lang::VarDecl*> func_args;
+    lang::FuncArgs* func_args = new lang::FuncArgs;
     lang::TypeDecl* return_type = DEFAULT_FUNC_RETURN_TYPE;
     
     lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, return_type, *func_suite);
@@ -243,7 +243,7 @@ void* parse_func_def_with_return(std::vector<void*>& args, void* data){
     lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[6]);
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[7]);
 
-    std::vector<lang::VarDecl*> func_args;
+    lang::FuncArgs* func_args = new lang::FuncArgs;
 
     lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, type_decl, *func_suite);
 
@@ -258,18 +258,18 @@ void* parse_func_def_with_return(std::vector<void*>& args, void* data){
     return func_def;
 }
 
-// func_def : DEF NAME LPAR arg_list RPAR COLON func_suite 
+// func_def : DEF NAME LPAR func_args RPAR COLON func_suite 
 void* parse_func_def_with_args(std::vector<void*>& args, void* data){
     lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
     lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
     lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
-    std::vector<lang::VarDecl*>* func_args = static_cast<std::vector<lang::VarDecl*>*>(args[3]);
+    lang::FuncArgs* func_args = static_cast<lang::FuncArgs*>(args[3]);
     lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[4]);
     lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[5]);
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[6]);
     
     lang::TypeDecl* return_type = DEFAULT_FUNC_RETURN_TYPE;
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, *func_args, return_type, *func_suite);
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, return_type, *func_suite);
 
     delete def;
     delete name;
@@ -282,19 +282,19 @@ void* parse_func_def_with_args(std::vector<void*>& args, void* data){
     return func_def;
 }
 
-// func_def : DEF NAME LPAR arg_list RPAR ARROW type_decl COLON func_suite  
+// func_def : DEF NAME LPAR func_args RPAR ARROW type_decl COLON func_suite  
 void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data){
     lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
     lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
     lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
-    std::vector<lang::VarDecl*>* func_args = static_cast<std::vector<lang::VarDecl*>*>(args[3]);
+    lang::FuncArgs* func_args = static_cast<lang::FuncArgs*>(args[3]);
     lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[4]);
     lexing::LexToken* arrow = static_cast<lexing::LexToken*>(args[5]);
     lang::TypeDecl* type_decl = static_cast<lang::TypeDecl*>(args[6]);
     lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[7]);
     std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[8]);
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, *func_args, type_decl, *func_suite);
+    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, type_decl, *func_suite);
 
     delete def;
     delete name;
@@ -308,14 +308,26 @@ void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data)
     return func_def;
 }
 
-// arg_list : var_decl_list 
+// func_args : var_decl_list 
 void* parse_arg_list_only_var_decls(std::vector<void*>& args, void* data){
-    return args[0];
+    std::vector<lang::VarDecl*>* var_decl_list = static_cast<std::vector<lang::VarDecl*>*>(args[0]);
+
+    lang::FuncArgs* func_args = new lang::FuncArgs(*var_decl_list, "", {}, "");
+
+    delete var_decl_list;
+
+    return func_args;
 }
 
-// arg_list : var_assign_list
+// func_args : var_assign_list
 void* parse_arg_list_only_kwarg_decls(std::vector<void*>& args, void* data){
-    return args[0];
+    std::vector<lang::Assign*>* assign_list = static_cast<std::vector<lang::Assign*>*>(args[0]);
+
+    lang::FuncArgs* func_args = new lang::FuncArgs({}, "", *assign_list, "");
+
+    delete assign_list;
+
+    return func_args;
 }
 
 // func_suite : NEWLINE INDENT func_stmts DEDENT
@@ -675,11 +687,11 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // Functions 
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_return},
-    {"func_def", {"DEF", "NAME", "LPAR", "arg_list", "RPAR", "COLON", "func_suite"}, parse_func_def_with_args},
-    {"func_def", {"DEF", "NAME", "LPAR", "arg_list", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_args_with_return},
+    {"func_def", {"DEF", "NAME", "LPAR", "func_args", "RPAR", "COLON", "func_suite"}, parse_func_def_with_args},
+    {"func_def", {"DEF", "NAME", "LPAR", "func_args", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_args_with_return},
 
-    {"arg_list", {"var_decl_list"}, parse_arg_list_only_var_decls},
-    {"arg_list", {"var_assign_list"}, parse_arg_list_only_kwarg_decls},
+    {"func_args", {"var_decl_list"}, parse_arg_list_only_var_decls},
+    {"func_args", {"var_assign_list"}, parse_arg_list_only_kwarg_decls},
 
     // List of variable declarations
     {"var_decl_list", {"var_decl"}, parse_var_decl_list_one_arg},
