@@ -124,7 +124,7 @@ namespace lang {
             }
             void exit_scope(){ scope_stack_.pop_back(); }
 
-            std::shared_ptr<FuncType> funcdef_type(FuncDef*) const;
+            std::shared_ptr<FuncType> funcdef_type(FuncDef*);
 
         public:
             Compiler();

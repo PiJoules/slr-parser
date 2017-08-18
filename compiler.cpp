@@ -22,13 +22,10 @@ lang::LibData lang::create_io_lib(){
         {
             {"print", 
                 std::shared_ptr<lang::LangType>(
-                    new lang::FuncType(
-                        NONE_TYPE,
-                        {STAR_ARGS_TYPE}
-                    )
+                    new lang::FuncType(NONE_TYPE, {}, true, false)
                 )
             },
-            {"input", std::shared_ptr<lang::LangType>(new lang::FuncType(STR_TYPE, {STR_TYPE}))},
+            {"input", std::shared_ptr<lang::LangType>(new lang::FuncType(STR_TYPE, {STR_TYPE}, false, false))},
         },
     };
 }
@@ -95,7 +92,7 @@ void* lang::Compiler::visit(Module* module){
     return cpp_module;
 }
 
-std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef* funcdef) const {
+std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef* funcdef){
     std::cerr << 1.1 << std::endl;
     TypeDecl* ret_type_decl = funcdef->return_type_decl();
     std::cerr << 1.2 << std::endl;
@@ -103,7 +100,9 @@ std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef* funcdef) c
     std::cerr << 1.3 << std::endl;
     std::vector<std::shared_ptr<LangType>> args;
 
-    for (VarDecl* arg : funcdef->args()){
+    FuncArgs* func_args = funcdef->args();
+
+    for (VarDecl* arg : func_args->pos_args()){
         std::cerr << 1.31 << std::endl;
         TypeDecl* type_decl = arg->type();
         std::cerr << 1.32 << std::endl;
@@ -112,8 +111,16 @@ std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef* funcdef) c
         args.push_back(type);
     }
     std::cerr << 1.4 << std::endl;
+
+    for (Assign* arg : func_args->keyword_args()){
+        Expr* rhs = arg->expr();
+        std::shared_ptr<LangType> type = infer(rhs);
+        args.push_back(type);
+    }
     
-    return std::shared_ptr<FuncType>(new FuncType(ret_type, args));
+    return std::shared_ptr<FuncType>(new FuncType(ret_type, args, 
+                                                  func_args->has_varargs(),
+                                                  func_args->has_kwargs()));
 }
 
 void* lang::Compiler::visit(FuncDef* funcdef){

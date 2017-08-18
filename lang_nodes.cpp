@@ -240,5 +240,6 @@ std::shared_ptr<lang::LangType> lang::FuncTypeDecl::as_type() const {
     for (TypeDecl* arg : args_){
         args.push_back(arg->as_type());
     }
-    return std::shared_ptr<LangType>(new FuncType(return_type_->as_type(), args));
+    return std::shared_ptr<LangType>(new FuncType(return_type_->as_type(), args,
+                                                  has_varargs_, has_kwargs_));
 }
