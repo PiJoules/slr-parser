@@ -414,10 +414,11 @@ namespace lang {
             std::vector<TypeDecl*> args_;
 
         public:
-            FuncTypeDecl(TypeDecl* return_type, std::vector<TypeDecl*>& args): 
-                return_type_(return_type), args_(args){}
-            FuncTypeDecl(TypeDecl* return_type, std::initializer_list<TypeDecl*> args): 
-                return_type_(return_type), args_(args){}
+            FuncTypeDecl(TypeDecl* return_type, 
+                         std::vector<TypeDecl*>& args): 
+                return_type_(return_type), 
+                args_(args){}
+
             std::shared_ptr<LangType> as_type() const override;
 
             ~FuncTypeDecl(){
@@ -447,46 +448,102 @@ namespace lang {
         private:
             std::shared_ptr<LangType> return_type_;
             std::vector<std::shared_ptr<LangType>> pos_args_;
+            std::vector<std::shared_ptr<LangType>> keyword_args_;
+            std::vector<Expr
+            bool has_varargs_ = false;
+            bool has_kwargs_ = false;
 
         public:
             FuncType(std::shared_ptr<LangType> return_type, 
-                    std::vector<std::shared_ptr<LangType>>& args):
-                return_type_(return_type), args_(args){}
+                     std::vector<std::shared_ptr<LangType>>& pos_args,
+                     std::vector<std::shared_ptr<LangType>>& keyword_args,
+                     bool has_varargs,
+                     bool has_kwargs):
+                return_type_(return_type), 
+                pos_args_(pos_args),
+                keyword_args_(keyword_args),
+                has_varargs_(has_varargs),
+                has_kwargs_(has_kwargs){}
+
             FuncType(std::shared_ptr<LangType> return_type, 
-                    std::initializer_list<std::shared_ptr<LangType>> args):
-                return_type_(return_type), args_(args){}
+                     std::initializer_list<std::shared_ptr<LangType>>& pos_args,
+                     std::initializer_list<std::shared_ptr<LangType>>& keyword_args,
+                     bool has_varargs,
+                     bool has_kwargs):
+                return_type_(return_type), 
+                pos_args_(pos_args),
+                keyword_args_(keyword_args),
+                has_varargs_(has_varargs),
+                has_kwargs_(has_kwargs){}
 
             std::shared_ptr<LangType> return_type() const { return return_type_; }
-            const std::vector<std::shared_ptr<LangType>>& args() const { return args_; }
+            const std::vector<std::shared_ptr<LangType>>& pos_args() const { return pos_args_; }
+            const std::vector<std::shared_ptr<LangType>>& keyword_args() const { return keyword_args_; }
+            bool has_varargs() const { return has_varargs_; }
+            bool has_kwargs() const { return has_kwargs_; }
 
             TypeDecl* as_type_decl() const {
-                std::vector<TypeDecl*> args;
-                for (std::shared_ptr<LangType> arg : args_){
-                    args.push_back(arg->as_type_decl());
+                std::vector<TypeDecl*> pos_args;
+                for (std::shared_ptr<LangType> arg : pos_args_){
+                    pos_args.push_back(arg->as_type_decl());
                 }
-                return new FuncTypeDecl(return_type_->as_type_decl(), args);
+
+                std::vector<TypeDecl*> keyword_args;
+                for (std::shared_ptr<LangType> arg : keyword_args_){
+                    keyword_args.push_back(arg->as_type_decl());
+                }
+
+                std::string varargs_name;
+                if (has_varargs_){
+                    varargs_name = "args";
+                }
+
+                std::string keyword_args;
+                if (has_kwargs_){
+                    keyword_args = "kwargs";
+                }
+
+                return new FuncTypeDecl(return_type_->as_type_decl(), pos_args, keyword_args,
+                                        varargs_name, kwargs_name);
             }
 
             bool equals(const LangType& other) const {
                 const FuncType* other_func = dynamic_cast<const FuncType*>(&other);
-                if (other_func){
-                    // Check return type
-                    if (*return_type_ == *(other_func->return_type())){
-                        // Check arguments
-                        const std::vector<std::shared_ptr<LangType>>& other_args = other_func->args();
-                        if (args_.size() == other_args.size()){
-                            for (std::size_t i = 0; i < args_.size(); ++i){
-                                if (*(args_[i]) != *(other_args[i])){
-                                    return false;
-                                }
-                            }
+
+                if (!other_func){
+                    return false;
+                }
+
+                // Check return type
+                if (*return_type_ != *(other_func->return_type())){
+                    return false;
+                }
+
+                // Check arguments  
+                if (has_varargs_ != other_func->has_varargs() || 
+                    has_kwargs_ != other_func->has_kwargs()){
+                    return false;
+                }
+
+                const std::vector<std::shared_ptr<LangType>>& other_args = other_func->pos_args();
+                if (args_.size() == other_args.size()){
+                    for (std::size_t i = 0; i < args_.size(); ++i){
+                        if (*(args_[i]) != *(other_args[i])){
+                            return false;
                         }
                     }
-                    return false;
                 }
-                else {
-                    return false;
+
+                const std::vector<std::shared_ptr<LangType>>& other_args = other_func->args();
+                if (args_.size() == other_args.size()){
+                    for (std::size_t i = 0; i < args_.size(); ++i){
+                        if (*(args_[i]) != *(other_args[i])){
+                            return false;
+                        }
+                    }
                 }
+
+                return true;
             }
     };
 
