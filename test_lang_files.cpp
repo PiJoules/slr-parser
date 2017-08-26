@@ -21,7 +21,6 @@ void test_read_input(){
 
 void test_arguments(){
     std::string filename = "test_lang_files/arguments.lang";
-    // TODO: Have this accept stdin to test input()
     lang::run_lang_file(filename);
 }
 
