@@ -34,19 +34,14 @@ std::string lang::FuncArgs::line() const {
         arg_strs.push_back(arg->line());
     }
 
-    // varargs 
-    if (has_varargs()){
-        arg_strs.push_back("*" + varargs_name_);
-    }
-
     // keyword args
     for (Assign* arg : keyword_args_){
         arg_strs.push_back(arg->line());
     }
 
     // kwargs
-    if (has_kwargs()){
-        arg_strs.push_back("**" + kwargs_name_);
+    if (has_varargs_){
+        arg_strs.push_back("...");
     }
 
     return join(arg_strs, ", ");
@@ -241,5 +236,5 @@ std::shared_ptr<lang::LangType> lang::FuncTypeDecl::as_type() const {
         args.push_back(arg->as_type());
     }
     return std::shared_ptr<LangType>(new FuncType(return_type_->as_type(), args,
-                                                  has_varargs_, has_kwargs_));
+                                                  has_varargs_));
 }

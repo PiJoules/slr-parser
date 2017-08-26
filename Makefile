@@ -2,6 +2,7 @@ CPP = g++-4.9
 STD = c++11
 
 CPPFLAGS = -Wall -Werror -std=$(STD) -Wfatal-errors $(MACROS)
+OPTIMIZATION ?= -O2
 
 MEMCHECK = valgrind --error-exitcode=1 --leak-check=full
 
@@ -36,7 +37,7 @@ test: test_lexer test_table_generation test_lang test_cppnodes test_lang_files
 
 # Object files from cpp files
 %.o: %.cpp 
-	$(CPP) $(CPPFLAGS) -O2 -c $< -o $@
+	$(CPP) $(CPPFLAGS) $(OPTIMIZATION) -c $< -o $@
 
 compile: $(OBJS) $(EXE_OUTPUTS)
 compile_objs: $(OBJS)

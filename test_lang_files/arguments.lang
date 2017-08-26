@@ -1,9 +1,5 @@
 def only_positional(arg1: int, arg2: int):
     print(arg1, arg2)
 
-def only_keyword(arg1=2, arg2 = 4):
-    print(arg1, arg2)
-
 def main():
     only_positional(1, 2)
-    only_keyword()

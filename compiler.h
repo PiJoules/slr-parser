@@ -45,19 +45,23 @@ namespace lang {
                     assert(*(found_var->second.get()) == *(type.get()));
                 }
             }
+
+            bool var_exists(const std::string& varname) const {
+                return varnames_.find(varname) != varnames_.end();
+            }
+
             void check_var_exists(const std::string& varname) const {
-                auto found = varnames_.find(varname);
-                if (found == varnames_.end()){
+                if (!var_exists(varname)){
                     throw std::runtime_error("Unknown variable '" + varname + "'");
                 }
             }
+
             std::shared_ptr<LangType> var_type(const std::string& varname) const { 
-                auto found = varnames_.find(varname);
-                if (found == varnames_.end()){
+                if (!var_exists(varname)){
                     throw std::runtime_error("Unknown variable '" + varname + "'");
                 }
                 else {
-                    return found->second;
+                    return varnames_.at(varname);
                 }
             }
             //const std::unordered_map<std::string, std::shared_ptr<LangType>>& varnames () const { return varnames_; }

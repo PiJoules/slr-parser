@@ -274,7 +274,6 @@ void* parse_func_def_with_args(std::vector<void*>& args, void* data){
     delete def;
     delete name;
     delete lpar;
-    delete func_args;
     delete rpar;
     delete colon;
     delete func_suite;
@@ -299,7 +298,6 @@ void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data)
     delete def;
     delete name;
     delete lpar;
-    delete func_args;
     delete rpar;
     delete arrow;
     delete colon;
@@ -312,7 +310,7 @@ void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data)
 void* parse_arg_list_only_var_decls(std::vector<void*>& args, void* data){
     std::vector<lang::VarDecl*>* var_decl_list = static_cast<std::vector<lang::VarDecl*>*>(args[0]);
 
-    lang::FuncArgs* func_args = new lang::FuncArgs(*var_decl_list, "", {}, "");
+    lang::FuncArgs* func_args = new lang::FuncArgs(*var_decl_list, {}, false);
 
     delete var_decl_list;
 
@@ -323,7 +321,7 @@ void* parse_arg_list_only_var_decls(std::vector<void*>& args, void* data){
 void* parse_arg_list_only_kwarg_decls(std::vector<void*>& args, void* data){
     std::vector<lang::Assign*>* assign_list = static_cast<std::vector<lang::Assign*>*>(args[0]);
 
-    lang::FuncArgs* func_args = new lang::FuncArgs({}, "", *assign_list, "");
+    lang::FuncArgs* func_args = new lang::FuncArgs({}, *assign_list, false);
 
     delete assign_list;
 
@@ -691,7 +689,7 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"func_def", {"DEF", "NAME", "LPAR", "func_args", "RPAR", "ARROW", "type_decl", "COLON", "func_suite"}, parse_func_def_with_args_with_return},
 
     {"func_args", {"var_decl_list"}, parse_arg_list_only_var_decls},
-    {"func_args", {"var_assign_list"}, parse_arg_list_only_kwarg_decls},
+    //{"func_args", {"var_assign_list"}, parse_arg_list_only_kwarg_decls},
 
     // List of variable declarations
     {"var_decl_list", {"var_decl"}, parse_var_decl_list_one_arg},
@@ -699,8 +697,8 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"var_decl", {"NAME", "COLON", "type_decl"}, parse_var_decl},
 
     // List of variable assignments 
-    {"var_assign_list", {"var_assign"}, parse_var_assign_list_one_assign},
-    {"var_assign_list", {"var_assign_list", "COMMA", "var_assign"}, parse_var_assign_list},
+    //{"var_assign_list", {"var_assign"}, parse_var_assign_list_one_assign},
+    //{"var_assign_list", {"var_assign_list", "COMMA", "var_assign"}, parse_var_assign_list},
     {"var_assign", {"NAME", "ASSIGN", "expr"}, parse_var_assign},
 
     // Type declarations

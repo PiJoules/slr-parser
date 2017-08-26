@@ -413,26 +413,21 @@ namespace lang {
             TypeDecl* return_type_;
             std::vector<TypeDecl*> args_;
             bool has_varargs_ = false;
-            bool has_kwargs_ = false;
 
         public:
             FuncTypeDecl(TypeDecl* return_type, 
                          const std::vector<TypeDecl*>& args,
-                         bool has_varargs,
-                         bool has_kwargs): 
+                         bool has_varargs):
                 return_type_(return_type), 
                 args_(args),
-                has_varargs_(has_varargs),
-                has_kwargs_(has_kwargs){}
+                has_varargs_(has_varargs){}
 
             FuncTypeDecl(TypeDecl* return_type, 
                          const std::initializer_list<TypeDecl*>& args,
-                         bool has_varargs,
-                         bool has_kwargs): 
+                         bool has_varargs):
                 return_type_(return_type), 
                 args_(args),
-                has_varargs_(has_varargs),
-                has_kwargs_(has_kwargs){}
+                has_varargs_(has_varargs){}
 
             std::shared_ptr<LangType> as_type() const override;
 
@@ -464,31 +459,25 @@ namespace lang {
             std::shared_ptr<LangType> return_type_;
             std::vector<std::shared_ptr<LangType>> args_;
             bool has_varargs_ = false;
-            bool has_kwargs_ = false;
 
         public:
             FuncType(std::shared_ptr<LangType> return_type, 
                      std::vector<std::shared_ptr<LangType>>& args,
-                     bool has_varargs,
-                     bool has_kwargs):
+                     bool has_varargs):
                 return_type_(return_type), 
                 args_(args),
-                has_varargs_(has_varargs),
-                has_kwargs_(has_kwargs){}
+                has_varargs_(has_varargs){}
 
             FuncType(std::shared_ptr<LangType> return_type, 
-                     const std::initializer_list<std::shared_ptr<LangType>>& args,
-                     bool has_varargs,
-                     bool has_kwargs):
+                     std::initializer_list<std::shared_ptr<LangType>> args,
+                     bool has_varargs):
                 return_type_(return_type), 
                 args_(args),
-                has_varargs_(has_varargs),
-                has_kwargs_(has_kwargs){}
+                has_varargs_(has_varargs){}
 
             std::shared_ptr<LangType> return_type() const { return return_type_; }
             const std::vector<std::shared_ptr<LangType>>& args() const { return args_; }
             bool has_varargs() const { return has_varargs_; }
-            bool has_kwargs() const { return has_kwargs_; }
 
             TypeDecl* as_type_decl() const {
                 std::vector<TypeDecl*> args;
@@ -497,7 +486,7 @@ namespace lang {
                 }
 
                 return new FuncTypeDecl(return_type_->as_type_decl(), args,
-                                        has_varargs_, has_kwargs_);
+                                        has_varargs_);
             }
 
             bool equals(const LangType& other) const {
@@ -513,8 +502,7 @@ namespace lang {
                 }
 
                 // Check arguments  
-                if (has_varargs_ != other_func->has_varargs() || 
-                    has_kwargs_ != other_func->has_kwargs()){
+                if (has_varargs_ != other_func->has_varargs()){
                     return false;
                 }
 
@@ -553,31 +541,27 @@ namespace lang {
     class FuncArgs: public SimpleNode, public Visitable<FuncArgs> {
         private:
             std::vector<VarDecl*> pos_args_;
-            std::string varargs_name_;
             std::vector<Assign*> keyword_args_;
-            std::string kwargs_name_;
+            bool has_varargs_ = false;
 
         public:
+            FuncArgs(){}
+
             FuncArgs(const std::vector<VarDecl*>& pos_args,
-                     const std::string& varargs_name, // *args
                      const std::vector<Assign*>& keyword_args,
-                     const std::string& kwargs_name // **kwargs 
+                     bool has_varargs
                      ):
                 pos_args_(pos_args),
-                varargs_name_(varargs_name),
                 keyword_args_(keyword_args),
-                kwargs_name_(kwargs_name){}
+                has_varargs_(has_varargs){}
 
             FuncArgs(const std::initializer_list<VarDecl*>& pos_args,
-                     const std::string& varargs_name, // *args
                      const std::initializer_list<Assign*>& keyword_args,
-                     const std::string& kwargs_name // **kwargs 
+                     bool has_varargs
                      ):
                 pos_args_(pos_args),
-                varargs_name_(varargs_name),
                 keyword_args_(keyword_args),
-                kwargs_name_(kwargs_name){}
-            FuncArgs(){}
+                has_varargs_(has_varargs){}
 
             ~FuncArgs(){
                 for (VarDecl* arg : pos_args_){ delete arg; }
@@ -586,10 +570,7 @@ namespace lang {
 
             const std::vector<VarDecl*>& pos_args() const { return pos_args_; }
             const std::vector<Assign*>& keyword_args() const { return keyword_args_; }
-            std::string varargs_name() const { return varargs_name_; }
-            std::string kwargs_name() const { return varargs_name_; }
-            bool has_varargs() const { return !varargs_name_.empty(); }
-            bool has_kwargs() const { return !kwargs_name_.empty(); }
+            bool has_varargs() const { return has_varargs_; }
 
             std::string line() const override;
     };

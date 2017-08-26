@@ -26,9 +26,9 @@ void test_arguments(){
 }
 
 int main(){
-    //test_hello_world();
-    //test_fib();
-    //test_read_input();
+    test_hello_world();
+    test_fib();
+    test_read_input();
     test_arguments();
 
     return 0;
