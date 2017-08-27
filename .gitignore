@@ -1,7 +1,7 @@
 *.dump 
 example_lang_files/*.cpp
 *.py
-FEATURES.md 
+FEATURES.md
 language_exe
 
 # Prerequisites
