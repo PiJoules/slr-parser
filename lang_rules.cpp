@@ -8,6 +8,8 @@ std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"def", "DEF"},
     {"return", "RETURN"},
     {"if", "IF"},
+    {"for", "FOR"},
+    {"in", "IN"},
 };
 
 void reserved_name(lexing::LexToken& tok, void* data){
@@ -40,6 +42,7 @@ const lexing::TokensMap lang::LANG_TOKENS = {
 
     // Member access
     {"ARROW", {R"(\-\>)", nullptr}},
+    {"DOT", {R"(\.)", nullptr}},
 
     // Comparison 
     {"EQ", {R"(\=\=)", nullptr}},
@@ -55,11 +58,15 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     // Containers 
     {"LPAR", {R"(\()", nullptr}},
     {"RPAR", {R"(\))", nullptr}},
+    {"LBRACE", {R"(\{)", nullptr}},
+    {"RBRACE", {R"(\})", nullptr}},
 
     // Misc 
     {"DEF", {R"(def)", nullptr}},
     {"RETURN", {"return", nullptr}},
     {"IF", {"if", nullptr}},
+    {"FOR", {"for", nullptr}},
+    {"IN", {"in", nullptr}},
     {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
     {"COMMA", {R"(\,)", nullptr}},
@@ -395,7 +402,8 @@ void* parse_simple_func_stmt(std::vector<void*>& args, void* data){
 }
 
 // compound_func_stmt : if_stmt 
-void* parse_compound_func_stmt_if(std::vector<void*>& args, void* data){
+//                    | for_loop
+void* parse_compound_func_stmt(std::vector<void*>& args, void* data){
     return args[0];
 }
 
@@ -435,6 +443,59 @@ void* parse_if_stmt(std::vector<void*>& args, void* data){
     return if_stmt;
 }
 
+// for_loop : FOR expr_list IN expr COLON func_suite 
+void* parse_for_loop(std::vector<void*>& args, void* data){
+    lexing::LexToken* for_tok = static_cast<lexing::LexToken*>(args[0]);
+    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[1]);
+    lexing::LexToken* in_tok = static_cast<lexing::LexToken*>(args[2]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[3]);
+    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[4]);
+    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
+
+    lang::ForLoop* for_loop = new lang::ForLoop(*expr_list, expr, *func_suite);
+
+    delete for_tok;
+    delete expr_list;
+    delete in_tok;
+    delete colon;
+    delete func_suite;
+
+    return for_loop;
+}
+
+// expr : tuple 
+void* parse_tuple_expr(std::vector<void*>& args, void* data){
+    return args[0];
+}
+
+// tuple : LBRACE RBRACE
+void* parse_empty_tuple(std::vector<void*>& args, void* data){
+    lexing::LexToken* lbrace = static_cast<lexing::LexToken*>(args[0]);
+    lexing::LexToken* rbrace = static_cast<lexing::LexToken*>(args[1]);
+
+    lang::Tuple* tuple = new lang::Tuple;
+
+    delete lbrace;
+    delete rbrace;
+
+    return tuple;
+}
+
+// tuple : LBRACE expr_list RBRACE
+void* parse_tuple(std::vector<void*>& args, void* data){
+    lexing::LexToken* lbrace = static_cast<lexing::LexToken*>(args[0]);
+    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[1]);
+    lexing::LexToken* rbrace = static_cast<lexing::LexToken*>(args[2]);
+
+    lang::Tuple* tuple = new lang::Tuple(*expr_list);
+
+    delete lbrace;
+    delete expr_list;
+    delete rbrace;
+
+    return tuple;
+}
+
 // expr : expr LPAR RPAR 
 void* parse_empty_func_call(std::vector<void*>& args, void* data){
     lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
@@ -449,44 +510,44 @@ void* parse_empty_func_call(std::vector<void*>& args, void* data){
     return call;
 }
 
-// expr : expr LPAR call_args RPAR
+// expr : expr LPAR expr_list RPAR
 void* parse_func_call(std::vector<void*>& args, void* data){
     lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
     lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<lang::Expr*>* call_args = static_cast<std::vector<lang::Expr*>*>(args[2]);
+    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[2]);
     lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
 
     delete lpar;
     delete rpar;
 
-    lang::Call* call = new lang::Call(expr, *call_args);
+    lang::Call* call = new lang::Call(expr, *expr_list);
 
-    delete call_args;
+    delete expr_list;
 
     return call;
 }
 
-// call_args : call_arg  
+// expr_list : expr  
 void* parse_call_one_arg(std::vector<void*>& args, void* data){
-    lang::Expr* call_arg = static_cast<lang::Expr*>(args[0]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
 
-    std::vector<lang::Expr*>* call_args = new std::vector<lang::Expr*>;
-    call_args->push_back(call_arg);
+    std::vector<lang::Expr*>* expr_list = new std::vector<lang::Expr*>;
+    expr_list->push_back(expr);
 
-    return call_args;
+    return expr_list;
 }
 
-// call_args : call_args COMMA call_arg
-void* parse_call_args(std::vector<void*>& args, void* data){
-    std::vector<lang::Expr*>* call_args = static_cast<std::vector<lang::Expr*>*>(args[0]);
+// expr_list : expr_list COMMA expr
+void* parse_expr_list(std::vector<void*>& args, void* data){
+    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[0]);
     lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* call_arg = static_cast<lang::Expr*>(args[2]);
+    lang::Expr* expr = static_cast<lang::Expr*>(args[2]);
 
     delete comma;
 
-    call_args->push_back(call_arg);
+    expr_list->push_back(expr);
 
-    return call_args;
+    return expr_list;
 }
 
 // expr : expr SUB expr 
@@ -709,10 +770,13 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     {"func_stmts", {"func_stmts", "func_stmt"}, parse_func_stmts2},
     {"func_stmt", {"simple_func_stmt", lang::tokens::NEWLINE}, parse_func_stmt_simple},
     {"func_stmt", {"compound_func_stmt"}, parse_func_stmt_compound},
+
     {"simple_func_stmt", {"expr_stmt"}, parse_simple_func_stmt},
     {"simple_func_stmt", {"return_stmt"}, parse_simple_func_stmt},
     {"simple_func_stmt", {"var_assign"}, parse_simple_func_stmt},
-    {"compound_func_stmt", {"if_stmt"}, parse_compound_func_stmt_if},
+
+    {"compound_func_stmt", {"if_stmt"}, parse_compound_func_stmt},
+    {"compound_func_stmt", {"for_loop"}, parse_compound_func_stmt},
 
     // Simple statements - one line 
     {"expr_stmt", {"expr"}, parse_expr_stmt},
@@ -721,12 +785,18 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // Compound statements - multiple lines 
     // TODO: The rest of the ladder
     {"if_stmt", {"IF", "expr", "COLON", "func_suite"}, parse_if_stmt},
+    {"for_loop", {"FOR", "expr_list", "IN", "expr", "COLON", "func_suite"}, parse_for_loop},
+
+    // Tuple literal 
+    {"expr", {"tuple"}, parse_tuple_expr},
+    {"tuple", {"LBRACE", "RBRACE"}, parse_empty_tuple},
+    {"tuple", {"LBRACE", "expr_list", "RBRACE"}, parse_tuple},
 
     // Function calls 
     {"expr", {"expr", "LPAR", "RPAR"}, parse_empty_func_call},
-    {"expr", {"expr", "LPAR", "call_args", "RPAR"}, parse_func_call},
-    {"call_args", {"expr"}, parse_call_one_arg},
-    {"call_args", {"call_args", "COMMA", "expr"}, parse_call_args},
+    {"expr", {"expr", "LPAR", "expr_list", "RPAR"}, parse_func_call},
+    {"expr_list", {"expr"}, parse_call_one_arg},
+    {"expr_list", {"expr_list", "COMMA", "expr"}, parse_expr_list},
 
     // Binary Expressions
     {"expr", {"expr", "SUB", "expr"}, parse_bin_sub_expr},
@@ -770,8 +840,8 @@ const parsing::PrecedenceList lang::LANG_PRECEDENCE = {
 
     // 1
 
-    // Function call
-    {parsing::LEFT_ASSOC, {"LPAR"}},
+    // Function call, pointer member access, member access
+    {parsing::LEFT_ASSOC, {"LPAR", "ARROW", "DOT"}},
 };
 
 /**************** Grammar ***************/ 

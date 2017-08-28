@@ -13,6 +13,8 @@
 
 #include "utils.h"
 
+const std::string INDENT = "    ";
+
 namespace lang {
     class NodeVisitor {
         public:
@@ -192,6 +194,51 @@ namespace lang {
             const std::vector<FuncStmt*> body() const { return body_; }
     };
 
+    class ForLoop: public FuncStmt, public Visitable<ForLoop> {
+        private:
+            std::vector<Expr*> target_list_;
+            Expr* container_;
+            std::vector<FuncStmt*> body_;
+        
+        public:
+            ForLoop(const std::vector<Expr*>& target_list, Expr* container,
+                    const std::vector<FuncStmt*>& body):
+                target_list_(target_list), container_(container), body_(body){}
+
+            ~ForLoop(){
+                for (Expr* target : target_list_){
+                    delete target;
+                }
+                delete container_;
+                for (FuncStmt* stmt : body_){
+                    delete stmt;
+                }
+            }
+
+            const std::vector<Expr*>& target_list() const { return target_list_; }
+            Expr* container() const { return container_; }
+
+            std::vector<std::string> lines() const override {
+                std::vector<std::string> v;
+
+                std::vector<std::string> arg_strs;
+                for (Expr* target : target_list_){
+                    arg_strs.push_back(target->value_str());
+                }
+
+                std::string line1 = "for " + join(arg_strs, ", ") + " in " + container_->value_str();
+                v.push_back(line1);
+
+                for (FuncStmt* stmt : body_){
+                    for (std::string& stmt_line : stmt->lines()){
+                        v.push_back(INDENT + stmt_line);
+                    }
+                }
+
+                return v;
+            }
+    };
+
     class Call: public VisitableExpr<Call>, public Visitable<Call> {
         private:
             Expr* func_;
@@ -206,6 +253,31 @@ namespace lang {
             const std::vector<Expr*>& args() const { return args_; }
 
             std::string value_str() const override;
+    };
+
+    class Tuple: public VisitableExpr<Tuple>, public Visitable<Call> {
+        private:
+            std::vector<Expr*> contents_;
+
+        public:
+            Tuple(){}
+            Tuple(const std::vector<Expr*>& contents): contents_(contents){}
+
+            ~Tuple(){
+                for (Expr* expr : contents_){
+                    delete expr;
+                }
+            }
+
+            const std::vector<Expr*> contents() const { return contents_; }
+
+            std::string value_str() const override {
+                std::vector<std::string> v;
+                for (Expr* expr : contents_){
+                    v.push_back(expr->value_str());
+                }
+                return join(v, ", ");
+            }
     };
 
     class BinOperator: public virtual Node {

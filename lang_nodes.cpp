@@ -2,8 +2,6 @@
 #include <sstream>
 #include <algorithm>
 
-static const std::string INDENT = "    ";
-
 
 /**
  * Module

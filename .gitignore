@@ -1,4 +1,5 @@
 *.dump 
+EXAMPLES.md
 example_lang_files/*.cpp
 *.py
 FEATURES.md
