@@ -20,6 +20,8 @@
 #include "parser.h"
 #include "nodes.h"
 
+#define STARTING_COL 1
+
 namespace lang {
 
     /********* Lexer ********/
@@ -35,8 +37,8 @@ namespace lang {
             lexing::LexToken make_dedent() const;
 
             // Indentation tracking
-            std::vector<int> levels = {1};
-            bool found_indent = false, found_dedent = false;
+            std::vector<int> levels_ = {STARTING_COL};
+            bool found_indent_ = false, found_dedent_ = false;
             bool loaded_init_token_ = false;
             lexing::LexToken next_tok_;
 

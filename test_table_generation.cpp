@@ -1,4 +1,5 @@
 #include "lang.h"
+#include "utils.h"
 #include <cassert>
 
 static const lexing::TokensMap test_tokens = {
@@ -320,16 +321,16 @@ void test_parse_precedence(){
 }
 
 int main(){
-    test_closure();
-    test_move_pos();
-    test_parse_precedence();
-
     test_rules1();
     test_rules2();
     test_rules3();
     test_rules4();
     test_rules5();
     test_rules6();
+
+    test_closure();
+    test_move_pos();
+    test_parse_precedence();
 
     return 0;
 }

@@ -255,6 +255,25 @@ namespace lang {
             std::string value_str() const override;
     };
 
+    class MemberAccess: public VisitableExpr<MemberAccess>, public Visitable<MemberAccess> {
+        private:
+            Expr* base_;
+            std::string member_;
+
+        public:
+            MemberAccess(Expr* base, const std::string& member): base_(base), member_(member){}
+            ~MemberAccess(){
+                delete base_;
+            }
+
+            Expr* base() const { return base_; }
+            std::string member() const { return member_; }
+
+            std::string value_str() const override {
+                return base_->value_str() + "." + member_;
+            }
+    };
+
     class Tuple: public VisitableExpr<Tuple>, public Visitable<Call> {
         private:
             std::vector<Expr*> contents_;

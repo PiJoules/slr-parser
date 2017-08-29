@@ -132,7 +132,7 @@ void lexing::Lexer::input(const std::string& code){
 
 /**
  * Return the next token and advance the stream.
- */
+ */ 
 lexing::LexToken lexing::Lexer::token(void* data){
     LexToken next_token;
 

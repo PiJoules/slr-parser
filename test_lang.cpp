@@ -86,6 +86,23 @@ def func():
     delete module_node;
 }
 
+void test_ending_on_func_suite(){
+    const std::string code = R"(
+def main():
+    friends = {"john", "pat", "gary", "michael"}
+    for i, name in enumerate(friends):
+        print("iteration {} is {}".format(i, name))
+)";
+
+    lang::LangLexer lexer(lang::LANG_TOKENS);
+    parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
+
+    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+    assert(lexer.empty());
+
+    delete module_node;
+}
+
 int main(){
     assert(lang::LANG_GRAMMAR.conflicts().empty());
 
@@ -93,6 +110,7 @@ int main(){
     test_regular();
     test_empty();
     test_fictitios_token();
+    test_ending_on_func_suite();
 
     return 0;
 }

@@ -1,7 +1,5 @@
 #include "cpp_nodes.h"
 
-static const std::string INDENT = "    ";
-
 /**
  * Module
  */

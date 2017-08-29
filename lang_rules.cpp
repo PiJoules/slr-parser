@@ -27,6 +27,7 @@ void trim_string_quotes(lexing::LexToken& tok, void* data){
     tok.value = tok.value.substr(1, tok.value.size()-2);
 }
 
+// Tokens are stored in an unordered map and have no iterative order
 const lexing::TokensMap lang::LANG_TOKENS = {
     // Values
     {"INT", {R"(\d+)", nullptr}},
@@ -67,9 +68,12 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     {"IF", {"if", nullptr}},
     {"FOR", {"for", nullptr}},
     {"IN", {"in", nullptr}},
-    {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
     {"COLON", {R"(\:)", nullptr}},
     {"COMMA", {R"(\,)", nullptr}},
+
+    // Spacing
+    {lang::tokens::NEWLINE, {R"(\n+)", nullptr}},
+    {lexing::tokens::COMMENT, {R"([ ]*\#[^\n]*)", nullptr}},
     {"WS", {R"([ ]+)", comment}},
     {lang::tokens::INDENT, {lang::tokens::INDENT, nullptr}},
     {lang::tokens::DEDENT, {lang::tokens::DEDENT, nullptr}},
@@ -463,6 +467,20 @@ void* parse_for_loop(std::vector<void*>& args, void* data){
     return for_loop;
 }
 
+// expr : expr DOT NAME
+void* parse_member_access(std::vector<void*>& args, void* data){
+    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
+    lexing::LexToken* dot = static_cast<lexing::LexToken*>(args[1]);
+    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[2]);
+
+    lang::MemberAccess* member_access = new lang::MemberAccess(expr, name->value);
+
+    delete dot;
+    delete name;
+
+    return member_access;
+}
+
 // expr : tuple 
 void* parse_tuple_expr(std::vector<void*>& args, void* data){
     return args[0];
@@ -735,13 +753,45 @@ void* parse_string_expr(std::vector<void*>& args, void* data){
     return expr;
 }
 
+//void* parse_module_stmt_list_1(std::vector<void*>& args, void* data){
+//    std::vector<lang::Node*>* module_stmt_list = new std::vector<lang::Node*>;
+//
+//    lang::Node* module_stmt = static_cast<lang::Node*>(args[0]);
+//
+//    module_stmt_list->push_back(module_stmt);
+//
+//    return module_stmt_list;
+//}
+//
+//void* parse_module_stmt_list_2(std::vector<void*>& args, void* data){
+//    std::vector<lang::Node*>* module_stmt_list = static_cast<std::vector<lang::Node*>*>(args[0]);
+//    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
+//    lang::Node* module_stmt = static_cast<lang::Node*>(args[2]);
+//
+//    module_stmt_list->push_back(module_stmt);
+//
+//    delete newline;
+//
+//    return module_stmt_list;
+//}
+//
+//void* parse_func_def_module_stmt(std::vector<void*>& args, void* data){
+//    return args[0];
+//}
+
 const std::vector<parsing::ParseRule> lang::LANG_RULES = {
+    // TODO: See if we can simplify the module_stmt_list into NEWLINE separated module_stmts 
+    // like we do with the argument list but with commas
     // Entry point 
     {"module", {"module_stmt_list"}, parse_module},
+    //{"module", {lang::tokens::NEWLINE}, parse_module},
     {"module_stmt_list", {"func_def"}, parse_module_stmt_list},
     {"module_stmt_list", {lang::tokens::NEWLINE}, parse_module_stmt_list2},
     {"module_stmt_list", {"module_stmt_list", lang::tokens::NEWLINE}, parse_module_stmt_list3},
     {"module_stmt_list", {"module_stmt_list", "func_def"}, parse_module_stmt_list4},
+    //{"module_stmt_list", {"module_stmt"}, parse_module_stmt_list_1},
+    //{"module_stmt_list", {"module_stmt_list", lang::tokens::NEWLINE, "module_stmt"}, parse_module_stmt_list_2},
+    //{"module_stmt", {"func_def"}, parse_func_def_module_stmt},
 
     // Functions 
     {"func_def", {"DEF", "NAME", "LPAR", "RPAR", "COLON", "func_suite"}, parse_func_def},
@@ -786,6 +836,10 @@ const std::vector<parsing::ParseRule> lang::LANG_RULES = {
     // TODO: The rest of the ladder
     {"if_stmt", {"IF", "expr", "COLON", "func_suite"}, parse_if_stmt},
     {"for_loop", {"FOR", "expr_list", "IN", "expr", "COLON", "func_suite"}, parse_for_loop},
+
+    // Member access 
+    {"expr", {"expr", "DOT", "NAME"}, parse_member_access},
+    //{"expr", {"expr", "ARROW", "expr"}, parse_pointer_member_access},
 
     // Tuple literal 
     {"expr", {"tuple"}, parse_tuple_expr},
