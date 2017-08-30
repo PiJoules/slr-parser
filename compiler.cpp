@@ -320,8 +320,24 @@ void* lang::Compiler::visit(Gte* op){
 void* lang::Compiler::visit(NameTypeDecl* name_type_decl){
     std::string type_name = name_type_decl->name();
     assert(!cached_type_name_.empty());
-    cppnodes::RegVarDecl* cpp_var_decl = new cppnodes::RegVarDecl(cached_type_name_, type_name);
+
+    cppnodes::NameType* name_type = new cppnodes::NameType(type_name);
+
+    cppnodes::RegVarDecl* cpp_var_decl = new cppnodes::RegVarDecl(cached_type_name_, name_type);
     return cpp_var_decl;
+}
+
+/**
+ * LangTuple<type1, type2, ...>
+ */
+void* lang::Compiler::visit(TupleTypeDecl* tuple_type_decl){
+    assert(!cached_type_name_.empty());
+
+    std::vector<
+
+    cppnodes::RegVarDecl* cpp_tuple_type_decl = new cppnodes::RegVarDecl(
+            cached_type_name_, new cppnodes::NameType("LangTuple"), );
+    return cpp_tuple_type_decl;
 }
 
 std::shared_ptr<lang::LangType> lang::Compiler::infer(Call* call){

@@ -97,19 +97,6 @@ std::vector<std::string> cppnodes::FuncDef::lines() const {
 }
 
 /**
- * Regular variable declaration
- */ 
-cppnodes::RegVarDecl::RegVarDecl(const char* name, const char* type): name_(name), type_(type){}
-cppnodes::RegVarDecl::RegVarDecl(std::string& name, std::string& type): name_(name), type_(type){}
-
-std::vector<std::string> cppnodes::RegVarDecl::lines() const {
-    std::vector<std::string> v;
-    std::string line = type_ + " " + name_;
-    v.push_back(line);
-    return v;
-}
-
-/**
  * Return statement
  */ 
 cppnodes::ReturnStmt::ReturnStmt(Expr* expr): expr_(expr){}

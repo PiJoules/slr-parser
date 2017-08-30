@@ -18,7 +18,7 @@ void test_func_def(){
     assert(ret_stmt->str() == "return func(x);");
 
     std::vector<lang::Node*> func_body = {ret_stmt};
-    RegVarDecl* var_decl = new RegVarDecl("x", "int");
+    RegVarDecl* var_decl = new RegVarDecl("x", new NameType("int"));
     assert(var_decl->str() == "int x");
     std::vector<VarDecl*> args_list = {var_decl};
     FuncDef* funcdef = new FuncDef("main", "int", args_list, func_body);

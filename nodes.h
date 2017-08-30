@@ -321,6 +321,8 @@ namespace lang {
             }
 
             std::shared_ptr<LangType> as_type() const override;
+
+            const std::vector<TypeDecl*>& contents() const { return contents_; }
     };
 
     class TupleType: public LangType {

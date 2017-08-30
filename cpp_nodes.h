@@ -58,18 +58,65 @@ namespace cppnodes {
     };
 
     // Variable declaration
-    class VarDecl: public lang::Visitable<VarDecl> {};
+    class VarDecl: public lang::Visitable<VarDecl> {
+        public:
+            virtual std::string line() const = 0;
+            std::vector<std::string> lines() const { return {line()}; }
+    };
+
+    class Type {
+        public:
+            virtual ~Type(){}
+            virtual std::string line() const = 0;
+            std::vector<std::string> lines() const { return {line()}; }
+    };
+
+    class NameType: public Type {
+        private:
+            std::string name_;
+
+        public:
+            NameType(const std::string& name): name_(name){}
+
+            std::string name() const { return name_; }
+
+            std::string line() const { return name_; }
+    };
 
     // int x;
     class RegVarDecl: public VarDecl {
         private:
             std::string name_;
-            std::string type_;
+            Type* type_;
+            std::vector<Type*> template_args_;
 
         public:
-            RegVarDecl(const char* name, const char* type);
-            RegVarDecl(std::string& name, std::string& type);
-            std::vector<std::string> lines() const;
+            RegVarDecl(const char* name, Type* type): name_(name), type_(type){}
+            RegVarDecl(const std::string& name, Type* type): name_(name), type_(type){}
+            RegVarDecl(const char* name, Type* type, const std::vector<Type*> template_args): 
+                name_(name), type_(type), template_args_(template_args){}
+            RegVarDecl(const std::string& name, Type* type, const std::vector<Type*> template_args): 
+                name_(name), type_(type), template_args_(template_args){}
+
+            ~RegVarDecl(){
+                delete type_;
+                for (Type* arg : template_args_){
+                    delete arg;
+                }
+            }
+
+            std::string line() const override {
+                std::string line = type_->line();
+                if (!template_args_.empty()){
+                    std::vector<std::string> type_strs;
+                    for (Type* arg : template_args_){
+                        type_strs.push_back(arg->line());
+                    }
+                    line += "<" + join(type_strs, ",") + ">";
+                }
+                line += " " + name_;
+                return line;
+            }
     };
 
     // int (*func)(int arg1, int arg2)
