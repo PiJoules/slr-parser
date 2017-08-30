@@ -335,6 +335,20 @@ std::shared_ptr<lang::LangType> lang::Compiler::infer(NameExpr* name_expr){
     return current_scope().var_type(name_expr->name());
 }
 
+std::shared_ptr<lang::LangType> lang::Compiler::infer(Tuple* tuple_expr){
+    std::vector<std::shared_ptr<LangType>> content_types;
+
+    for (Expr* expr : tuple_expr->contents()){
+        content_types.push_back(infer(expr));
+    }
+
+    return std::make_shared<TupleType>(content_types);
+}
+
+std::shared_ptr<lang::LangType> lang::Compiler::infer(String* str_expr){
+    return std::make_shared<StringType>();
+}
+
 /************ Cmd line interface **************/
 
 std::string compile_lang_str(const std::string& code){

@@ -299,6 +299,67 @@ namespace lang {
             }
     };
 
+    class TupleTypeDecl: public TypeDecl, public Visitable<TupleTypeDecl> {
+        private:
+            std::vector<TypeDecl*> contents_;
+
+        public:
+            TupleTypeDecl(){}
+            TupleTypeDecl(const std::vector<TypeDecl*>& contents): contents_(contents){}
+            ~TupleTypeDecl(){
+                for (TypeDecl* decl : contents_){
+                    delete decl;
+                }
+            }
+
+            std::string value_str() const override {
+                std::vector<std::string> v;
+                for (TypeDecl* decl : contents_){
+                    v.push_back(decl->value_str());
+                }
+                return "tuple[" + join(v, ",") + "]";
+            }
+
+            std::shared_ptr<LangType> as_type() const override;
+    };
+
+    class TupleType: public LangType {
+        private:
+            std::vector<std::shared_ptr<LangType>> contents_;
+
+        public:
+            TupleType(){}
+            TupleType(const std::vector<std::shared_ptr<LangType>>& contents): contents_(contents){}
+
+            const std::vector<std::shared_ptr<LangType>>& contents() const { return contents_; }
+
+            TypeDecl* as_type_decl() const {
+                std::vector<TypeDecl*> content_type_decls;
+
+                for (auto& lang_type : contents_){
+                    content_type_decls.push_back(lang_type->as_type_decl());
+                }
+
+                return new TupleTypeDecl(content_type_decls);
+            }
+
+            bool equals(const LangType& other) const {
+                const TupleType* other_tuple = dynamic_cast<const TupleType*>(&other);
+                if (other_tuple){
+                    const auto& other_contents = other_tuple->contents();
+                    if (contents_.size() == other_contents.size()){
+                        for (std::size_t i = 0; i < contents_.size(); ++i){
+                            if (*(contents_[i]) != *(other_contents[i])){
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+    };
+
     class BinOperator: public virtual Node {
         public:
             virtual std::string symbol() const = 0;
@@ -393,6 +454,24 @@ namespace lang {
             String(const std::string&);
             std::string value_str() const;
             std::string value() const { return value_; }
+    };
+
+    class StringTypeDecl: public TypeDecl, public Visitable<StringTypeDecl> {
+        public:
+            std::string value_str() const override { return "str"; }
+            std::shared_ptr<LangType> as_type() const override;
+    };
+
+    class StringType: public LangType {
+        public:
+            TypeDecl* as_type_decl() const {
+                return new StringTypeDecl;
+            }
+
+            bool equals(const LangType& other) const {
+                const StringType* other_str = dynamic_cast<const StringType*>(&other);
+                return other_str;
+            }
     };
 
     class BinExpr: public VisitableExpr<BinExpr>, public Visitable<BinExpr> {

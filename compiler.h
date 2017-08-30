@@ -107,7 +107,9 @@ namespace lang {
                     // Inference
                     public BaseInferer,
                     public Inferer<Call>,
-                    public Inferer<NameExpr>
+                    public Inferer<NameExpr>,
+                    public Inferer<Tuple>,
+                    public Inferer<String>
     {
         private:
             LangLexer lexer_;
@@ -177,6 +179,8 @@ namespace lang {
             // Inference
             std::shared_ptr<LangType> infer(Call*);
             std::shared_ptr<LangType> infer(NameExpr*);
+            std::shared_ptr<LangType> infer(Tuple*);
+            std::shared_ptr<LangType> infer(String*);
     };
 
     // Language cmd interface 

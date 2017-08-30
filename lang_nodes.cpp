@@ -225,9 +225,11 @@ std::vector<std::string> lang::IfStmt::lines() const {
 std::shared_ptr<lang::LangType> lang::StarArgsTypeDecl::as_type() const { 
     return std::shared_ptr<LangType>(new StarArgsType); 
 }
+
 std::shared_ptr<lang::LangType> lang::NameTypeDecl::as_type() const { 
     return std::shared_ptr<LangType>(new NameType(name_)); 
 }
+
 std::shared_ptr<lang::LangType> lang::FuncTypeDecl::as_type() const {
     std::vector<std::shared_ptr<LangType>> args;
     for (TypeDecl* arg : args_){
@@ -235,4 +237,18 @@ std::shared_ptr<lang::LangType> lang::FuncTypeDecl::as_type() const {
     }
     return std::shared_ptr<LangType>(new FuncType(return_type_->as_type(), args,
                                                   has_varargs_));
+}
+
+std::shared_ptr<lang::LangType> lang::TupleTypeDecl::as_type() const {
+    std::vector<std::shared_ptr<LangType>> content_types;
+
+    for (TypeDecl* decl : contents_){
+        content_types.push_back(decl->as_type());
+    }
+
+    return std::make_shared<TupleType>(content_types);
+}
+
+std::shared_ptr<lang::LangType> lang::StringTypeDecl::as_type() const {
+    return std::make_shared<StringType>();
 }
