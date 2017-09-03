@@ -103,7 +103,7 @@ namespace lang {
                     public Visitor<Gte>,
 
                     public Visitor<NameTypeDecl>,
-                    public Visitor<TupleTypeDecl>,
+                    //public Visitor<TupleTypeDecl>,
 
                     // Inference
                     public BaseInferer,
@@ -176,7 +176,7 @@ namespace lang {
             void* visit(Gte*);
 
             void* visit(NameTypeDecl*);
-            void* visit(TupleTypeDecl*);
+            //void* visit(TupleTypeDecl*);
 
             // Inference
             std::shared_ptr<LangType> infer(Call*);

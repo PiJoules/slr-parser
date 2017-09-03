@@ -32,11 +32,11 @@ void test_for_loop(){
 }
 
 int main(){
-    //test_hello_world();
-    //test_fib();
-    //test_read_input();
-    //test_arguments();
-    test_for_loop();
+    test_hello_world();
+    test_fib();
+    test_read_input();
+    test_arguments();
+    //test_for_loop();
 
     return 0;
 }

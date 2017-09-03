@@ -3,6 +3,7 @@
 
 #include "nodes.h"
 #include <sstream>
+#include <memory>
 
 namespace cppnodes {
     // Base node representing a whole .c file

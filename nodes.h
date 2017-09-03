@@ -21,6 +21,24 @@ namespace lang {
             virtual ~NodeVisitor(){}
     };
 
+
+    /**
+     * Usage:
+     *
+     * If you want to just create an AST for dumping into a string, the child node can just inherit 
+     * from Node. 
+     *
+     * If you want to be able to visit nodes in the true, it just needs to inherit from 
+     * Visitable which uses the CRTP to notify the Visitor to visit this specific node.
+     *
+     * The Node and Visitable classes are inherited virtually, so any other classes derived from Node 
+     * can inherit virtually from Node to act as a mixin. The SimpleNode, which is used for implementing
+     * nodes that have only one line, can be used as a mixin like so:
+     *
+     * class BinExpr: public lang::SimpleNode, public lang::Visitable<BinExpr> {
+     *     ...
+     * };
+     */ 
     class Node {
         public:
             virtual void* accept(NodeVisitor&) = 0;
@@ -32,18 +50,15 @@ namespace lang {
 
             // The lines joined by newlines
             std::string str() const {
-                std::string s;
-
-                const std::vector<std::string>& node_lines = lines();
-                if (!node_lines.empty()){
-                    s += node_lines.front();
-                }
-                for (auto it = node_lines.begin() + 1; it < node_lines.end(); ++it){
-                    s += "\n" + *it;
-                }
-
-                return s;
+                return join(lines(), "\n");
             }
+    };
+
+    // Node that only contains one line
+    class SimpleNode: public virtual Node {
+        public:
+            virtual std::string line() const = 0;
+            std::vector<std::string> lines() const override { return {line()}; }
     };
     
     template <typename VisitedNode>
@@ -73,7 +88,7 @@ namespace lang {
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
-                    err << "Check if your Visitor implementation both inherits from 'Visitor<your node>' and implements 'void* visit(your node*)'." << std::endl;
+                    err << "Check if your Visitor implementation both inherits from 'Visitor<NODE>' and implements 'void* visit(NODE*)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
@@ -81,17 +96,6 @@ namespace lang {
 
     class ModuleStmt: public virtual Node {};
     class FuncStmt: public virtual Node {};
-
-    class SimpleNode: public virtual Node {
-        public:
-            virtual std::string line() const = 0;
-            
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v;
-                v.push_back(line());
-                return v;
-            };
-    };
 
     class SimpleFuncStmt: public virtual FuncStmt, public virtual SimpleNode {};
 
