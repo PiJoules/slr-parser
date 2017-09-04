@@ -21,7 +21,6 @@ namespace lang {
             virtual ~NodeVisitor(){}
     };
 
-
     /**
      * Usage:
      *
@@ -49,9 +48,7 @@ namespace lang {
             virtual std::vector<std::string> lines() const = 0;
 
             // The lines joined by newlines
-            std::string str() const {
-                return join(lines(), "\n");
-            }
+            std::string str() const { return join(lines(), "\n"); }
     };
 
     // Node that only contains one line
@@ -61,10 +58,10 @@ namespace lang {
             std::vector<std::string> lines() const override { return {line()}; }
     };
     
-    template <typename VisitedNode>
-    class Visitor {
+    template <typename VisitingNode>
+    class Visitor: public virtual NodeVisitor {
         public:
-            virtual void* visit(VisitedNode*) = 0;
+            virtual void* visit(VisitingNode*) = 0;
     };
 
     template <typename DerivedNode>
@@ -88,7 +85,7 @@ namespace lang {
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
-                    err << "Check if your Visitor implementation both inherits from 'Visitor<NODE>' and implements 'void* visit(NODE*)'." << std::endl;
+                    err << "Check if your Visitor implementation inherits from both 'Visitor<NODE>' and implements 'void* visit(NODE*)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
@@ -139,7 +136,7 @@ namespace lang {
     };
 
     template <typename VisitedExpr>
-    class Inferer {
+    class Inferer: public virtual BaseInferer {
         public:
             virtual std::shared_ptr<LangType> infer(VisitedExpr*) = 0;
     };

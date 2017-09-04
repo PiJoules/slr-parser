@@ -74,8 +74,7 @@ namespace lang {
             }
     };
 
-    class Compiler: public NodeVisitor,
-                    public Visitor<Module>,
+    class Compiler: public Visitor<Module>,
                     public Visitor<FuncDef>,
                     public Visitor<ReturnStmt>,
                     public Visitor<VarDecl>,
@@ -106,7 +105,6 @@ namespace lang {
                     //public Visitor<TupleTypeDecl>,
 
                     // Inference
-                    public BaseInferer,
                     public Inferer<Call>,
                     public Inferer<NameExpr>,
                     public Inferer<Tuple>,
