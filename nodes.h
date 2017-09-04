@@ -16,9 +16,12 @@
 const std::string INDENT = "    ";
 
 namespace lang {
+    class Node;
+
     class NodeVisitor {
         public:
             virtual ~NodeVisitor(){}
+            void* visit(Node*);
     };
 
     /**

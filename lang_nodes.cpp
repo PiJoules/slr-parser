@@ -3,6 +3,11 @@
 #include <algorithm>
 
 
+void* lang::NodeVisitor::visit(Node* node){
+    return node->accept(*this);
+}
+
+
 /**
  * Module
  */ 
