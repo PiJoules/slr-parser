@@ -65,23 +65,49 @@ namespace cppnodes {
             std::vector<std::string> lines() const { return {line()}; }
     };
 
-    class Type {
-        public:
-            virtual ~Type(){}
-            virtual std::string line() const = 0;
-            std::vector<std::string> lines() const { return {line()}; }
-    };
-
-    class NameType: public Type {
+    /**
+     * base<template args> varname;
+     *
+     * The template args will usually be a type(name) or variable.
+     */
+    class Type: public lang::SimpleNode, public lang::Visitable<Type> {
         private:
-            std::string name_;
+            Node* base_;
+            std::vector<Node*> template_args_;
 
         public:
-            NameType(const std::string& name): name_(name){}
+            Type(Node* base): base_(base){}
+            Type(Node* base, const std::vector<Node*>& template_args): 
+                base_(base), template_args_(template_args){}
+            Type(Node* base, std::initializer_list<Node*> template_args): 
+                base_(base), template_args_(template_args){}
 
-            std::string name() const { return name_; }
+            ~Type(){
+                delete base_;
+                for (Node* arg : template_args_){
+                    delete arg;
+                }
+            }
 
-            std::string line() const { return name_; }
+            std::string line() const override {
+                std::string line = base_->str();
+
+                if (!template_args_.empty()){
+                    line += "<";
+
+                    std::vector<std::string> arg_strs;
+                    for (Node* arg : template_args_){
+                        arg_strs.push_back(arg->str());
+                    }
+                    line += join(arg_strs, ",");
+
+                    line += ">";
+                }
+                
+                return line;
+            }
+
+            const std::vector<Node*>& template_args() const { return template_args_; }
     };
 
     // int x;
@@ -89,34 +115,17 @@ namespace cppnodes {
         private:
             std::string name_;
             Type* type_;
-            std::vector<Type*> template_args_;
 
         public:
             RegVarDecl(const char* name, Type* type): name_(name), type_(type){}
             RegVarDecl(const std::string& name, Type* type): name_(name), type_(type){}
-            RegVarDecl(const char* name, Type* type, const std::vector<Type*> template_args): 
-                name_(name), type_(type), template_args_(template_args){}
-            RegVarDecl(const std::string& name, Type* type, const std::vector<Type*> template_args): 
-                name_(name), type_(type), template_args_(template_args){}
 
             ~RegVarDecl(){
                 delete type_;
-                for (Type* arg : template_args_){
-                    delete arg;
-                }
             }
 
             std::string line() const override {
-                std::string line = type_->line();
-                if (!template_args_.empty()){
-                    std::vector<std::string> type_strs;
-                    for (Type* arg : template_args_){
-                        type_strs.push_back(arg->line());
-                    }
-                    line += "<" + join(type_strs, ",") + ">";
-                }
-                line += " " + name_;
-                return line;
+                return type_->line() + " " + name_;
             }
     };
 
