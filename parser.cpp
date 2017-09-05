@@ -126,7 +126,8 @@ std::string parsing::action_str(const ParseInstr::Action& action){
  * Add a substitute rule that will act as the new top level rule
  */
 
-static void* parse_prime(std::vector<void*>& args, void* data){
+static std::shared_ptr<void> parse_prime(
+        std::vector<std::shared_ptr<void>>& args, void* data){
     return args.front();
 }
 
@@ -769,8 +770,8 @@ const std::unordered_map<std::string, std::unordered_set<std::string>>& parsing:
 
 /**************** Parser ************/ 
 
-void* parsing::NodeVisitor::visit(Node* node){
-    return node->accept(*this);
+std::shared_ptr<void> parsing::NodeVisitor::visit(Node& node){
+    return node.accept(*this);
 }
 
 /**
@@ -780,7 +781,7 @@ void* parsing::NodeVisitor::visit(Node* node){
 void parsing::Parser::reduce(
         const ParseRule& parse_rule, 
         std::vector<lexing::LexToken>& symbol_stack,
-        std::vector<void*>& node_stack,
+        std::vector<std::shared_ptr<void>>& node_stack,
         std::vector<std::size_t>& state_stack,
         void* data){
     const std::string& rule = parse_rule.rule;
@@ -794,15 +795,15 @@ void parsing::Parser::reduce(
     assert(node_stack.size() == symbol_stack.size());
 
     auto start = node_stack.begin() + node_stack.size() - prod.size();
-    void* result_node;
+    std::shared_ptr<void> result_node;
 
     if (func){
-        std::vector<void*> slice(start, node_stack.end());
+        std::vector<std::shared_ptr<void>> slice(start, node_stack.end());
         result_node = func(slice, data);
     }
     else {
         // Otherwise, add the wrapper for the rule token
-        result_node = new lexing::LexToken(rule_token);
+        result_node = std::make_shared<lexing::LexToken>(rule_token);
     }
 
     node_stack.erase(start, node_stack.end());
@@ -848,7 +849,7 @@ parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& pars
 /**
  * The actual parsing.
  */
-void* parsing::Parser::parse(const std::string& code, void* data){
+std::shared_ptr<void> parsing::Parser::parse(const std::string& code, void* data){
     // This language is defined such that all statements must end with a newline 
     std::string code_cpy = code + "\n";
 
@@ -861,7 +862,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
     state_stack.push_back(0);
 
     std::vector<lexing::LexToken> symbol_stack;
-    std::vector<void*> node_stack;
+    std::vector<std::shared_ptr<void>> node_stack;
 
     lexing::LexToken lookahead = lexer_.token(data);
     const std::vector<ParseRule>& parse_rules = grammar_.parse_rules();
@@ -878,7 +879,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
         std::cerr << std::endl;
 #endif
 
-        lexing::LexToken* stack_token;
+        std::shared_ptr<lexing::LexToken> stack_token;
         const ParseInstr& instr = get_instr(state, lookahead);
 
         switch (instr.action){
@@ -891,7 +892,7 @@ void* parsing::Parser::parse(const std::string& code, void* data){
                 symbol_stack.push_back(lookahead);
 
                 // Copy the lookahead data
-                stack_token = new lexing::LexToken(lookahead);
+                stack_token = std::make_shared<lexing::LexToken>(lookahead);
                 node_stack.push_back(stack_token);
 
                 lookahead = lexer_.token(data);

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <cassert>
+#include <memory>
 
 #include "utils.h"
 #include "lexer.h"
@@ -18,7 +19,7 @@ namespace parsing {
     }
 
     // The function called for handling symbols in a production when reducing by a rule
-    typedef void* (*ParseCallback)(std::vector<void*>& nodes, void* data);
+    typedef std::shared_ptr<void> (*ParseCallback)(std::vector<std::shared_ptr<void>>& nodes, void* data);
 
     // Individual entries created by the user containing the 
     // - Nonterminal rule to be reduced to 
@@ -190,7 +191,7 @@ namespace parsing {
     class NodeVisitor {
         public:
             virtual ~NodeVisitor(){}
-            void* visit(Node*);
+            std::shared_ptr<void> visit(Node&);
     };
 
     /**
@@ -211,7 +212,7 @@ namespace parsing {
      */ 
     class Node {
         public:
-            virtual void* accept(NodeVisitor&) = 0;
+            virtual std::shared_ptr<void> accept(NodeVisitor&) = 0;
             virtual ~Node(){}
 
             // lines() returns a vector containing strings that represent 
@@ -232,47 +233,31 @@ namespace parsing {
     template <typename VisitingNode>
     class Visitor: public virtual NodeVisitor {
         public:
-            virtual void* visit(VisitingNode*) = 0;
+            virtual std::shared_ptr<void> visit(VisitingNode&) = 0;
     };
 
     template <typename DerivedNode>
     class Visitable: public virtual Node {
         public:
-            void* accept(NodeVisitor& base_visitor){
+            std::shared_ptr<void> accept(NodeVisitor& base_visitor){
                 try {
                     Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
-
-#ifdef DEBUG
-                    std::cerr << "visiting " << typeid(DerivedNode).name() << std::endl;
-#endif
-
-                    void* result = visitor.visit(static_cast<DerivedNode*>(this));
-
-#ifdef DEBUG 
-                    std::cerr << "leaving " << typeid(DerivedNode).name() << std::endl;
-#endif
-
-                    return result;
+                    return visitor.visit(static_cast<DerivedNode&>(*this));
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
-                    err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
-                    err << "Check if your Visitor implementation inherits from both 'Visitor<NODE>' and implements 'void* visit(NODE*)'." << std::endl;
+                    err << "Bad cast thrown for: " << typeid(DerivedNode).name() << std::endl;
+                    err << "Check if your Visitor implementation inherits from both 'Visitor<NODE>' and implements 'std::shared_ptr<void> visit(NODE&)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
     };
-
-    //union ParserStackElem {
-    //    std::shared_ptr<lexing::LexToken> token;
-    //    std::shared_ptr<Node>
-    //};
 
     class Parser {
         private:
             lexing::Lexer& lexer_;
             const Grammar grammar_;
 
-            void reduce(const ParseRule&, std::vector<lexing::LexToken>&, std::vector<void*>&,
+            void reduce(const ParseRule&, std::vector<lexing::LexToken>&, std::vector<std::shared_ptr<void>>&,
                         std::vector<std::size_t>&, void* data);
             const ParseInstr& get_instr(std::size_t, const lexing::LexToken&);
 
@@ -281,7 +266,7 @@ namespace parsing {
             Parser(lexing::Lexer&, const std::vector<ParseRule>& parse_rules,
                    const PrecedenceList& precedence={{}});
 
-            void* parse(const std::string&, void* data=nullptr);
+            std::shared_ptr<void> parse(const std::string&, void* data=nullptr);
 
             // Getters
             const Grammar& grammar() const;

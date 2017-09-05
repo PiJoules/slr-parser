@@ -129,52 +129,52 @@ namespace lang {
             }
             void exit_scope(){ scope_stack_.pop_back(); }
 
-            std::shared_ptr<FuncType> funcdef_type(FuncDef*);
+            std::shared_ptr<FuncType> funcdef_type(FuncDef&);
 
         public:
             Compiler();
             ~Compiler();
-            cppnodes::Module* compile(std::string);
+            std::shared_ptr<cppnodes::Module> compile(std::string);
 
-            std::shared_ptr<LangType> infer(Expr* expr){
+            std::shared_ptr<LangType> infer(std::shared_ptr<Expr> expr){
                 return expr->type(*this);
             }
 
-            void* visit(Module*);
+            std::shared_ptr<void> visit(Module&);
 
             // Simple stmts
-            void* visit(ReturnStmt*);
-            void* visit(ExprStmt*);
-            void* visit(VarDecl*);
-            void* visit(Assign*);
+            std::shared_ptr<void> visit(ReturnStmt&);
+            std::shared_ptr<void> visit(ExprStmt&);
+            std::shared_ptr<void> visit(VarDecl&);
+            std::shared_ptr<void> visit(Assign&);
 
             // Compound stmts
-            void* visit(FuncDef*);
-            void* visit(IfStmt*);
+            std::shared_ptr<void> visit(FuncDef&);
+            std::shared_ptr<void> visit(IfStmt&);
 
-            void* visit(Call*);
-            void* visit(BinExpr*);
+            std::shared_ptr<void> visit(Call&);
+            std::shared_ptr<void> visit(BinExpr&);
 
             // Atoms
-            void* visit(String*);
-            void* visit(NameExpr*);
-            void* visit(Int*);
+            std::shared_ptr<void> visit(String&);
+            std::shared_ptr<void> visit(NameExpr&);
+            std::shared_ptr<void> visit(Int&);
 
             // Binary operators  
-            void* visit(Add*);
-            void* visit(Sub*);
-            void* visit(Mul*);
-            void* visit(Div*);
+            std::shared_ptr<void> visit(Add&);
+            std::shared_ptr<void> visit(Sub&);
+            std::shared_ptr<void> visit(Mul&);
+            std::shared_ptr<void> visit(Div&);
 
-            void* visit(Eq*);
-            void* visit(Ne*);
-            void* visit(Lt*);
-            void* visit(Gt*);
-            void* visit(Lte*);
-            void* visit(Gte*);
+            std::shared_ptr<void> visit(Eq&);
+            std::shared_ptr<void> visit(Ne&);
+            std::shared_ptr<void> visit(Lt&);
+            std::shared_ptr<void> visit(Gt&);
+            std::shared_ptr<void> visit(Lte&);
+            std::shared_ptr<void> visit(Gte&);
 
-            void* visit(NameTypeDecl*);
-            //void* visit(TupleTypeDecl*);
+            std::shared_ptr<void> visit(NameTypeDecl&);
+            //std::shared_ptr<void> visit(TupleTypeDecl&);
 
             // Inference
             std::shared_ptr<LangType> infer(Call*);

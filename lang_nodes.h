@@ -24,16 +24,9 @@ namespace lang {
     class LangType;
 
     // The type of an object
-    class TypeDecl: public virtual parsing::Node {
+    class TypeDecl: public virtual parsing::SimpleNode {
         public:
-            virtual std::string value_str() const = 0;
             virtual std::shared_ptr<LangType> as_type() const = 0;
-            
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v;
-                v.push_back(value_str());
-                return v;
-            };
     };
 
     class BaseInferer {
@@ -43,27 +36,23 @@ namespace lang {
 
     class LangType {
         public:
-            virtual TypeDecl* as_type_decl() const = 0;
-            virtual ~LangType(){}
+            virtual std::shared_ptr<TypeDecl> as_type_decl() const = 0;
             virtual bool equals(const LangType&) const = 0;
 
             bool operator==(const LangType& other) const { return equals(other); }
             bool operator!=(const LangType& other) const { return !(*this == other); }
     };
 
-    class Expr: public virtual parsing::Node {
+    class Expr: public virtual parsing::SimpleNode {
         public:
             // The string representation of the value this expression holds
-            virtual std::string value_str() const = 0;
             virtual std::shared_ptr<LangType> type(BaseInferer&) = 0;
-
-            std::vector<std::string> lines() const;
     };
 
     template <typename VisitedExpr>
     class Inferer: public virtual BaseInferer {
         public:
-            virtual std::shared_ptr<LangType> infer(VisitedExpr*) = 0;
+            virtual std::shared_ptr<LangType> infer(VisitedExpr&) = 0;
     };
 
     template <typename DerivedExpr>
@@ -72,11 +61,11 @@ namespace lang {
             std::shared_ptr<LangType> type(BaseInferer& base_inferer){
                 try {
                     Inferer<DerivedExpr>& inferer = dynamic_cast<Inferer<DerivedExpr>&>(base_inferer);
-                    return inferer.infer(static_cast<DerivedExpr*>(this));
+                    return inferer.infer(static_cast<DerivedExpr&>(*this));
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown in: " << typeid(DerivedExpr).name() << std::endl;
-                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'std::shared_ptr<LangType> infer(your expr*)'." << std::endl;
+                    err << "Check if your Inferer implementation both inherits from Inferer<your expr>' and implements 'std::shared_ptr<LangType> infer(your expr&)'." << std::endl;
                     throw std::runtime_error(err.str());
                 }
             }
@@ -85,77 +74,60 @@ namespace lang {
     class Assign: public ModuleStmt, public SimpleFuncStmt, public parsing::Visitable<Assign> {
         private:
             std::string varname_;
-            Expr* expr_;
+            std::shared_ptr<Expr> expr_;
 
         public:
-            Assign(std::string& name, Expr* expr): varname_(name), expr_(expr){}
-            Assign(const char* name, Expr* expr): varname_(name), expr_(expr){}
-            ~Assign(){
-                delete expr_;
-            }
+            Assign(const std::string& name, std::shared_ptr<Expr> expr): varname_(name), expr_(expr){}
+            Assign(const char* name, std::shared_ptr<Expr> expr): varname_(name), expr_(expr){}
 
             std::string varname() const { return varname_; }
-            Expr* expr() const { return expr_; }
+            std::shared_ptr<Expr> expr() const { return expr_; }
             std::string line() const {
-                return varname_ + " = " + expr_->value_str();
+                return varname_ + " = " + expr_->line();
             }
     };
 
     class IfStmt: public FuncStmt, public parsing::Visitable<IfStmt> {
         private:
-            Expr* cond_;
-            std::vector<FuncStmt*> body_;
+            std::shared_ptr<Expr> cond_;
+            std::vector<std::shared_ptr<FuncStmt>> body_;
 
         public:
-            IfStmt(Expr* cond, std::vector<FuncStmt*>& body): cond_(cond), body_(body){}
-            ~IfStmt(){
-                for (FuncStmt* stmt : body_){
-                    delete stmt;
-                }
-                delete cond_;
-            }
+            IfStmt(std::shared_ptr<Expr> cond, 
+                   const std::vector<std::shared_ptr<FuncStmt>>& body): cond_(cond), body_(body){}
             std::vector<std::string> lines() const override;
 
-            Expr* cond() const { return cond_; }
-            const std::vector<FuncStmt*> body() const { return body_; }
+            std::shared_ptr<Expr> cond() const { return cond_; }
+            const std::vector<std::shared_ptr<FuncStmt>> body() const { return body_; }
     };
 
     class ForLoop: public FuncStmt, public parsing::Visitable<ForLoop> {
         private:
-            std::vector<Expr*> target_list_;
-            Expr* container_;
-            std::vector<FuncStmt*> body_;
+            std::vector<std::shared_ptr<Expr>> target_list_;
+            std::shared_ptr<Expr> container_;
+            std::vector<std::shared_ptr<FuncStmt>> body_;
         
         public:
-            ForLoop(const std::vector<Expr*>& target_list, Expr* container,
-                    const std::vector<FuncStmt*>& body):
+            ForLoop(const std::vector<std::shared_ptr<Expr>>& target_list, 
+                    std::shared_ptr<Expr> container,
+                    const std::vector<std::shared_ptr<FuncStmt>>& body):
                 target_list_(target_list), container_(container), body_(body){}
 
-            ~ForLoop(){
-                for (Expr* target : target_list_){
-                    delete target;
-                }
-                delete container_;
-                for (FuncStmt* stmt : body_){
-                    delete stmt;
-                }
-            }
-
-            const std::vector<Expr*>& target_list() const { return target_list_; }
-            Expr* container() const { return container_; }
+            const std::vector<std::shared_ptr<Expr>>& target_list() const { return target_list_; }
+            std::shared_ptr<Expr> container() const { return container_; }
 
             std::vector<std::string> lines() const override {
                 std::vector<std::string> v;
 
                 std::vector<std::string> arg_strs;
-                for (Expr* target : target_list_){
-                    arg_strs.push_back(target->value_str());
+                for (std::shared_ptr<Expr> target : target_list_){
+                    arg_strs.push_back(target->line());
                 }
 
-                std::string line1 = "for " + join(arg_strs, ", ") + " in " + container_->value_str();
+                std::string line1 = "for " + join(arg_strs, ", ") + " in " + container_->line();
                 v.push_back(line1);
 
-                for (FuncStmt* stmt : body_){
+                for (std::shared_ptr<FuncStmt> stmt : body_){
                     for (std::string& stmt_line : stmt->lines()){
                         v.push_back(INDENT + stmt_line);
                     }
@@ -167,59 +139,52 @@ namespace lang {
 
     class Call: public VisitableExpr<Call>, public parsing::Visitable<Call> {
         private:
-            Expr* func_;
-            std::vector<Expr*> args_;
+            std::shared_ptr<Expr> func_;
+            std::vector<std::shared_ptr<Expr>> args_;
 
         public:
-            Call(Expr*);
-            Call(Expr*, const std::vector<Expr*>&);
-            ~Call();
+            Call(std::shared_ptr<Expr> func): func_(func){}
+            Call(std::shared_ptr<Expr> func, const std::vector<std::shared_ptr<Expr>>& args):
+                func_(func), args_(args){}
 
-            Expr* func() const { return func_; }
-            const std::vector<Expr*>& args() const { return args_; }
+            std::shared_ptr<Expr> func() const { return func_; }
+            const std::vector<std::shared_ptr<Expr>>& args() const { return args_; }
 
-            std::string value_str() const override;
+            std::string line() const override;
     };
 
     class MemberAccess: public VisitableExpr<MemberAccess>, public parsing::Visitable<MemberAccess> {
         private:
-            Expr* base_;
+            std::shared_ptr<Expr> base_;
             std::string member_;
 
         public:
-            MemberAccess(Expr* base, const std::string& member): base_(base), member_(member){}
-            ~MemberAccess(){
-                delete base_;
-            }
+            MemberAccess(std::shared_ptr<Expr> base, 
+                         const std::string& member): 
+                base_(base), member_(member){}
 
-            Expr* base() const { return base_; }
+            std::shared_ptr<Expr> base() const { return base_; }
             std::string member() const { return member_; }
 
-            std::string value_str() const override {
-                return base_->value_str() + "." + member_;
+            std::string line() const override {
+                return base_->line() + "." + member_;
             }
     };
 
     class Tuple: public VisitableExpr<Tuple>, public parsing::Visitable<Call> {
         private:
-            std::vector<Expr*> contents_;
+            std::vector<std::shared_ptr<Expr>> contents_;
 
         public:
             Tuple(){}
-            Tuple(const std::vector<Expr*>& contents): contents_(contents){}
+            Tuple(const std::vector<std::shared_ptr<Expr>>& contents): contents_(contents){}
 
-            ~Tuple(){
-                for (Expr* expr : contents_){
-                    delete expr;
-                }
-            }
+            const std::vector<std::shared_ptr<Expr>> contents() const { return contents_; }
 
-            const std::vector<Expr*> contents() const { return contents_; }
-
-            std::string value_str() const override {
+            std::string line() const override {
                 std::vector<std::string> v;
-                for (Expr* expr : contents_){
-                    v.push_back(expr->value_str());
+                for (std::shared_ptr<Expr> expr : contents_){
+                    v.push_back(expr->line());
                 }
                 return join(v, ", ");
             }
@@ -227,28 +192,23 @@ namespace lang {
 
     class TupleTypeDecl: public TypeDecl, public parsing::Visitable<TupleTypeDecl> {
         private:
-            std::vector<TypeDecl*> contents_;
+            std::vector<std::shared_ptr<TypeDecl>> contents_;
 
         public:
             TupleTypeDecl(){}
-            TupleTypeDecl(const std::vector<TypeDecl*>& contents): contents_(contents){}
-            ~TupleTypeDecl(){
-                for (TypeDecl* decl : contents_){
-                    delete decl;
-                }
-            }
+            TupleTypeDecl(const std::vector<std::shared_ptr<TypeDecl>>& contents): contents_(contents){}
 
-            std::string value_str() const override {
+            std::string line() const override {
                 std::vector<std::string> v;
-                for (TypeDecl* decl : contents_){
-                    v.push_back(decl->value_str());
+                for (std::shared_ptr<TypeDecl> decl : contents_){
+                    v.push_back(decl->line());
                 }
                 return "tuple[" + join(v, ",") + "]";
             }
 
             std::shared_ptr<LangType> as_type() const override;
 
-            const std::vector<TypeDecl*>& contents() const { return contents_; }
+            const std::vector<std::shared_ptr<TypeDecl>>& contents() const { return contents_; }
     };
 
     class TupleType: public LangType {
@@ -261,14 +221,14 @@ namespace lang {
 
             const std::vector<std::shared_ptr<LangType>>& contents() const { return contents_; }
 
-            TypeDecl* as_type_decl() const {
-                std::vector<TypeDecl*> content_type_decls;
+            std::shared_ptr<TypeDecl> as_type_decl() const {
+                std::vector<std::shared_ptr<TypeDecl>> content_type_decls;
 
                 for (auto& lang_type : contents_){
                     content_type_decls.push_back(lang_type->as_type_decl());
                 }
 
-                return new TupleTypeDecl(content_type_decls);
+                return std::make_shared<TupleTypeDecl>(content_type_decls);
             }
 
             bool equals(const LangType& other) const {
@@ -288,13 +248,10 @@ namespace lang {
             }
     };
 
-    class BinOperator: public virtual parsing::Node {
+    class BinOperator: public parsing::SimpleNode {
         public:
             virtual std::string symbol() const = 0;
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v = {symbol()};
-                return v;
-            }
+            std::string line() const override { return symbol(); }
     };
     class Add: public BinOperator, public parsing::Visitable<Add> {
         public:
@@ -340,15 +297,12 @@ namespace lang {
 
     // TODO: Maybe we can merge this and the binary operator class
     // if they don't really end up having different logic in the long run.
-    class UnaryOperator: public parsing::Visitable<UnaryOperator> {
+    class UnaryOperator: public parsing::SimpleNode {
         public:
             virtual std::string symbol() const = 0;
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v = {symbol()};
-                return v;
-            }
+            std::string line() const override { return symbol(); }
     };
-    class USub: public UnaryOperator {
+    class USub: public UnaryOperator, public parsing::Visitable<USub> {
         public:
             std::string symbol() const { return "-"; }
     };
@@ -360,7 +314,7 @@ namespace lang {
         public:
             Int(const std::string&);
             Int(int);
-            std::string value_str() const;
+            std::string line() const;
             int value() const { return value_; }
     };
 
@@ -370,7 +324,7 @@ namespace lang {
 
         public:
             NameExpr(const std::string&);
-            std::string value_str() const;
+            std::string line() const;
             std::string name() const { return name_; }
     };
 
@@ -380,20 +334,20 @@ namespace lang {
 
         public:
             String(const std::string&);
-            std::string value_str() const;
+            std::string line() const;
             std::string value() const { return value_; }
     };
 
     class StringTypeDecl: public TypeDecl, public parsing::Visitable<StringTypeDecl> {
         public:
-            std::string value_str() const override { return "str"; }
+            std::string line() const override { return "str"; }
             std::shared_ptr<LangType> as_type() const override;
     };
 
     class StringType: public LangType {
         public:
-            TypeDecl* as_type_decl() const {
-                return new StringTypeDecl;
+            std::shared_ptr<TypeDecl> as_type_decl() const {
+                return std::make_shared<StringTypeDecl>();
             }
 
             bool equals(const LangType& other) const {
@@ -404,64 +358,65 @@ namespace lang {
 
     class BinExpr: public VisitableExpr<BinExpr>, public parsing::Visitable<BinExpr> {
         private:
-            Expr* lhs_;
-            BinOperator* op_;
-            Expr* rhs_;
+            std::shared_ptr<Expr> lhs_;
+            std::shared_ptr<BinOperator> op_;
+            std::shared_ptr<Expr> rhs_;
 
         public:
-            BinExpr(Expr*, BinOperator*, Expr*);
-            std::string value_str() const;
-            ~BinExpr();
+            BinExpr(std::shared_ptr<Expr> lhs, std::shared_ptr<BinOperator> op, 
+                    std::shared_ptr<Expr> rhs):
+                lhs_(lhs), op_(op), rhs_(rhs){}
+            std::string line() const override;
 
-            Expr* lhs() const { return lhs_; }
-            BinOperator* op() const { return op_; }
-            Expr* rhs() const { return rhs_; }
+            std::shared_ptr<Expr> lhs() const { return lhs_; }
+            std::shared_ptr<BinOperator> op() const { return op_; }
+            std::shared_ptr<Expr> rhs() const { return rhs_; }
     };
 
     class UnaryExpr: public VisitableExpr<UnaryExpr>, public parsing::Visitable<UnaryExpr> {
         private: 
-            Expr* expr_;
-            UnaryOperator* op_;
+            std::shared_ptr<Expr> expr_;
+            std::shared_ptr<UnaryOperator> op_;
 
         public:
-            UnaryExpr(Expr*, UnaryOperator*);
-            std::string value_str() const;
-            ~UnaryExpr();
+            UnaryExpr(std::shared_ptr<Expr> expr, std::shared_ptr<UnaryOperator> op):
+                expr_(expr), op_(op){}
+            std::string line() const override;
     };
 
     class ExprStmt: public SimpleFuncStmt, public parsing::Visitable<ExprStmt> {
         private:
-            Expr* expr_;
+            std::shared_ptr<Expr> expr_;
 
         public:
-            ExprStmt(Expr*);
-            std::string line() const override;
-            ~ExprStmt();
-            Expr* expr() const { return expr_; }
+            ExprStmt(std::shared_ptr<Expr> expr): expr_(expr){}
+            std::string line() const override { return expr_->line(); }
+            std::shared_ptr<Expr> expr() const { return expr_; }
     };
 
     class ReturnStmt: public SimpleFuncStmt, public parsing::Visitable<ReturnStmt> {
         private:
-            Expr* expr_;
+            std::shared_ptr<Expr> expr_;
 
         public:
-            ReturnStmt(Expr*);
-            std::string line() const;
-            ~ReturnStmt();
+            ReturnStmt(std::shared_ptr<Expr> expr): expr_(expr){}
+            std::string line() const override { return "return " + expr_->line(); }
 
-            Expr* expr() const { return expr_; }
+            std::shared_ptr<Expr> expr() const { return expr_; }
     };
 
     // Variable arguments collector  
     class StarArgsTypeDecl: public TypeDecl, public parsing::Visitable<StarArgsTypeDecl> {
         public:
-            std::string value_str() const override { return "*"; }
+            std::string line() const override { return "*"; }
             std::shared_ptr<LangType> as_type() const override;
     };
 
     class StarArgsType: public LangType {
         public:
-            TypeDecl* as_type_decl() const override { return new StarArgsTypeDecl; }
+            std::shared_ptr<TypeDecl> as_type_decl() const override { 
+                return std::make_shared<StarArgsTypeDecl>(); 
+            }
             bool equals(const LangType& other) const {
                 const StarArgsType* other_star_args = dynamic_cast<const StarArgsType*>(&other);
                 return other_star_args;
@@ -476,7 +431,7 @@ namespace lang {
             NameTypeDecl(const std::string& name): name_(name){}
             NameTypeDecl(const char* name): name_(name){}
             std::string name() const { return name_; }
-            std::string value_str() const override { return name_; }
+            std::string line() const override { return name_; }
             std::shared_ptr<LangType> as_type() const override;
     };
 
@@ -490,9 +445,8 @@ namespace lang {
 
             std::string name() const { return name_; }
 
-            TypeDecl* as_type_decl() const {
-                NameTypeDecl* type_decl = new NameTypeDecl(name_);
-                return type_decl;
+            std::shared_ptr<TypeDecl> as_type_decl() const {
+                return std::make_shared<NameTypeDecl>(name_);
             }
 
             bool equals(const LangType& other) const {
@@ -508,20 +462,20 @@ namespace lang {
 
     class FuncTypeDecl: public TypeDecl, public parsing::Visitable<FuncTypeDecl> {
         private:
-            TypeDecl* return_type_;
-            std::vector<TypeDecl*> args_;
+            std::shared_ptr<TypeDecl> return_type_;
+            std::vector<std::shared_ptr<TypeDecl>> args_;
             bool has_varargs_ = false;
 
         public:
-            FuncTypeDecl(TypeDecl* return_type, 
-                         const std::vector<TypeDecl*>& args,
+            FuncTypeDecl(std::shared_ptr<TypeDecl> return_type, 
+                         const std::vector<std::shared_ptr<TypeDecl>>& args,
                          bool has_varargs):
                 return_type_(return_type), 
                 args_(args),
                 has_varargs_(has_varargs){}
 
-            FuncTypeDecl(TypeDecl* return_type, 
-                         const std::initializer_list<TypeDecl*>& args,
+            FuncTypeDecl(std::shared_ptr<TypeDecl> return_type, 
+                         const std::initializer_list<std::shared_ptr<TypeDecl>>& args,
                          bool has_varargs):
                 return_type_(return_type), 
                 args_(args),
@@ -529,25 +483,18 @@ namespace lang {
 
             std::shared_ptr<LangType> as_type() const override;
 
-            ~FuncTypeDecl(){
-                delete return_type_;
-                for (TypeDecl* t : args_){
-                    delete t;
-                }
-            }
+            std::shared_ptr<TypeDecl> return_type() const { return return_type_; }
+            const std::vector<std::shared_ptr<TypeDecl>>& args() const { return args_; }
 
-            TypeDecl* return_type() const { return return_type_; }
-            const std::vector<TypeDecl*>& args() const { return args_; }
-
-            std::string value_str() const {
+            std::string line() const override {
                 std::string line = "(";
 
                 std::vector<std::string> v;
-                for (TypeDecl* decl : args_){
-                    v.push_back(decl->value_str());
+                for (std::shared_ptr<TypeDecl> decl : args_){
+                    v.push_back(decl->line());
                 }
 
-                line += join(v, ", ") + ") -> " + return_type_->value_str();
+                line += join(v, ", ") + ") -> " + return_type_->line();
                 return line;
             }
     };
@@ -577,14 +524,14 @@ namespace lang {
             const std::vector<std::shared_ptr<LangType>>& args() const { return args_; }
             bool has_varargs() const { return has_varargs_; }
 
-            TypeDecl* as_type_decl() const {
-                std::vector<TypeDecl*> args;
+            std::shared_ptr<TypeDecl> as_type_decl() const {
+                std::vector<std::shared_ptr<TypeDecl>> args;
                 for (std::shared_ptr<LangType> arg : args_){
                     args.push_back(arg->as_type_decl());
                 }
 
-                return new FuncTypeDecl(return_type_->as_type_decl(), args,
-                                        has_varargs_);
+                return std::make_shared<FuncTypeDecl>(return_type_->as_type_decl(), args,
+                                                      has_varargs_);
             }
 
             bool equals(const LangType& other) const {
@@ -620,54 +567,46 @@ namespace lang {
     class VarDecl: public SimpleFuncStmt, public parsing::Visitable<VarDecl> {
         private:
             std::string name_;
-            TypeDecl* type_;
+            std::shared_ptr<TypeDecl> type_;
 
         public:
-            VarDecl(std::string& name, TypeDecl* type): name_(name), type_(type){}
-            ~VarDecl(){
-                delete type_;
-            }
+            VarDecl(std::string& name, std::shared_ptr<TypeDecl> type): name_(name), type_(type){}
 
             std::string name() const { return name_; }
-            TypeDecl* type() const { return type_; }
+            std::shared_ptr<TypeDecl> type() const { return type_; }
 
-            std::string line() const {
-                return name_ + ": " + type_->value_str();
+            std::string line() const override {
+                return name_ + ": " + type_->line();
             }
     };
 
     class FuncArgs: public parsing::SimpleNode, public parsing::Visitable<FuncArgs> {
         private:
-            std::vector<VarDecl*> pos_args_;
-            std::vector<Assign*> keyword_args_;
+            std::vector<std::shared_ptr<VarDecl>> pos_args_;
+            std::vector<std::shared_ptr<Assign>> keyword_args_;
             bool has_varargs_ = false;
 
         public:
             FuncArgs(){}
 
-            FuncArgs(const std::vector<VarDecl*>& pos_args,
-                     const std::vector<Assign*>& keyword_args,
+            FuncArgs(const std::vector<std::shared_ptr<VarDecl>>& pos_args,
+                     const std::vector<std::shared_ptr<Assign>>& keyword_args,
                      bool has_varargs
                      ):
                 pos_args_(pos_args),
                 keyword_args_(keyword_args),
                 has_varargs_(has_varargs){}
 
-            FuncArgs(const std::initializer_list<VarDecl*>& pos_args,
-                     const std::initializer_list<Assign*>& keyword_args,
+            FuncArgs(const std::initializer_list<std::shared_ptr<VarDecl>>& pos_args,
+                     const std::initializer_list<std::shared_ptr<Assign>>& keyword_args,
                      bool has_varargs
                      ):
                 pos_args_(pos_args),
                 keyword_args_(keyword_args),
                 has_varargs_(has_varargs){}
 
-            ~FuncArgs(){
-                for (VarDecl* arg : pos_args_){ delete arg; }
-                for (Assign* arg : keyword_args_){ delete arg; }
-            }
-
-            const std::vector<VarDecl*>& pos_args() const { return pos_args_; }
-            const std::vector<Assign*>& keyword_args() const { return keyword_args_; }
+            const std::vector<std::shared_ptr<VarDecl>>& pos_args() const { return pos_args_; }
+            const std::vector<std::shared_ptr<Assign>>& keyword_args() const { return keyword_args_; }
             bool has_varargs() const { return has_varargs_; }
 
             std::string line() const override;
@@ -676,15 +615,15 @@ namespace lang {
     class FuncDef: public ModuleStmt, public parsing::Visitable<FuncDef> {
         private:
             std::string func_name_;
-            FuncArgs* args_;
-            TypeDecl* return_type_decl_;
-            std::vector<FuncStmt*> func_suite_;
+            std::shared_ptr<FuncArgs> args_;
+            std::shared_ptr<TypeDecl> return_type_decl_;
+            std::vector<std::shared_ptr<FuncStmt>> func_suite_;
 
         public:
             FuncDef(const std::string& func_name, 
-                    FuncArgs* args,
-                    TypeDecl* return_type_decl, 
-                    std::vector<FuncStmt*>& func_suite):
+                    std::shared_ptr<FuncArgs> args,
+                    std::shared_ptr<TypeDecl> return_type_decl, 
+                    std::vector<std::shared_ptr<FuncStmt>>& func_suite):
                 func_name_(func_name),
                 args_(args),
                 return_type_decl_(return_type_decl),
@@ -692,23 +631,20 @@ namespace lang {
 
             std::vector<std::string> lines() const;
 
-            ~FuncDef();
-
-            const std::vector<FuncStmt*>& suite() const { return func_suite_; }
+            const std::vector<std::shared_ptr<FuncStmt>>& suite() const { return func_suite_; }
             std::string name() const { return func_name_; }
-            TypeDecl* return_type_decl() const { return return_type_decl_; }
-            FuncArgs* args() const { return args_; }
+            std::shared_ptr<TypeDecl> return_type_decl() const { return return_type_decl_; }
+            std::shared_ptr<FuncArgs> args() const { return args_; }
     };
 
     class Module: public parsing::Visitable<Module> {
         private:
-            std::vector<ModuleStmt*> body_;
+            std::vector<std::shared_ptr<ModuleStmt>> body_;
 
         public:
-            Module(std::vector<ModuleStmt*>& body): body_(body){}
-            const std::vector<ModuleStmt*>& body() const { return body_; }
+            Module(std::vector<std::shared_ptr<ModuleStmt>>& body): body_(body){}
+            const std::vector<std::shared_ptr<ModuleStmt>>& body() const { return body_; }
             std::vector<std::string> lines() const;
-            ~Module();
     };
 }
 

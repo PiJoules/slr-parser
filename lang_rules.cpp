@@ -1,6 +1,6 @@
 #include "lang.h"
 
-#define DEFAULT_FUNC_RETURN_TYPE new lang::NameTypeDecl("int")
+#define DEFAULT_FUNC_RETURN_TYPE std::make_shared<lang::NameTypeDecl>("int")
 
 /****************** Lexer tokens *****************/
 
@@ -82,52 +82,37 @@ const lexing::TokensMap lang::LANG_TOKENS = {
     {"UMINUS", {"", nullptr}},
 };
 
-/********** Parser rules ***************/ 
+/********** Parser rules ***************/  
 
 // module : module_stmt_list
-void* parse_module(std::vector<void*>& args, void* data){
-    std::vector<lang::ModuleStmt*>* module_stmt_list = static_cast<std::vector<lang::ModuleStmt*>*>(args[0]);
-
-    lang::Module* module = new lang::Module(*module_stmt_list);
-
-    delete module_stmt_list;
-
-    return module;
+std::shared_ptr<void> parse_module(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto module_stmt_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::ModuleStmt>>>(args[0]);
+    return std::make_shared<lang::Module>(*module_stmt_list);
 }
 
 // module_stmt_list : func_def
-void* parse_module_stmt_list(std::vector<void*>& args, void* data){
-    lang::FuncDef* func_def = static_cast<lang::FuncDef*>(args[0]);
-    std::vector<parsing::Node*>* module_stmt_list = new std::vector<parsing::Node*>;
+std::shared_ptr<void> parse_module_stmt_list(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto func_def = std::static_pointer_cast<lang::FuncDef>(args[0]);
+    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list;
     module_stmt_list->push_back(func_def);
 
     return module_stmt_list;
 }
 
 // module_stmt_list : NEWLINE
-void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
-    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[0]);
-    std::vector<parsing::Node*>* module_stmt_list = new std::vector<parsing::Node*>;
-
-    delete newline;
-
-    return module_stmt_list;
+std::shared_ptr<void> parse_module_stmt_list2(std::vector<std::shared_ptr<void>>& args, void* data){
+    return std::make_shared<std::vector<std::shared_ptr<parsing::Node>>>();
 }
 
 // module_stmt_list : module_stmt_list NEWLINE
-void* parse_module_stmt_list3(std::vector<void*>& args, void* data){
-    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<parsing::Node*>* module_stmt_list = static_cast<std::vector<parsing::Node*>*>(args[0]);
-
-    delete newline;
-
-    return module_stmt_list;
+std::shared_ptr<void> parse_module_stmt_list3(std::vector<std::shared_ptr<void>>& args, void* data){
+    return args[0];
 }
 
 // module_stmt_list : module_stmt_list func_def
-void* parse_module_stmt_list4(std::vector<void*>& args, void* data){
-    lang::FuncDef* func_def = static_cast<lang::FuncDef*>(args[1]);
-    std::vector<parsing::Node*>* module_stmt_list = static_cast<std::vector<parsing::Node*>*>(args[0]);
+std::shared_ptr<void> parse_module_stmt_list4(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto module_stmt_list = std::static_pointer_cast<std::vector<std::shared_ptr<parsing::Node>>>(args[0]);
+    auto func_def = std::static_pointer_cast<lang::FuncDef>(args[1]);
 
     module_stmt_list->push_back(func_def);
 
@@ -135,22 +120,19 @@ void* parse_module_stmt_list4(std::vector<void*>& args, void* data){
 }
 
 // var_decl_list : var_decl 
-void* parse_var_decl_list_one_arg(std::vector<void*>& args, void* data){
-    lang::VarDecl* var_decl = static_cast<lang::VarDecl*>(args[0]);
-    std::vector<lang::VarDecl*>* var_decl_list = new std::vector<lang::VarDecl*>;
+std::shared_ptr<void> parse_var_decl_list_one_arg(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto var_decl = std::static_pointer_cast<lang::VarDecl>(args[0]);
 
+    std::shared_ptr<std::vector<std::shared_ptr<lang::VarDecl>>> var_decl_list;
     var_decl_list->push_back(var_decl);
 
     return var_decl_list;
 }
 
 // var_decl_list : var_decl_list COMMA var_decl 
-void* parse_var_decl_list(std::vector<void*>& args, void* data){
-    std::vector<lang::VarDecl*>* var_decl_list = static_cast<std::vector<lang::VarDecl*>*>(args[0]);
-    lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
-    lang::VarDecl* var_decl = static_cast<lang::VarDecl*>(args[2]);
-
-    delete comma;
+std::shared_ptr<void> parse_var_decl_list(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto var_decl_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::VarDecl>>>(args[0]);
+    auto var_decl = std::static_pointer_cast<lang::VarDecl>(args[2]);
 
     var_decl_list->push_back(var_decl);
 
@@ -158,23 +140,19 @@ void* parse_var_decl_list(std::vector<void*>& args, void* data){
 }
 
 // var_decl : NAME COLON type_decl 
-void* parse_var_decl(std::vector<void*>& args, void* data){
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
-    lang::TypeDecl* type_decl = static_cast<lang::TypeDecl*>(args[2]);
+std::shared_ptr<void> parse_var_decl(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
+    auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[2]);
 
-    lang::VarDecl* var_decl = new lang::VarDecl(name->value, type_decl);
-
-    delete name;
-    delete comma;
+    auto var_decl = std::make_shared<lang::VarDecl>(name->value, type_decl);
 
     return var_decl;
 }
 
 // var_assign_list : var_assign 
-void* parse_var_assign_list_one_assign(std::vector<void*>& args, void* data){
-    lang::Assign* var_assign = static_cast<lang::Assign*>(args[0]);
-    std::vector<lang::Assign*>* var_assign_list = new std::vector<lang::Assign*>;
+std::shared_ptr<void> parse_var_assign_list_one_assign(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto var_assign = std::static_pointer_cast<lang::Assign>(args[0]);
+    std::shared_ptr<std::vector<std::shared_ptr<lang::Assign>>> var_assign_list;
 
     var_assign_list->push_back(var_assign);
 
@@ -182,386 +160,221 @@ void* parse_var_assign_list_one_assign(std::vector<void*>& args, void* data){
 }
 
 // var_assign_list : var_assign_list COMMA var_assign 
-void* parse_var_assign_list(std::vector<void*>& args, void* data){
-    std::vector<lang::Assign*>* var_assign_list = static_cast<std::vector<lang::Assign*>*>(args[0]);
-    lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
-    lang::Assign* var_assign = static_cast<lang::Assign*>(args[2]);
+std::shared_ptr<void> parse_var_assign_list(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto var_assign_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Assign>>>(args[0]);
+    auto var_assign = std::static_pointer_cast<lang::Assign>(args[2]);
 
     var_assign_list->push_back(var_assign);
-
-    delete comma;
 
     return var_assign_list;
 }
 
 // var_assign : NAME ASSIGN expr
-void* parse_var_assign(std::vector<void*>& args, void* data){
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* assign = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_var_assign(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
+    auto expr = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Assign* var_assign = new lang::Assign(name->value, expr);
-
-    delete name;
-    delete assign;
-
-    return var_assign;
+    return std::make_shared<lang::Assign>(name->value, expr);
 }
 
 // type_decl : NAME 
-void* parse_type_decl_name(std::vector<void*>& args, void* data){
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
-
-    lang::TypeDecl* type_decl = new lang::NameTypeDecl(name->value);
-
-    delete name;
-
-    return type_decl;
+std::shared_ptr<void> parse_type_decl_name(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
+    return std::make_shared<lang::NameTypeDecl>(name->value);
 }
 
 // func_def : DEF NAME LPAR RPAR COLON func_suite
-void* parse_func_def(std::vector<void*>& args, void* data){
-    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
-    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
-    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
-    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[4]);
-    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
+std::shared_ptr<void> parse_func_def(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
+    auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[5]);
 
-    lang::FuncArgs* func_args = new lang::FuncArgs;
-    lang::TypeDecl* return_type = DEFAULT_FUNC_RETURN_TYPE;
+    std::shared_ptr<lang::FuncArgs> func_args;
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, return_type, *func_suite);
-
-    delete def;
-    delete name;
-    delete lpar;
-    delete rpar;
-    delete colon;
-    delete func_suite;
-
-    return func_def;
+    return std::make_shared<lang::FuncDef>(
+            name->value, func_args, DEFAULT_FUNC_RETURN_TYPE, *func_suite);
 }
 
 // func_def : DEF NAME LPAR RPAR ARROW type_decl COLON func_suite
-void* parse_func_def_with_return(std::vector<void*>& args, void* data){
-    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
-    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
-    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
-    lexing::LexToken* arrow = static_cast<lexing::LexToken*>(args[4]);
-    lang::TypeDecl* type_decl = static_cast<lang::TypeDecl*>(args[5]);
-    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[6]);
-    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[7]);
+std::shared_ptr<void> parse_func_def_with_return(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
+    auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[5]);
+    auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[7]);
 
-    lang::FuncArgs* func_args = new lang::FuncArgs;
+    std::shared_ptr<lang::FuncArgs> func_args;
 
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, type_decl, *func_suite);
-
-    delete def;
-    delete name;
-    delete lpar;
-    delete rpar;
-    delete arrow;
-    delete colon;
-    delete func_suite;
-
-    return func_def;
+    return std::make_shared<lang::FuncDef>(name->value, func_args, type_decl, *func_suite);
 }
 
 // func_def : DEF NAME LPAR func_args RPAR COLON func_suite 
-void* parse_func_def_with_args(std::vector<void*>& args, void* data){
-    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
-    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
-    lang::FuncArgs* func_args = static_cast<lang::FuncArgs*>(args[3]);
-    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[4]);
-    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[5]);
-    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[6]);
+std::shared_ptr<void> parse_func_def_with_args(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
+    auto func_args = std::static_pointer_cast<lang::FuncArgs>(args[3]);
+    auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[6]);
     
-    lang::TypeDecl* return_type = DEFAULT_FUNC_RETURN_TYPE;
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, return_type, *func_suite);
-
-    delete def;
-    delete name;
-    delete lpar;
-    delete rpar;
-    delete colon;
-    delete func_suite;
-
-    return func_def;
+    return std::make_shared<lang::FuncDef>(
+            name->value, func_args, DEFAULT_FUNC_RETURN_TYPE, *func_suite);
 }
 
 // func_def : DEF NAME LPAR func_args RPAR ARROW type_decl COLON func_suite  
-void* parse_func_def_with_args_with_return(std::vector<void*>& args, void* data){
-    lexing::LexToken* def = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[1]);
-    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[2]);
-    lang::FuncArgs* func_args = static_cast<lang::FuncArgs*>(args[3]);
-    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[4]);
-    lexing::LexToken* arrow = static_cast<lexing::LexToken*>(args[5]);
-    lang::TypeDecl* type_decl = static_cast<lang::TypeDecl*>(args[6]);
-    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[7]);
-    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[8]);
+std::shared_ptr<void> parse_func_def_with_args_with_return(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
+    auto func_args = std::static_pointer_cast<lang::FuncArgs>(args[3]);
+    auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[6]);
+    auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[8]);
     
-    lang::FuncDef* func_def = new lang::FuncDef(name->value, func_args, type_decl, *func_suite);
-
-    delete def;
-    delete name;
-    delete lpar;
-    delete rpar;
-    delete arrow;
-    delete colon;
-    delete func_suite;
-
-    return func_def;
+    return std::make_shared<lang::FuncDef>(name->value, func_args, type_decl, *func_suite);
 }
 
 // func_args : var_decl_list 
-void* parse_arg_list_only_var_decls(std::vector<void*>& args, void* data){
-    std::vector<lang::VarDecl*>* var_decl_list = static_cast<std::vector<lang::VarDecl*>*>(args[0]);
-
-    lang::FuncArgs* func_args = new lang::FuncArgs(*var_decl_list, {}, false);
-
-    delete var_decl_list;
-
-    return func_args;
+std::shared_ptr<void> parse_arg_list_only_var_decls(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto var_decl_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::VarDecl>>>(args[0]);
+    std::vector<std::shared_ptr<lang::Assign>> kw_args;
+    return std::make_shared<lang::FuncArgs>(*var_decl_list, kw_args, false);
 }
 
 // func_args : var_assign_list
-void* parse_arg_list_only_kwarg_decls(std::vector<void*>& args, void* data){
-    std::vector<lang::Assign*>* assign_list = static_cast<std::vector<lang::Assign*>*>(args[0]);
-
-    lang::FuncArgs* func_args = new lang::FuncArgs({}, *assign_list, false);
-
-    delete assign_list;
-
-    return func_args;
+std::shared_ptr<void> parse_arg_list_only_kwarg_decls(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto assign_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Assign>>>(args[0]);
+    std::vector<std::shared_ptr<lang::VarDecl>> pos_args;
+    return std::make_shared<lang::FuncArgs>(pos_args, *assign_list, false);
 }
 
 // func_suite : NEWLINE INDENT func_stmts DEDENT
-void* parse_func_suite(std::vector<void*>& args, void* data){
-    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* indent = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<parsing::Node*>* func_stmts = static_cast<std::vector<parsing::Node*>*>(args[2]);
-    lexing::LexToken* dedent = static_cast<lexing::LexToken*>(args[3]);
-
-    delete newline;
-    delete indent;
-    delete dedent;
-
-    return func_stmts;
+std::shared_ptr<void> parse_func_suite(std::vector<std::shared_ptr<void>>& args, void* data){
+    return args[2];
 }
 
 // func_stmts : func_stmt 
-void* parse_func_stmts(std::vector<void*>& args, void* data){
-    parsing::Node* func_stmt = static_cast<parsing::Node*>(args[0]);
-    std::vector<parsing::Node*>* func_stmts = new std::vector<parsing::Node*>;
+std::shared_ptr<void> parse_func_stmts(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto func_stmt = std::static_pointer_cast<parsing::Node>(args[0]);
+    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> func_stmts;
     func_stmts->push_back(func_stmt);
 
     return func_stmts;
 }
 
 // func_stmts : func_stmts func_stmt 
-void* parse_func_stmts2(std::vector<void*>& args, void* data){
-    parsing::Node* func_stmt = static_cast<parsing::Node*>(args[1]);
-    std::vector<parsing::Node*>* func_stmts = static_cast<std::vector<parsing::Node*>*>(args[0]);
+std::shared_ptr<void> parse_func_stmts2(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto func_stmt = std::static_pointer_cast<parsing::Node>(args[1]);
+    auto func_stmts = std::static_pointer_cast<std::vector<std::shared_ptr<parsing::Node>>>(args[0]);
     func_stmts->push_back(func_stmt);
 
     return func_stmts;
 }
 
 // func_stmts : func_stmts NEWLINE func_stmt 
-void* parse_func_stmts3(std::vector<void*>& args, void* data){
-    parsing::Node* func_stmt = static_cast<parsing::Node*>(args[2]);
-    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<parsing::Node*>* func_stmts = static_cast<std::vector<parsing::Node*>*>(args[0]);
+std::shared_ptr<void> parse_func_stmts3(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto func_stmt = std::static_pointer_cast<parsing::Node>(args[2]);
+    auto func_stmts = std::static_pointer_cast<std::vector<std::shared_ptr<parsing::Node>>>(args[0]);
     func_stmts->push_back(func_stmt);
-
-    delete newline;
 
     return func_stmts;
 }
 
 // func_stmt : simple_func_stmt NEWLINE
-void* parse_func_stmt_simple(std::vector<void*>& args, void* data){
-    lang::SimpleFuncStmt* simple_func_stmt = static_cast<lang::SimpleFuncStmt*>(args[0]);
-    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-
-    delete newline;
-
-    return simple_func_stmt;
+std::shared_ptr<void> parse_func_stmt_simple(std::vector<std::shared_ptr<void>>& args, void* data){
+    return args[0];
 }
 
 // func_stmt : compound_func_stmt
-void* parse_func_stmt_compound(std::vector<void*>& args, void* data){
+std::shared_ptr<void> parse_func_stmt_compound(std::vector<std::shared_ptr<void>>& args, void* data){
     return args[0];
 }
 
 // simple_func_stmt : expr_stmt
 //                  | return_stmt
 //                  | var_assign
-void* parse_simple_func_stmt(std::vector<void*>& args, void* data){
+std::shared_ptr<void> parse_simple_func_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
     return args[0];
 }
 
 // compound_func_stmt : if_stmt 
 //                    | for_loop
-void* parse_compound_func_stmt(std::vector<void*>& args, void* data){
+std::shared_ptr<void> parse_compound_func_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
     return args[0];
 }
 
 // expr_stmt : expr 
-void* parse_expr_stmt(std::vector<void*>& args, void* data){
-    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
-    lang::ExprStmt* expr_stmt = new lang::ExprStmt(expr);
-    
-    return expr_stmt;
+std::shared_ptr<void> parse_expr_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
+    return std::make_shared<lang::ExprStmt>(expr);
 }
 
 // return_stmt : RETURN expr  
-void* parse_return_stmt(std::vector<void*>& args, void* data){
-    lexing::LexToken* return_token = static_cast<lexing::LexToken*>(args[0]);
-    lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
-
-    delete return_token;
-
-    lang::ReturnStmt* return_stmt = new lang::ReturnStmt(expr);
-
-    return return_stmt;
+std::shared_ptr<void> parse_return_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[1]);
+    return std::make_shared<lang::ReturnStmt>(expr);
 }
 
 // if_stmt : IF expr COLON func_suite 
-void* parse_if_stmt(std::vector<void*>& args, void* data){
-    lexing::LexToken* if_tok = static_cast<lexing::LexToken*>(args[0]);
-    lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
-    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[2]);
-    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[3]);
+std::shared_ptr<void> parse_if_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[1]);
+    auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[3]);
 
-    lang::IfStmt* if_stmt = new lang::IfStmt(expr, *func_suite);
-
-    delete if_tok;
-    delete colon;
-    delete func_suite;
-
-    return if_stmt;
+    return std::make_shared<lang::IfStmt>(expr, *func_suite);
 }
 
 // for_loop : FOR expr_list IN expr COLON func_suite 
-void* parse_for_loop(std::vector<void*>& args, void* data){
-    lexing::LexToken* for_tok = static_cast<lexing::LexToken*>(args[0]);
-    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[1]);
-    lexing::LexToken* in_tok = static_cast<lexing::LexToken*>(args[2]);
-    lang::Expr* expr = static_cast<lang::Expr*>(args[3]);
-    lexing::LexToken* colon = static_cast<lexing::LexToken*>(args[4]);
-    std::vector<lang::FuncStmt*>* func_suite = static_cast<std::vector<lang::FuncStmt*>*>(args[5]);
+std::shared_ptr<void> parse_for_loop(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[1]);
+    auto expr = std::static_pointer_cast<lang::Expr>(args[3]);
+    auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[5]);
 
-    lang::ForLoop* for_loop = new lang::ForLoop(*expr_list, expr, *func_suite);
-
-    delete for_tok;
-    delete expr_list;
-    delete in_tok;
-    delete colon;
-    delete func_suite;
-
-    return for_loop;
+    return std::make_shared<lang::ForLoop>(*expr_list, expr, *func_suite);
 }
 
 // expr : expr DOT NAME
-void* parse_member_access(std::vector<void*>& args, void* data){
-    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* dot = static_cast<lexing::LexToken*>(args[1]);
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[2]);
+std::shared_ptr<void> parse_member_access(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[2]);
 
-    lang::MemberAccess* member_access = new lang::MemberAccess(expr, name->value);
-
-    delete dot;
-    delete name;
-
-    return member_access;
+    return std::make_shared<lang::MemberAccess>(expr, name->value);
 }
 
 // expr : tuple 
-void* parse_tuple_expr(std::vector<void*>& args, void* data){
+std::shared_ptr<void> parse_tuple_expr(std::vector<std::shared_ptr<void>>& args, void* data){
     return args[0];
 }
 
 // tuple : LBRACE RBRACE
-void* parse_empty_tuple(std::vector<void*>& args, void* data){
-    lexing::LexToken* lbrace = static_cast<lexing::LexToken*>(args[0]);
-    lexing::LexToken* rbrace = static_cast<lexing::LexToken*>(args[1]);
-
-    lang::Tuple* tuple = new lang::Tuple;
-
-    delete lbrace;
-    delete rbrace;
-
-    return tuple;
+std::shared_ptr<void> parse_empty_tuple(std::vector<std::shared_ptr<void>>& args, void* data){
+    return std::make_shared<lang::Tuple>();
 }
 
 // tuple : LBRACE expr_list RBRACE
-void* parse_tuple(std::vector<void*>& args, void* data){
-    lexing::LexToken* lbrace = static_cast<lexing::LexToken*>(args[0]);
-    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[1]);
-    lexing::LexToken* rbrace = static_cast<lexing::LexToken*>(args[2]);
-
-    lang::Tuple* tuple = new lang::Tuple(*expr_list);
-
-    delete lbrace;
-    delete expr_list;
-    delete rbrace;
-
-    return tuple;
+std::shared_ptr<void> parse_tuple(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[1]);
+    return std::make_shared<lang::Tuple>(*expr_list);
 }
 
 // expr : expr LPAR RPAR 
-void* parse_empty_func_call(std::vector<void*>& args, void* data){
-    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[1]);
-    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[2]);
-
-    delete lpar;
-    delete rpar;
-
-    lang::Call* call = new lang::Call(expr);
-
-    return call;
+std::shared_ptr<void> parse_empty_func_call(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
+    return std::make_shared<lang::Call>(expr);
 }
 
 // expr : expr LPAR expr_list RPAR
-void* parse_func_call(std::vector<void*>& args, void* data){
-    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* lpar = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[2]);
-    lexing::LexToken* rpar = static_cast<lexing::LexToken*>(args[3]);
+std::shared_ptr<void> parse_func_call(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[2]);
 
-    delete lpar;
-    delete rpar;
-
-    lang::Call* call = new lang::Call(expr, *expr_list);
-
-    delete expr_list;
-
-    return call;
+    return std::make_shared<lang::Call>(expr, *expr_list);
 }
 
 // expr_list : expr  
-void* parse_call_one_arg(std::vector<void*>& args, void* data){
-    lang::Expr* expr = static_cast<lang::Expr*>(args[0]);
+std::shared_ptr<void> parse_call_one_arg(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
 
-    std::vector<lang::Expr*>* expr_list = new std::vector<lang::Expr*>;
+    std::shared_ptr<std::vector<std::shared_ptr<lang::Expr>>> expr_list;
     expr_list->push_back(expr);
 
     return expr_list;
 }
 
 // expr_list : expr_list COMMA expr
-void* parse_expr_list(std::vector<void*>& args, void* data){
-    std::vector<lang::Expr*>* expr_list = static_cast<std::vector<lang::Expr*>*>(args[0]);
-    lexing::LexToken* comma = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr = static_cast<lang::Expr*>(args[2]);
-
-    delete comma;
+std::shared_ptr<void> parse_expr_list(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[0]);
+    auto expr = std::static_pointer_cast<lang::Expr>(args[2]);
 
     expr_list->push_back(expr);
 
@@ -569,204 +382,124 @@ void* parse_expr_list(std::vector<void*>& args, void* data){
 }
 
 // expr : expr SUB expr 
-void* parse_bin_sub_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_sub_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Sub* op = new lang::Sub;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Sub>(), expr2);
 }
 
 // expr : expr ADD expr 
-void* parse_bin_add_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_add_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Add* op = new lang::Add;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Add>(), expr2);
 }
 
 // expr : expr MUL expr 
-void* parse_bin_mul_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_mul_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Mul* op = new lang::Mul;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Mul>(), expr2);
 }
 
 // expr : expr DIV expr 
-void* parse_bin_div_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_div_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Div* op = new lang::Div;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Div>(), expr2);
 }
 
 // expr : expr EQ expr 
-void* parse_bin_eq_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_eq_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Eq* op = new lang::Eq;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Eq>(), expr2);
 }
 
 // expr : expr NE expr 
-void* parse_bin_ne_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_ne_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Ne* op = new lang::Ne;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Ne>(), expr2);
 }
 
 // expr : expr LT expr 
-void* parse_bin_lt_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_lt_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Lt* op = new lang::Lt;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Lt>(), expr2);
 }
 
 // expr : expr GT expr 
-void* parse_bin_gt_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_gt_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Gt* op = new lang::Gt;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Gt>(), expr2);
 }
 
 // expr : expr LTE expr 
-void* parse_bin_lte_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_lte_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Lte* op = new lang::Lte;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Lte>(), expr2);
 }
 
 // expr : expr GTE expr 
-void* parse_bin_gte_expr(std::vector<void*>& args, void* data){
-    lang::Expr* expr1 = static_cast<lang::Expr*>(args[0]);
-    lexing::LexToken* op_tok = static_cast<lexing::LexToken*>(args[1]);
-    lang::Expr* expr2 = static_cast<lang::Expr*>(args[2]);
+std::shared_ptr<void> parse_bin_gte_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
+    auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
-    lang::Gte* op = new lang::Gte;
-    lang::BinExpr* bin_expr = new lang::BinExpr(expr1, op, expr2);
-
-    delete op_tok;
-
-    return bin_expr;
+    return std::make_shared<lang::BinExpr>(expr1, std::make_shared<lang::Gte>(), expr2);
 }
 
 // expr : SUB expr %UMINUS
-void* parse_un_sub_expr(std::vector<void*>& args, void* data){
-    lexing::LexToken* sub = static_cast<lexing::LexToken*>(args[0]);
-    lang::Expr* expr = static_cast<lang::Expr*>(args[1]);
-
-    lang::USub* op = new lang::USub;
-    lang::UnaryExpr* unary_expr = new lang::UnaryExpr(expr, op);
-
-    delete sub;
-
-    return unary_expr;
+std::shared_ptr<void> parse_un_sub_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto expr = std::static_pointer_cast<lang::Expr>(args[1]);
+    return std::make_shared<lang::UnaryExpr>(expr, std::make_shared<lang::USub>());
 }
 
 // expr : NAME 
-void* parse_name_expr(std::vector<void*>& args, void* data){
-    lexing::LexToken* name = static_cast<lexing::LexToken*>(args[0]);
-    lang::NameExpr* expr = new lang::NameExpr(name->value);
-
-    delete name;
-
-    return expr;
+std::shared_ptr<void> parse_name_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
+    return std::make_shared<lang::NameExpr>(name->value);
 }
 
 // expr : INT
-void* parse_int_expr(std::vector<void*>& args, void* data){
-    lexing::LexToken* int_tok = static_cast<lexing::LexToken*>(args[0]);
-    lang::Int* expr = new lang::Int(int_tok->value);
-    
-    delete int_tok;
-
-    return expr;
+std::shared_ptr<void> parse_int_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto int_tok = std::static_pointer_cast<lexing::LexToken>(args[0]);
+    return std::make_shared<lang::Int>(int_tok->value);
 }
 
 // expr : STRING
 // with the quotes trimmed off
-void* parse_string_expr(std::vector<void*>& args, void* data){
-    lexing::LexToken* str = static_cast<lexing::LexToken*>(args[0]);
-
-    lang::String* expr = new lang::String(str->value);
-
-    delete str;
-
-    return expr;
+std::shared_ptr<void> parse_string_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+    auto str = std::static_pointer_cast<lexing::LexToken>(args[0]);
+    return std::make_shared<lang::String>(str->value);
 }
 
-//void* parse_module_stmt_list_1(std::vector<void*>& args, void* data){
-//    std::vector<parsing::Node*>* module_stmt_list = new std::vector<parsing::Node*>;
+//std::shared_ptr<void> parse_module_stmt_list_1(std::vector<std::shared_ptr<void>>& args, void* data){
+//    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list;
 //
-//    parsing::Node* module_stmt = static_cast<parsing::Node*>(args[0]);
+//    parsing::Node* module_stmt = std::static_pointer_cast<parsing::Node*>(args[0]);
 //
 //    module_stmt_list->push_back(module_stmt);
 //
 //    return module_stmt_list;
 //}
 //
-//void* parse_module_stmt_list_2(std::vector<void*>& args, void* data){
-//    std::vector<parsing::Node*>* module_stmt_list = static_cast<std::vector<parsing::Node*>*>(args[0]);
-//    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-//    parsing::Node* module_stmt = static_cast<parsing::Node*>(args[2]);
+//std::shared_ptr<void> parse_module_stmt_list_2(std::vector<std::shared_ptr<void>>& args, void* data){
+//    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list = std::static_pointer_cast<std::vector<parsing::Node*>*>(args[0]);
+//    auto newline = std::static_pointer_cast<lexing::LexToken>(args[1]);
+//    parsing::Node* module_stmt = std::static_pointer_cast<parsing::Node*>(args[2]);
 //
 //    module_stmt_list->push_back(module_stmt);
 //
@@ -775,7 +508,7 @@ void* parse_string_expr(std::vector<void*>& args, void* data){
 //    return module_stmt_list;
 //}
 //
-//void* parse_func_def_module_stmt(std::vector<void*>& args, void* data){
+//std::shared_ptr<void> parse_func_def_module_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
 //    return args[0];
 //}
 

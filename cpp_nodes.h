@@ -9,61 +9,42 @@ namespace cppnodes {
     // Base node representing a whole .c file
     class Module: public parsing::Visitable<Module> {
         private:
-            std::vector<parsing::Node*> body_;
+            std::vector<std::shared_ptr<Node>> body_;
 
         public:
-            Module(const std::vector<parsing::Node*>&);
+            Module(const std::vector<std::shared_ptr<parsing::Node>>& body): body_(body){}
             std::vector<std::string> lines() const;
-            ~Module();
 
-            void prepend(Node*);
+            void prepend(std::shared_ptr<Node>);
     };
 
     // Base Expression node
-    class Expr: public parsing::Visitable<Expr> {
-        public:
-            // All expressions can be written on one line
-            virtual std::string value_str() const = 0;
-            std::vector<std::string> lines() const;
-    };
+    class Expr: public virtual parsing::SimpleNode {};
 
-    class Stmt: public parsing::Visitable<Stmt> {};
+    class Stmt: public virtual parsing::Node {};
 
     // One line statement
-    class SimpleStmt: public Stmt {
-        public:
-            virtual std::string value_str() const = 0;
-            std::vector<std::string> lines() const;
-    };
+    class SimpleStmt: public virtual Stmt, public virtual parsing::SimpleNode {};
 
     // Multi line statement
-    class CompoundStmt: public Stmt {};
+    class CompoundStmt: public virtual Stmt {};
 
-    class IfStmt: public CompoundStmt {
+    class IfStmt: public CompoundStmt, public parsing::Visitable<IfStmt> {
         private:
-            Expr* cond_;
-            std::vector<Node*> body_;
+            std::shared_ptr<Expr> cond_;
+            std::vector<std::shared_ptr<Node>> body_;
 
         public:
-            IfStmt(Expr* cond, std::vector<Node*>& body): cond_(cond), body_(body){}
-            ~IfStmt(){
-                for (Node* stmt : body_){
-                    delete stmt;
-                }
-                delete cond_;
-            }
+            IfStmt(std::shared_ptr<Expr> cond, const std::vector<std::shared_ptr<Node>>& body): 
+                cond_(cond), body_(body){}
             std::vector<std::string> lines() const override;
 
-            Expr* cond() const { return cond_; }
-            const std::vector<Node*> body() const { return body_; }
+            std::shared_ptr<Expr> cond() const { return cond_; }
+            const std::vector<std::shared_ptr<Node>> body() const { return body_; }
     };
 
     // Variable declaration
-    class VarDecl: public parsing::Visitable<VarDecl> {
-        public:
-            virtual std::string line() const = 0;
-            std::vector<std::string> lines() const { return {line()}; }
-    };
+    class VarDecl: public virtual parsing::SimpleNode {};
 
     /**
      * base<template args> varname;
@@ -72,22 +53,15 @@ namespace cppnodes {
      */
     class Type: public parsing::SimpleNode, public parsing::Visitable<Type> {
         private:
-            Node* base_;
-            std::vector<Node*> template_args_;
+            std::shared_ptr<Node> base_;
+            std::vector<std::shared_ptr<Node>> template_args_;
 
         public:
-            Type(Node* base): base_(base){}
-            Type(Node* base, const std::vector<Node*>& template_args): 
+            Type(std::shared_ptr<Node> base): base_(base){}
+            Type(std::shared_ptr<Node> base, const std::vector<std::shared_ptr<Node>>& template_args): 
                 base_(base), template_args_(template_args){}
-            Type(Node* base, std::initializer_list<Node*> template_args): 
+            Type(std::shared_ptr<Node> base, std::initializer_list<std::shared_ptr<Node>> template_args): 
                 base_(base), template_args_(template_args){}
-
-            ~Type(){
-                delete base_;
-                for (Node* arg : template_args_){
-                    delete arg;
-                }
-            }
 
             std::string line() const override {
                 std::string line = base_->str();
@@ -96,7 +70,7 @@ namespace cppnodes {
                     line += "<";
 
                     std::vector<std::string> arg_strs;
-                    for (Node* arg : template_args_){
+                    for (std::shared_ptr<Node> arg : template_args_){
                         arg_strs.push_back(arg->str());
                     }
                     line += join(arg_strs, ",");
@@ -107,251 +81,230 @@ namespace cppnodes {
                 return line;
             }
 
-            const std::vector<Node*>& template_args() const { return template_args_; }
+            const std::vector<std::shared_ptr<Node>>& template_args() const { return template_args_; }
     };
 
     // int x;
-    class RegVarDecl: public VarDecl {
+    class RegVarDecl: public VarDecl, public parsing::Visitable<RegVarDecl> {
         private:
             std::string name_;
-            Type* type_;
+            std::shared_ptr<Type> type_;
 
         public:
-            RegVarDecl(const char* name, Type* type): name_(name), type_(type){}
-            RegVarDecl(const std::string& name, Type* type): name_(name), type_(type){}
-
-            ~RegVarDecl(){
-                delete type_;
-            }
+            RegVarDecl(const char* name, std::shared_ptr<Type> type): name_(name), type_(type){}
+            RegVarDecl(const std::string& name, std::shared_ptr<Type> type): name_(name), type_(type){}
 
             std::string line() const override {
                 return type_->line() + " " + name_;
             }
     };
 
-    // int (*func)(int arg1, int arg2)
-    class FuncDecl: public VarDecl {};
+    //// int (*func)(int arg1, int arg2)
+    //class FuncDecl: public VarDecl, public parsing::Visitable<FuncDecl> {};
 
-    // struct Person person;
-    class StructDecl: public VarDecl {};
+    //// struct Person person;
+    //class StructDecl: public VarDecl, public parsing::Visitable<StructDecl> {};
 
-    // enum Color color;
-    class EnumDecl: public VarDecl {};
+    //// enum Color color;
+    //class EnumDecl: public VarDecl {}, public parsing::Visitable<EnumDecl> {};
 
-    class FuncDef: public CompoundStmt {
+    class FuncDef: public CompoundStmt, public parsing::Visitable<FuncDef> {
         private:
             std::string name_;
             std::string type_;
-            std::vector<VarDecl*> args_;
-            std::vector<parsing::Node*> body_;
+            std::vector<std::shared_ptr<VarDecl>> args_;
+            std::vector<std::shared_ptr<Node>> body_;
 
         public:
             FuncDef(const std::string&, const std::string&, 
-                    const std::vector<VarDecl*>&,
-                    const std::vector<parsing::Node*>&);
-            ~FuncDef();
-            std::vector<std::string> lines() const;
+                    const std::vector<std::shared_ptr<VarDecl>>&,
+                    const std::vector<std::shared_ptr<Node>>&);
+            std::vector<std::string> lines() const override;
     };
 
-    class Name: public Expr {
+    class Name: public Expr, public parsing::Visitable<Name> {
         private:
             std::string id_;
 
         public:
             Name(const char*);
             Name(const std::string&);
-            std::string value_str() const;
+            std::string line() const;
     };
 
-    class Int: public Expr {
+    class Int: public Expr, public parsing::Visitable<Int> {
         private:
             int val_;
 
         public:
             Int(int val): val_(val){}
-            std::string value_str() const { 
+            std::string line() const override { 
                 std::ostringstream out;
                 out << val_;
                 return out.str(); 
             }
     };
 
-    class String: public Expr {
+    class String: public Expr, public parsing::Visitable<String> {
         private:
             std::string value_;
 
         public:
             String(const std::string&);
-            std::string value_str() const;
+            std::string line() const override;
     };
 
-    class Call: public Expr {
+    class Call: public Expr, public parsing::Visitable<Call> {
         private:
-            Expr* func_;
-            std::vector<Expr*> args_;
+            std::shared_ptr<Expr> func_;
+            std::vector<std::shared_ptr<Expr>> args_;
 
         public:
-            Call(Expr*, std::vector<Expr*>&);
-            ~Call();
-            std::string value_str() const;
+            Call(std::shared_ptr<Expr> func, const std::vector<std::shared_ptr<Expr>>& args): 
+                func_(func), args_(args){}
+            std::string line() const override;
     };
 
-    class BinOperator: public parsing::Visitable<BinOperator> {
+    class BinOperator: public virtual parsing::SimpleNode {
         public:
             virtual std::string symbol() const = 0;
-            std::vector<std::string> lines() const {
-                std::vector<std::string> v = {symbol()};
-                return v;
-            }
+            std::string line() const override { return symbol(); }
     };
-    class Add: public BinOperator {
+    class Add: public BinOperator, public parsing::Visitable<Add> {
         public:
             std::string symbol() const { return "+"; }
     };
-    class Sub: public BinOperator {
+    class Sub: public BinOperator, public parsing::Visitable<Sub> {
         public:
             std::string symbol() const { return "-"; }
     };
-    class Div: public BinOperator {
+    class Div: public BinOperator, public parsing::Visitable<Div> {
         public:
             std::string symbol() const { return "/"; }
     };
-    class Mul: public BinOperator {
+    class Mul: public BinOperator, public parsing::Visitable<Mul> {
         public:
             std::string symbol() const { return "*"; }
     };
     
-    class Eq: public BinOperator {
+    class Eq: public BinOperator, public parsing::Visitable<Eq> {
         public:
             std::string symbol() const { return "=="; }
     };
-    class Ne: public BinOperator {
+    class Ne: public BinOperator, public parsing::Visitable<Ne> {
         public:
             std::string symbol() const { return "!="; }
     };
-    class Lt: public BinOperator {
+    class Lt: public BinOperator, public parsing::Visitable<Lt> {
         public:
             std::string symbol() const { return "<"; }
     };
-    class Gt: public BinOperator {
+    class Gt: public BinOperator, public parsing::Visitable<Gt> {
         public:
             std::string symbol() const { return ">"; }
     };
-    class Lte: public BinOperator {
+    class Lte: public BinOperator, public parsing::Visitable<Lte> {
         public:
             std::string symbol() const { return "<="; }
     };
-    class Gte: public BinOperator {
+    class Gte: public BinOperator, public parsing::Visitable<Gte> {
         public:
             std::string symbol() const { return ">="; }
     };
 
-    class BinExpr: public Expr {
+    class BinExpr: public Expr, public parsing::Visitable<BinExpr> {
         private:
-            Expr* lhs_;
-            BinOperator* op_;
-            Expr* rhs_;
+            std::shared_ptr<Expr> lhs_;
+            std::shared_ptr<BinOperator> op_;
+            std::shared_ptr<Expr> rhs_;
 
         public:
-            BinExpr(Expr* lhs, BinOperator* op, Expr* rhs): lhs_(lhs), op_(op), rhs_(rhs){}
-            std::string value_str() const override {
-                std::string s = lhs_->str() + " " + op_->symbol() + " " + rhs_->str();
-                return s;
-            }
-            ~BinExpr(){
-                delete lhs_;
-                delete op_;
-                delete rhs_;
+            BinExpr(std::shared_ptr<Expr> lhs, std::shared_ptr<BinOperator> op, 
+                    std::shared_ptr<Expr> rhs): 
+                lhs_(lhs), op_(op), rhs_(rhs){}
+            std::string line() const override {
+                return lhs_->line() + " " + op_->symbol() + " " + rhs_->line();
             }
 
-            Expr* lhs() const { return lhs_; }
-            BinOperator* op() const { return op_; }
-            Expr* rhs() const { return rhs_; }
+            std::shared_ptr<Expr> lhs() const { return lhs_; }
+            std::shared_ptr<BinOperator> op() const { return op_; }
+            std::shared_ptr<Expr> rhs() const { return rhs_; }
     };
 
-    class ReturnStmt: public SimpleStmt {
+    class ReturnStmt: public SimpleStmt, public parsing::Visitable<ReturnStmt> {
         private:
-            Expr* expr_;
+            std::shared_ptr<Expr> expr_;
 
         public:
-            ReturnStmt(Expr* expr);
-            ~ReturnStmt();
-            std::string value_str() const;
+            ReturnStmt(std::shared_ptr<Expr> expr);
+            std::string line() const override;
     };
 
-    class ExprStmt: public SimpleStmt {
+    class ExprStmt: public SimpleStmt, public parsing::Visitable<ExprStmt> {
         private:
-            Expr* expr_;
+            std::shared_ptr<Expr> expr_;
 
         public:
-            ExprStmt(Expr*);
-            ~ExprStmt();
-            std::string value_str() const;
+            ExprStmt(std::shared_ptr<Expr>);
+            std::string line() const override;
     };
 
     class Assign: public SimpleStmt {
         private:
-            VarDecl* var_decl_;
-            Expr* expr_;
+            std::shared_ptr<VarDecl> var_decl_;
+            std::shared_ptr<Expr> expr_;
 
         public:
-            Assign(VarDecl* var_decl, Expr* expr): var_decl_(var_decl), expr_(expr){}
-            ~Assign(){
-                delete var_decl_;
-                delete expr_;
-            }
+            Assign(std::shared_ptr<VarDecl> var_decl, std::shared_ptr<Expr> expr): 
+                var_decl_(var_decl), expr_(expr){}
 
-            VarDecl* var_decl() const { return var_decl_; }
-            Expr* expr() const { return expr_; }
-            std::string value_str() const { 
-                return var_decl_->str() + " = " + expr_->value_str() + ";";
+            std::shared_ptr<VarDecl> var_decl() const { return var_decl_; }
+            std::shared_ptr<Expr> expr() const { return expr_; }
+            std::string line() const override { 
+                return var_decl_->line() + " = " + expr_->line() + ";";
             }
     };
 
     /**
      * Macros
      */ 
-    class Macro: public parsing::Visitable<Macro> {};
+    class Macro: public virtual parsing::Node {};
 
     // Single line macro
-    class SimpleMacro: public Macro {
-        public:
-            virtual std::string value_str() const = 0;
-            std::vector<std::string> lines() const;
-    };
+    class SimpleMacro: public virtual Macro, public virtual parsing::SimpleNode {};
 
-    class Include: public SimpleMacro {
+    class Include: public SimpleMacro, public parsing::Visitable<Include> {
         private:
             std::string name_;
 
         public:
-            Include(std::string&);
-            std::string value_str() const;
+            Include(const std::string&);
+            std::string line() const override;
     };
 
     // Define without the second argument
-    class SimpleDefine: public SimpleMacro {
+    class SimpleDefine: public SimpleMacro, public parsing::Visitable<SimpleDefine> {
         private:
             std::string name_;
 
         public:
-            SimpleDefine(std::string&);
-            std::string value_str() const;
+            SimpleDefine(const std::string&);
+            std::string line() const override;
     };
 
-    class Ifndef: public SimpleMacro {
+    class Ifndef: public SimpleMacro, public parsing::Visitable<Ifndef> {
         private:
             std::string name_;
 
         public:
-            Ifndef(std::string&);
-            std::string value_str() const;
+            Ifndef(const std::string&);
+            std::string line() const override;
     };
 
-    class Endif: public SimpleMacro {
+    class Endif: public SimpleMacro, public parsing::Visitable<Endif> {
         public:
             Endif();
-            std::string value_str() const;
+            std::string line() const;
     };
 }
 
