@@ -18,7 +18,7 @@
 
 #include "lexer.h"
 #include "parser.h"
-#include "nodes.h"
+#include "lang_nodes.h"
 
 #define STARTING_COL 1
 

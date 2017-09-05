@@ -74,34 +74,34 @@ namespace lang {
             }
     };
 
-    class Compiler: public Visitor<Module>,
-                    public Visitor<FuncDef>,
-                    public Visitor<ReturnStmt>,
-                    public Visitor<VarDecl>,
-                    public Visitor<Assign>,
+    class Compiler: public parsing::Visitor<Module>,
+                    public parsing::Visitor<FuncDef>,
+                    public parsing::Visitor<ReturnStmt>,
+                    public parsing::Visitor<VarDecl>,
+                    public parsing::Visitor<Assign>,
 
-                    public Visitor<ExprStmt>,
-                    public Visitor<IfStmt>,
+                    public parsing::Visitor<ExprStmt>,
+                    public parsing::Visitor<IfStmt>,
 
-                    public Visitor<Call>,
-                    public Visitor<BinExpr>,
-                    public Visitor<String>,
-                    public Visitor<NameExpr>,
-                    public Visitor<Int>,
+                    public parsing::Visitor<Call>,
+                    public parsing::Visitor<BinExpr>,
+                    public parsing::Visitor<String>,
+                    public parsing::Visitor<NameExpr>,
+                    public parsing::Visitor<Int>,
 
-                    public Visitor<Add>, 
-                    public Visitor<Sub>,
-                    public Visitor<Mul>,
-                    public Visitor<Div>,
+                    public parsing::Visitor<Add>, 
+                    public parsing::Visitor<Sub>,
+                    public parsing::Visitor<Mul>,
+                    public parsing::Visitor<Div>,
 
-                    public Visitor<Eq>, 
-                    public Visitor<Ne>,
-                    public Visitor<Lt>,
-                    public Visitor<Gt>,
-                    public Visitor<Lte>,
-                    public Visitor<Gte>,
+                    public parsing::Visitor<Eq>, 
+                    public parsing::Visitor<Ne>,
+                    public parsing::Visitor<Lt>,
+                    public parsing::Visitor<Gt>,
+                    public parsing::Visitor<Lte>,
+                    public parsing::Visitor<Gte>,
 
-                    public Visitor<NameTypeDecl>,
+                    public parsing::Visitor<NameTypeDecl>,
                     //public Visitor<TupleTypeDecl>,
 
                     // Inference

@@ -98,7 +98,7 @@ void* parse_module(std::vector<void*>& args, void* data){
 // module_stmt_list : func_def
 void* parse_module_stmt_list(std::vector<void*>& args, void* data){
     lang::FuncDef* func_def = static_cast<lang::FuncDef*>(args[0]);
-    std::vector<lang::Node*>* module_stmt_list = new std::vector<lang::Node*>;
+    std::vector<parsing::Node*>* module_stmt_list = new std::vector<parsing::Node*>;
     module_stmt_list->push_back(func_def);
 
     return module_stmt_list;
@@ -107,7 +107,7 @@ void* parse_module_stmt_list(std::vector<void*>& args, void* data){
 // module_stmt_list : NEWLINE
 void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
     lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[0]);
-    std::vector<lang::Node*>* module_stmt_list = new std::vector<lang::Node*>;
+    std::vector<parsing::Node*>* module_stmt_list = new std::vector<parsing::Node*>;
 
     delete newline;
 
@@ -117,7 +117,7 @@ void* parse_module_stmt_list2(std::vector<void*>& args, void* data){
 // module_stmt_list : module_stmt_list NEWLINE
 void* parse_module_stmt_list3(std::vector<void*>& args, void* data){
     lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<lang::Node*>* module_stmt_list = static_cast<std::vector<lang::Node*>*>(args[0]);
+    std::vector<parsing::Node*>* module_stmt_list = static_cast<std::vector<parsing::Node*>*>(args[0]);
 
     delete newline;
 
@@ -127,7 +127,7 @@ void* parse_module_stmt_list3(std::vector<void*>& args, void* data){
 // module_stmt_list : module_stmt_list func_def
 void* parse_module_stmt_list4(std::vector<void*>& args, void* data){
     lang::FuncDef* func_def = static_cast<lang::FuncDef*>(args[1]);
-    std::vector<lang::Node*>* module_stmt_list = static_cast<std::vector<lang::Node*>*>(args[0]);
+    std::vector<parsing::Node*>* module_stmt_list = static_cast<std::vector<parsing::Node*>*>(args[0]);
 
     module_stmt_list->push_back(func_def);
 
@@ -343,7 +343,7 @@ void* parse_arg_list_only_kwarg_decls(std::vector<void*>& args, void* data){
 void* parse_func_suite(std::vector<void*>& args, void* data){
     lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[0]);
     lexing::LexToken* indent = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<lang::Node*>* func_stmts = static_cast<std::vector<lang::Node*>*>(args[2]);
+    std::vector<parsing::Node*>* func_stmts = static_cast<std::vector<parsing::Node*>*>(args[2]);
     lexing::LexToken* dedent = static_cast<lexing::LexToken*>(args[3]);
 
     delete newline;
@@ -355,8 +355,8 @@ void* parse_func_suite(std::vector<void*>& args, void* data){
 
 // func_stmts : func_stmt 
 void* parse_func_stmts(std::vector<void*>& args, void* data){
-    lang::Node* func_stmt = static_cast<lang::Node*>(args[0]);
-    std::vector<lang::Node*>* func_stmts = new std::vector<lang::Node*>;
+    parsing::Node* func_stmt = static_cast<parsing::Node*>(args[0]);
+    std::vector<parsing::Node*>* func_stmts = new std::vector<parsing::Node*>;
     func_stmts->push_back(func_stmt);
 
     return func_stmts;
@@ -364,8 +364,8 @@ void* parse_func_stmts(std::vector<void*>& args, void* data){
 
 // func_stmts : func_stmts func_stmt 
 void* parse_func_stmts2(std::vector<void*>& args, void* data){
-    lang::Node* func_stmt = static_cast<lang::Node*>(args[1]);
-    std::vector<lang::Node*>* func_stmts = static_cast<std::vector<lang::Node*>*>(args[0]);
+    parsing::Node* func_stmt = static_cast<parsing::Node*>(args[1]);
+    std::vector<parsing::Node*>* func_stmts = static_cast<std::vector<parsing::Node*>*>(args[0]);
     func_stmts->push_back(func_stmt);
 
     return func_stmts;
@@ -373,9 +373,9 @@ void* parse_func_stmts2(std::vector<void*>& args, void* data){
 
 // func_stmts : func_stmts NEWLINE func_stmt 
 void* parse_func_stmts3(std::vector<void*>& args, void* data){
-    lang::Node* func_stmt = static_cast<lang::Node*>(args[2]);
+    parsing::Node* func_stmt = static_cast<parsing::Node*>(args[2]);
     lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-    std::vector<lang::Node*>* func_stmts = static_cast<std::vector<lang::Node*>*>(args[0]);
+    std::vector<parsing::Node*>* func_stmts = static_cast<std::vector<parsing::Node*>*>(args[0]);
     func_stmts->push_back(func_stmt);
 
     delete newline;
@@ -754,9 +754,9 @@ void* parse_string_expr(std::vector<void*>& args, void* data){
 }
 
 //void* parse_module_stmt_list_1(std::vector<void*>& args, void* data){
-//    std::vector<lang::Node*>* module_stmt_list = new std::vector<lang::Node*>;
+//    std::vector<parsing::Node*>* module_stmt_list = new std::vector<parsing::Node*>;
 //
-//    lang::Node* module_stmt = static_cast<lang::Node*>(args[0]);
+//    parsing::Node* module_stmt = static_cast<parsing::Node*>(args[0]);
 //
 //    module_stmt_list->push_back(module_stmt);
 //
@@ -764,9 +764,9 @@ void* parse_string_expr(std::vector<void*>& args, void* data){
 //}
 //
 //void* parse_module_stmt_list_2(std::vector<void*>& args, void* data){
-//    std::vector<lang::Node*>* module_stmt_list = static_cast<std::vector<lang::Node*>*>(args[0]);
+//    std::vector<parsing::Node*>* module_stmt_list = static_cast<std::vector<parsing::Node*>*>(args[0]);
 //    lexing::LexToken* newline = static_cast<lexing::LexToken*>(args[1]);
-//    lang::Node* module_stmt = static_cast<lang::Node*>(args[2]);
+//    parsing::Node* module_stmt = static_cast<parsing::Node*>(args[2]);
 //
 //    module_stmt_list->push_back(module_stmt);
 //

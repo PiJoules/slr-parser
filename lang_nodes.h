@@ -1,5 +1,5 @@
-#ifndef _NODES_H
-#define _NODES_H 
+#ifndef _LANG_NODES_H
+#define _LANG_NODES_H 
 
 #include <vector>
 #include <string>
@@ -11,98 +11,20 @@
 #include <memory>
 #include <iostream>
 
-#include "utils.h"
+#include "parser.h"
 
 const std::string INDENT = "    ";
 
 namespace lang {
-    class Node;
+    class ModuleStmt: public virtual parsing::Node {};
+    class FuncStmt: public virtual parsing::Node {};
 
-    class NodeVisitor {
-        public:
-            virtual ~NodeVisitor(){}
-            void* visit(Node*);
-    };
-
-    /**
-     * Usage:
-     *
-     * If you want to just create an AST for dumping into a string, the child node can just inherit 
-     * from Node. 
-     *
-     * If you want to be able to visit nodes in the true, it just needs to inherit from 
-     * Visitable which uses the CRTP to notify the Visitor to visit this specific node.
-     *
-     * The Node and Visitable classes are inherited virtually, so any other classes derived from Node 
-     * can inherit virtually from Node to act as a mixin. The SimpleNode, which is used for implementing
-     * nodes that have only one line, can be used as a mixin like so:
-     *
-     * class BinExpr: public lang::SimpleNode, public lang::Visitable<BinExpr> {
-     *     ...
-     * };
-     */ 
-    class Node {
-        public:
-            virtual void* accept(NodeVisitor&) = 0;
-            virtual ~Node(){}
-
-            // lines() returns a vector containing strings that represent 
-            // individual lines separated in the code separated by newlines.
-            virtual std::vector<std::string> lines() const = 0;
-
-            // The lines joined by newlines
-            std::string str() const { return join(lines(), "\n"); }
-    };
-
-    // Node that only contains one line
-    class SimpleNode: public virtual Node {
-        public:
-            virtual std::string line() const = 0;
-            std::vector<std::string> lines() const override { return {line()}; }
-    };
-    
-    template <typename VisitingNode>
-    class Visitor: public virtual NodeVisitor {
-        public:
-            virtual void* visit(VisitingNode*) = 0;
-    };
-
-    template <typename DerivedNode>
-    class Visitable: public virtual Node {
-        public:
-            void* accept(NodeVisitor& base_visitor){
-                try {
-                    Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
-
-#ifdef DEBUG
-                    std::cerr << "visiting " << typeid(DerivedNode).name() << std::endl;
-#endif
-
-                    void* result = visitor.visit(static_cast<DerivedNode*>(this));
-
-#ifdef DEBUG 
-                    std::cerr << "leaving " << typeid(DerivedNode).name() << std::endl;
-#endif
-
-                    return result;
-                } catch (const std::bad_cast& e){
-                    std::ostringstream err;
-                    err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
-                    err << "Check if your Visitor implementation inherits from both 'Visitor<NODE>' and implements 'void* visit(NODE*)'." << std::endl;
-                    throw std::runtime_error(err.str());
-                }
-            }
-    };
-
-    class ModuleStmt: public virtual Node {};
-    class FuncStmt: public virtual Node {};
-
-    class SimpleFuncStmt: public virtual FuncStmt, public virtual SimpleNode {};
+    class SimpleFuncStmt: public virtual FuncStmt, public virtual parsing::SimpleNode {};
 
     class LangType;
 
     // The type of an object
-    class TypeDecl: public virtual Node {
+    class TypeDecl: public virtual parsing::Node {
         public:
             virtual std::string value_str() const = 0;
             virtual std::shared_ptr<LangType> as_type() const = 0;
@@ -129,7 +51,7 @@ namespace lang {
             bool operator!=(const LangType& other) const { return !(*this == other); }
     };
 
-    class Expr: public virtual Node {
+    class Expr: public virtual parsing::Node {
         public:
             // The string representation of the value this expression holds
             virtual std::string value_str() const = 0;
@@ -160,7 +82,7 @@ namespace lang {
             }
     };
 
-    class Assign: public ModuleStmt, public SimpleFuncStmt, public Visitable<Assign> {
+    class Assign: public ModuleStmt, public SimpleFuncStmt, public parsing::Visitable<Assign> {
         private:
             std::string varname_;
             Expr* expr_;
@@ -179,7 +101,7 @@ namespace lang {
             }
     };
 
-    class IfStmt: public FuncStmt, public Visitable<IfStmt> {
+    class IfStmt: public FuncStmt, public parsing::Visitable<IfStmt> {
         private:
             Expr* cond_;
             std::vector<FuncStmt*> body_;
@@ -198,7 +120,7 @@ namespace lang {
             const std::vector<FuncStmt*> body() const { return body_; }
     };
 
-    class ForLoop: public FuncStmt, public Visitable<ForLoop> {
+    class ForLoop: public FuncStmt, public parsing::Visitable<ForLoop> {
         private:
             std::vector<Expr*> target_list_;
             Expr* container_;
@@ -243,7 +165,7 @@ namespace lang {
             }
     };
 
-    class Call: public VisitableExpr<Call>, public Visitable<Call> {
+    class Call: public VisitableExpr<Call>, public parsing::Visitable<Call> {
         private:
             Expr* func_;
             std::vector<Expr*> args_;
@@ -259,7 +181,7 @@ namespace lang {
             std::string value_str() const override;
     };
 
-    class MemberAccess: public VisitableExpr<MemberAccess>, public Visitable<MemberAccess> {
+    class MemberAccess: public VisitableExpr<MemberAccess>, public parsing::Visitable<MemberAccess> {
         private:
             Expr* base_;
             std::string member_;
@@ -278,7 +200,7 @@ namespace lang {
             }
     };
 
-    class Tuple: public VisitableExpr<Tuple>, public Visitable<Call> {
+    class Tuple: public VisitableExpr<Tuple>, public parsing::Visitable<Call> {
         private:
             std::vector<Expr*> contents_;
 
@@ -303,7 +225,7 @@ namespace lang {
             }
     };
 
-    class TupleTypeDecl: public TypeDecl, public Visitable<TupleTypeDecl> {
+    class TupleTypeDecl: public TypeDecl, public parsing::Visitable<TupleTypeDecl> {
         private:
             std::vector<TypeDecl*> contents_;
 
@@ -366,7 +288,7 @@ namespace lang {
             }
     };
 
-    class BinOperator: public virtual Node {
+    class BinOperator: public virtual parsing::Node {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -374,51 +296,51 @@ namespace lang {
                 return v;
             }
     };
-    class Add: public BinOperator, public Visitable<Add> {
+    class Add: public BinOperator, public parsing::Visitable<Add> {
         public:
             std::string symbol() const { return "+"; }
     };
-    class Sub: public BinOperator, public Visitable<Sub> {
+    class Sub: public BinOperator, public parsing::Visitable<Sub> {
         public:
             std::string symbol() const { return "-"; }
     };
-    class Div: public BinOperator, public Visitable<Div> {
+    class Div: public BinOperator, public parsing::Visitable<Div> {
         public:
             std::string symbol() const { return "/"; }
     };
-    class Mul: public BinOperator, public Visitable<Mul> {
+    class Mul: public BinOperator, public parsing::Visitable<Mul> {
         public:
             std::string symbol() const { return "*"; }
     };
     
-    class Eq: public BinOperator, public Visitable<Eq> {
+    class Eq: public BinOperator, public parsing::Visitable<Eq> {
         public:
             std::string symbol() const { return "=="; }
     };
-    class Ne: public BinOperator, public Visitable<Ne> {
+    class Ne: public BinOperator, public parsing::Visitable<Ne> {
         public:
             std::string symbol() const { return "!="; }
     };
-    class Lt: public BinOperator, public Visitable<Lt> {
+    class Lt: public BinOperator, public parsing::Visitable<Lt> {
         public:
             std::string symbol() const { return "<"; }
     };
-    class Gt: public BinOperator, public Visitable<Gt> {
+    class Gt: public BinOperator, public parsing::Visitable<Gt> {
         public:
             std::string symbol() const { return ">"; }
     };
-    class Lte: public BinOperator, public Visitable<Lte> {
+    class Lte: public BinOperator, public parsing::Visitable<Lte> {
         public:
             std::string symbol() const { return "<="; }
     };
-    class Gte: public BinOperator, public Visitable<Gte> {
+    class Gte: public BinOperator, public parsing::Visitable<Gte> {
         public:
             std::string symbol() const { return ">="; }
     };
 
     // TODO: Maybe we can merge this and the binary operator class
     // if they don't really end up having different logic in the long run.
-    class UnaryOperator: public Visitable<UnaryOperator> {
+    class UnaryOperator: public parsing::Visitable<UnaryOperator> {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -431,7 +353,7 @@ namespace lang {
             std::string symbol() const { return "-"; }
     };
 
-    class Int: public VisitableExpr<Int>, public Visitable<Int> {
+    class Int: public VisitableExpr<Int>, public parsing::Visitable<Int> {
         private:
             int value_;
 
@@ -442,7 +364,7 @@ namespace lang {
             int value() const { return value_; }
     };
 
-    class NameExpr: public VisitableExpr<NameExpr>, public Visitable<NameExpr> {
+    class NameExpr: public VisitableExpr<NameExpr>, public parsing::Visitable<NameExpr> {
         private:
             std::string name_;
 
@@ -452,7 +374,7 @@ namespace lang {
             std::string name() const { return name_; }
     };
 
-    class String: public VisitableExpr<String>, public Visitable<String> {
+    class String: public VisitableExpr<String>, public parsing::Visitable<String> {
         private:
             std::string value_;
 
@@ -462,7 +384,7 @@ namespace lang {
             std::string value() const { return value_; }
     };
 
-    class StringTypeDecl: public TypeDecl, public Visitable<StringTypeDecl> {
+    class StringTypeDecl: public TypeDecl, public parsing::Visitable<StringTypeDecl> {
         public:
             std::string value_str() const override { return "str"; }
             std::shared_ptr<LangType> as_type() const override;
@@ -480,7 +402,7 @@ namespace lang {
             }
     };
 
-    class BinExpr: public VisitableExpr<BinExpr>, public Visitable<BinExpr> {
+    class BinExpr: public VisitableExpr<BinExpr>, public parsing::Visitable<BinExpr> {
         private:
             Expr* lhs_;
             BinOperator* op_;
@@ -496,7 +418,7 @@ namespace lang {
             Expr* rhs() const { return rhs_; }
     };
 
-    class UnaryExpr: public VisitableExpr<UnaryExpr>, public Visitable<UnaryExpr> {
+    class UnaryExpr: public VisitableExpr<UnaryExpr>, public parsing::Visitable<UnaryExpr> {
         private: 
             Expr* expr_;
             UnaryOperator* op_;
@@ -507,7 +429,7 @@ namespace lang {
             ~UnaryExpr();
     };
 
-    class ExprStmt: public SimpleFuncStmt, public Visitable<ExprStmt> {
+    class ExprStmt: public SimpleFuncStmt, public parsing::Visitable<ExprStmt> {
         private:
             Expr* expr_;
 
@@ -518,7 +440,7 @@ namespace lang {
             Expr* expr() const { return expr_; }
     };
 
-    class ReturnStmt: public SimpleFuncStmt, public Visitable<ReturnStmt> {
+    class ReturnStmt: public SimpleFuncStmt, public parsing::Visitable<ReturnStmt> {
         private:
             Expr* expr_;
 
@@ -531,7 +453,7 @@ namespace lang {
     };
 
     // Variable arguments collector  
-    class StarArgsTypeDecl: public TypeDecl, public Visitable<StarArgsTypeDecl> {
+    class StarArgsTypeDecl: public TypeDecl, public parsing::Visitable<StarArgsTypeDecl> {
         public:
             std::string value_str() const override { return "*"; }
             std::shared_ptr<LangType> as_type() const override;
@@ -546,7 +468,7 @@ namespace lang {
             }
     };
 
-    class NameTypeDecl: public TypeDecl, public Visitable<NameTypeDecl> {
+    class NameTypeDecl: public TypeDecl, public parsing::Visitable<NameTypeDecl> {
         private:
             std::string name_;
 
@@ -584,7 +506,7 @@ namespace lang {
             }
     };
 
-    class FuncTypeDecl: public TypeDecl, public Visitable<FuncTypeDecl> {
+    class FuncTypeDecl: public TypeDecl, public parsing::Visitable<FuncTypeDecl> {
         private:
             TypeDecl* return_type_;
             std::vector<TypeDecl*> args_;
@@ -695,7 +617,7 @@ namespace lang {
             }
     };
 
-    class VarDecl: public SimpleFuncStmt, public Visitable<VarDecl> {
+    class VarDecl: public SimpleFuncStmt, public parsing::Visitable<VarDecl> {
         private:
             std::string name_;
             TypeDecl* type_;
@@ -714,7 +636,7 @@ namespace lang {
             }
     };
 
-    class FuncArgs: public SimpleNode, public Visitable<FuncArgs> {
+    class FuncArgs: public parsing::SimpleNode, public parsing::Visitable<FuncArgs> {
         private:
             std::vector<VarDecl*> pos_args_;
             std::vector<Assign*> keyword_args_;
@@ -751,7 +673,7 @@ namespace lang {
             std::string line() const override;
     };
 
-    class FuncDef: public ModuleStmt, public Visitable<FuncDef> {
+    class FuncDef: public ModuleStmt, public parsing::Visitable<FuncDef> {
         private:
             std::string func_name_;
             FuncArgs* args_;
@@ -778,7 +700,7 @@ namespace lang {
             FuncArgs* args() const { return args_; }
     };
 
-    class Module: public Visitable<Module> {
+    class Module: public parsing::Visitable<Module> {
         private:
             std::vector<ModuleStmt*> body_;
 

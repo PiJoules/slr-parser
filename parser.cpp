@@ -767,7 +767,11 @@ const std::unordered_map<std::string, std::unordered_set<std::string>>& parsing:
 
 
 
-/**************** Parser ************/
+/**************** Parser ************/ 
+
+void* parsing::NodeVisitor::visit(Node* node){
+    return node->accept(*this);
+}
 
 /**
  * All terminal symbols on the stack have the same precedence and associativity.

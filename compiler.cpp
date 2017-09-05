@@ -81,11 +81,11 @@ cppnodes::Module* lang::Compiler::compile(std::string code){
  * Just convert the body vectors in each module.
  */
 void* lang::Compiler::visit(Module* module){
-    std::vector<Node*> body;
+    std::vector<parsing::Node*> body;
 
     for (ModuleStmt* stmt : module->body()){
         void* cpp_module_stmt = stmt->accept(*this);
-        body.push_back(static_cast<Node*>(cpp_module_stmt));
+        body.push_back(static_cast<parsing::Node*>(cpp_module_stmt));
     }
 
     cppnodes::Module* cpp_module = new cppnodes::Module(body);
@@ -119,7 +119,7 @@ void* lang::Compiler::visit(FuncDef* funcdef){
     std::string func_name = funcdef->name();
     std::vector<FuncStmt*> funcsuite = funcdef->suite();
     std::vector<cppnodes::VarDecl*> cpp_args;
-    std::vector<Node*> cpp_body;
+    std::vector<parsing::Node*> cpp_body;
 
     // Add this function to the current scope  
     std::shared_ptr<FuncType> func_type = funcdef_type(funcdef);
@@ -143,7 +143,7 @@ void* lang::Compiler::visit(FuncDef* funcdef){
 
     for (FuncStmt* stmt : funcsuite){
         void* cpp_stmt = stmt->accept(*this);
-        cpp_body.push_back(static_cast<Node*>(cpp_stmt));
+        cpp_body.push_back(static_cast<parsing::Node*>(cpp_stmt));
     }
 
     cppnodes::FuncDef* cpp_funcdef = new cppnodes::FuncDef(
@@ -202,10 +202,10 @@ void* lang::Compiler::visit(IfStmt* if_stmt){
 
     cppnodes::Expr* cpp_cond = static_cast<cppnodes::Expr*>(cond->accept(*this));
 
-    std::vector<Node*> cpp_body;
+    std::vector<parsing::Node*> cpp_body;
     for (FuncStmt* stmt : body){
         void* cpp_stmt = stmt->accept(*this);
-        cpp_body.push_back(static_cast<Node*>(cpp_stmt));
+        cpp_body.push_back(static_cast<parsing::Node*>(cpp_stmt));
     }
 
     cppnodes::IfStmt* cpp_if_stmt = new cppnodes::IfStmt(cpp_cond, cpp_body);

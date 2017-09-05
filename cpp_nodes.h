@@ -1,18 +1,18 @@
 #ifndef _CPP_NODES_H
 #define _CPP_NODES_H
 
-#include "nodes.h"
+#include "parser.h"
 #include <sstream>
 #include <memory>
 
 namespace cppnodes {
     // Base node representing a whole .c file
-    class Module: public lang::Visitable<Module> {
+    class Module: public parsing::Visitable<Module> {
         private:
-            std::vector<lang::Node*> body_;
+            std::vector<parsing::Node*> body_;
 
         public:
-            Module(const std::vector<lang::Node*>&);
+            Module(const std::vector<parsing::Node*>&);
             std::vector<std::string> lines() const;
             ~Module();
 
@@ -20,14 +20,14 @@ namespace cppnodes {
     };
 
     // Base Expression node
-    class Expr: public lang::Visitable<Expr> {
+    class Expr: public parsing::Visitable<Expr> {
         public:
             // All expressions can be written on one line
             virtual std::string value_str() const = 0;
             std::vector<std::string> lines() const;
     };
 
-    class Stmt: public lang::Visitable<Stmt> {};
+    class Stmt: public parsing::Visitable<Stmt> {};
 
     // One line statement
     class SimpleStmt: public Stmt {
@@ -59,7 +59,7 @@ namespace cppnodes {
     };
 
     // Variable declaration
-    class VarDecl: public lang::Visitable<VarDecl> {
+    class VarDecl: public parsing::Visitable<VarDecl> {
         public:
             virtual std::string line() const = 0;
             std::vector<std::string> lines() const { return {line()}; }
@@ -70,7 +70,7 @@ namespace cppnodes {
      *
      * The template args will usually be a type(name) or variable.
      */
-    class Type: public lang::SimpleNode, public lang::Visitable<Type> {
+    class Type: public parsing::SimpleNode, public parsing::Visitable<Type> {
         private:
             Node* base_;
             std::vector<Node*> template_args_;
@@ -143,12 +143,12 @@ namespace cppnodes {
             std::string name_;
             std::string type_;
             std::vector<VarDecl*> args_;
-            std::vector<lang::Node*> body_;
+            std::vector<parsing::Node*> body_;
 
         public:
             FuncDef(const std::string&, const std::string&, 
                     const std::vector<VarDecl*>&,
-                    const std::vector<lang::Node*>&);
+                    const std::vector<parsing::Node*>&);
             ~FuncDef();
             std::vector<std::string> lines() const;
     };
@@ -196,7 +196,7 @@ namespace cppnodes {
             std::string value_str() const;
     };
 
-    class BinOperator: public lang::Visitable<BinOperator> {
+    class BinOperator: public parsing::Visitable<BinOperator> {
         public:
             virtual std::string symbol() const = 0;
             std::vector<std::string> lines() const {
@@ -311,7 +311,7 @@ namespace cppnodes {
     /**
      * Macros
      */ 
-    class Macro: public lang::Visitable<Macro> {};
+    class Macro: public parsing::Visitable<Macro> {};
 
     // Single line macro
     class SimpleMacro: public Macro {

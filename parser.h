@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cassert>
 
+#include "utils.h"
 #include "lexer.h"
 
 namespace parsing {
@@ -183,6 +184,88 @@ namespace parsing {
 
 
     /************** Parser ************/ 
+
+    class Node;
+
+    class NodeVisitor {
+        public:
+            virtual ~NodeVisitor(){}
+            void* visit(Node*);
+    };
+
+    /**
+     * Usage:
+     *
+     * If you want to just create an AST for dumping into a string, the child node can just inherit 
+     * from Node. 
+     *
+     * If you want to be able to visit nodes in the true, it just needs to inherit from 
+     * Visitable which uses the CRTP to notify the Visitor to visit this specific node.
+     *
+     * The Node and Visitable classes are inherited virtually, so any other classes derived from Node 
+     * can inherit virtually from Node to act as a mixin. 
+     *
+     * class BinExpr: public lang::SimpleNode, public lang::Visitable<BinExpr> {
+     *     ...
+     * };
+     */ 
+    class Node {
+        public:
+            virtual void* accept(NodeVisitor&) = 0;
+            virtual ~Node(){}
+
+            // lines() returns a vector containing strings that represent 
+            // individual lines separated in the code separated by newlines.
+            virtual std::vector<std::string> lines() const = 0;
+
+            // The lines joined by newlines
+            std::string str() const { return join(lines(), "\n"); }
+    };
+
+    // Node that only contains one line
+    class SimpleNode: public virtual Node {
+        public:
+            virtual std::string line() const = 0;
+            std::vector<std::string> lines() const override { return {line()}; }
+    };
+    
+    template <typename VisitingNode>
+    class Visitor: public virtual NodeVisitor {
+        public:
+            virtual void* visit(VisitingNode*) = 0;
+    };
+
+    template <typename DerivedNode>
+    class Visitable: public virtual Node {
+        public:
+            void* accept(NodeVisitor& base_visitor){
+                try {
+                    Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
+
+#ifdef DEBUG
+                    std::cerr << "visiting " << typeid(DerivedNode).name() << std::endl;
+#endif
+
+                    void* result = visitor.visit(static_cast<DerivedNode*>(this));
+
+#ifdef DEBUG 
+                    std::cerr << "leaving " << typeid(DerivedNode).name() << std::endl;
+#endif
+
+                    return result;
+                } catch (const std::bad_cast& e){
+                    std::ostringstream err;
+                    err << "Bad cast thrown in: " << typeid(DerivedNode).name() << std::endl;
+                    err << "Check if your Visitor implementation inherits from both 'Visitor<NODE>' and implements 'void* visit(NODE*)'." << std::endl;
+                    throw std::runtime_error(err.str());
+                }
+            }
+    };
+
+    //union ParserStackElem {
+    //    std::shared_ptr<lexing::LexToken> token;
+    //    std::shared_ptr<Node>
+    //};
 
     class Parser {
         private:
