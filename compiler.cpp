@@ -53,11 +53,6 @@ lang::Compiler::Compiler():
     import_builtin_lib(create_io_lib());
 }
 
-lang::Compiler::~Compiler(){
-    assert(scope_stack_.size() == 1);
-    scope_stack_.pop_back();
-}
-
 std::shared_ptr<cppnodes::Module> lang::Compiler::compile(std::string code){
     std::shared_ptr<Module> module_node = std::static_pointer_cast<Module>(parser_.parse(code));
     assert(lexer_.empty());

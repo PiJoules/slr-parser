@@ -29,9 +29,15 @@ namespace lang {
             virtual std::shared_ptr<LangType> as_type() const = 0;
     };
 
+    /*********** Type Inference *******/
+
+    class LangType;
+    class Expr;
+
     class BaseInferer {
         public:
             virtual ~BaseInferer(){}
+            std::shared_ptr<LangType> infer(Expr&);
     };
 
     class LangType {
@@ -70,6 +76,8 @@ namespace lang {
                 }
             }
     };
+
+    /*********** End Type Inference *******/
 
     class Assign: public ModuleStmt, public SimpleFuncStmt, public parsing::Visitable<Assign> {
         private:

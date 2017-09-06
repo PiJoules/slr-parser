@@ -102,9 +102,9 @@ namespace lang {
                     public parsing::Visitor<Gte>,
 
                     public parsing::Visitor<NameTypeDecl>,
-                    //public Visitor<TupleTypeDecl>,
+                    //public parsing::Visitor<TupleTypeDecl>,
 
-                    // Inference
+                    // Inference 
                     public Inferer<Call>,
                     public Inferer<NameExpr>,
                     public Inferer<Tuple>,
@@ -132,13 +132,11 @@ namespace lang {
             std::shared_ptr<FuncType> funcdef_type(FuncDef&);
 
         public:
-            Compiler();
-            ~Compiler();
-            std::shared_ptr<cppnodes::Module> compile(std::string);
+            using NodeVisitor::visit;
+            using BaseInferer::infer;
 
-            std::shared_ptr<LangType> infer(Expr& expr){
-                return expr.type(*this);
-            }
+            Compiler();
+            std::shared_ptr<cppnodes::Module> compile(std::string);
 
             std::shared_ptr<void> visit(Module&);
 

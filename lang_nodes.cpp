@@ -2,6 +2,10 @@
 #include <sstream>
 #include <algorithm>
 
+std::shared_ptr<lang::LangType> lang::BaseInferer::infer(Expr& expr){
+    return expr.type(*this);
+}
+
 /**
  * Module
  */ 
