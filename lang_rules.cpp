@@ -93,7 +93,7 @@ std::shared_ptr<void> parse_module(std::vector<std::shared_ptr<void>>& args, voi
 // module_stmt_list : func_def
 std::shared_ptr<void> parse_module_stmt_list(std::vector<std::shared_ptr<void>>& args, void* data){
     auto func_def = std::static_pointer_cast<lang::FuncDef>(args[0]);
-    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list;
+    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list(new std::vector<std::shared_ptr<parsing::Node>>);
     module_stmt_list->push_back(func_def);
 
     return module_stmt_list;
@@ -123,7 +123,7 @@ std::shared_ptr<void> parse_module_stmt_list4(std::vector<std::shared_ptr<void>>
 std::shared_ptr<void> parse_var_decl_list_one_arg(std::vector<std::shared_ptr<void>>& args, void* data){
     auto var_decl = std::static_pointer_cast<lang::VarDecl>(args[0]);
 
-    std::shared_ptr<std::vector<std::shared_ptr<lang::VarDecl>>> var_decl_list;
+    std::shared_ptr<std::vector<std::shared_ptr<lang::VarDecl>>> var_decl_list(new std::vector<std::shared_ptr<lang::VarDecl>>);
     var_decl_list->push_back(var_decl);
 
     return var_decl_list;
@@ -152,7 +152,7 @@ std::shared_ptr<void> parse_var_decl(std::vector<std::shared_ptr<void>>& args, v
 // var_assign_list : var_assign 
 std::shared_ptr<void> parse_var_assign_list_one_assign(std::vector<std::shared_ptr<void>>& args, void* data){
     auto var_assign = std::static_pointer_cast<lang::Assign>(args[0]);
-    std::shared_ptr<std::vector<std::shared_ptr<lang::Assign>>> var_assign_list;
+    std::shared_ptr<std::vector<std::shared_ptr<lang::Assign>>> var_assign_list(new std::vector<std::shared_ptr<lang::Assign>>);
 
     var_assign_list->push_back(var_assign);
 
@@ -188,10 +188,12 @@ std::shared_ptr<void> parse_func_def(std::vector<std::shared_ptr<void>>& args, v
     auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[5]);
 
-    std::shared_ptr<lang::FuncArgs> func_args;
+    std::shared_ptr<lang::FuncArgs> func_args(new lang::FuncArgs);
     
-    return std::make_shared<lang::FuncDef>(
+    auto func_def = std::make_shared<lang::FuncDef>(
             name->value, func_args, DEFAULT_FUNC_RETURN_TYPE, *func_suite);
+
+    return func_def;
 }
 
 // func_def : DEF NAME LPAR RPAR ARROW type_decl COLON func_suite
@@ -200,7 +202,7 @@ std::shared_ptr<void> parse_func_def_with_return(std::vector<std::shared_ptr<voi
     auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[5]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[7]);
 
-    std::shared_ptr<lang::FuncArgs> func_args;
+    std::shared_ptr<lang::FuncArgs> func_args(new lang::FuncArgs);
 
     return std::make_shared<lang::FuncDef>(name->value, func_args, type_decl, *func_suite);
 }
@@ -247,7 +249,7 @@ std::shared_ptr<void> parse_func_suite(std::vector<std::shared_ptr<void>>& args,
 // func_stmts : func_stmt 
 std::shared_ptr<void> parse_func_stmts(std::vector<std::shared_ptr<void>>& args, void* data){
     auto func_stmt = std::static_pointer_cast<parsing::Node>(args[0]);
-    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> func_stmts;
+    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> func_stmts(new std::vector<std::shared_ptr<parsing::Node>>);
     func_stmts->push_back(func_stmt);
 
     return func_stmts;
@@ -365,7 +367,7 @@ std::shared_ptr<void> parse_func_call(std::vector<std::shared_ptr<void>>& args, 
 std::shared_ptr<void> parse_call_one_arg(std::vector<std::shared_ptr<void>>& args, void* data){
     auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
 
-    std::shared_ptr<std::vector<std::shared_ptr<lang::Expr>>> expr_list;
+    std::shared_ptr<std::vector<std::shared_ptr<lang::Expr>>> expr_list(new std::vector<std::shared_ptr<lang::Expr>>);
     expr_list->push_back(expr);
 
     return expr_list;

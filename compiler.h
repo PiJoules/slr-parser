@@ -136,8 +136,8 @@ namespace lang {
             ~Compiler();
             std::shared_ptr<cppnodes::Module> compile(std::string);
 
-            std::shared_ptr<LangType> infer(std::shared_ptr<Expr> expr){
-                return expr->type(*this);
+            std::shared_ptr<LangType> infer(Expr& expr){
+                return expr.type(*this);
             }
 
             std::shared_ptr<void> visit(Module&);
@@ -177,10 +177,10 @@ namespace lang {
             //std::shared_ptr<void> visit(TupleTypeDecl&);
 
             // Inference
-            std::shared_ptr<LangType> infer(Call*);
-            std::shared_ptr<LangType> infer(NameExpr*);
-            std::shared_ptr<LangType> infer(Tuple*);
-            std::shared_ptr<LangType> infer(String*);
+            std::shared_ptr<LangType> infer(Call&);
+            std::shared_ptr<LangType> infer(NameExpr&);
+            std::shared_ptr<LangType> infer(Tuple&);
+            std::shared_ptr<LangType> infer(String&);
     };
 
     // Language cmd interface 

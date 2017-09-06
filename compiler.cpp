@@ -103,7 +103,7 @@ std::shared_ptr<lang::FuncType> lang::Compiler::funcdef_type(FuncDef& funcdef){
 
     for (std::shared_ptr<Assign> arg : func_args->keyword_args()){
         std::shared_ptr<Expr> rhs = arg->expr();
-        std::shared_ptr<LangType> type = infer(rhs);
+        std::shared_ptr<LangType> type = infer(*rhs);
         args.push_back(type);
     }
     
@@ -158,166 +158,142 @@ std::shared_ptr<void> lang::Compiler::visit(ReturnStmt& returnstmt){
 }
 
 std::shared_ptr<void> lang::Compiler::visit(VarDecl& var_decl){
-    TypeDecl* type_decl = var_decl->type();
+    std::shared_ptr<TypeDecl> type_decl = var_decl.type();
 
-    cached_type_name_ = var_decl->name();
-    std::shared_ptr<cppnodes::VarDecl> cpp_var_decl = static_cast<std::shared_ptr<cppnodes::VarDecl>>(type_decl->accept(*this));
+    cached_type_name_ = var_decl.name();
+    std::shared_ptr<cppnodes::VarDecl> cpp_var_decl = std::static_pointer_cast<cppnodes::VarDecl>(type_decl->accept(*this));
     cached_type_name_.clear();
 
     return cpp_var_decl;
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Assign& assign){
-    std::string varname = assign->varname();
-    std::shared_ptr<Expr> expr = assign->expr();
+    std::string varname = assign.varname();
+    std::shared_ptr<Expr> expr = assign.expr();
 
-    std::shared_ptr<LangType> expr_type = infer(expr);
-    TypeDecl* expr_type_decl = expr_type->as_type_decl();
+    std::shared_ptr<LangType> expr_type = infer(*expr);
+    std::shared_ptr<TypeDecl> expr_type_decl = expr_type->as_type_decl();
 
     current_scope().add_var(varname, expr_type);
 
     cached_type_name_ = varname;
-    std::shared_ptr<cppnodes::VarDecl> cpp_var_decl = static_cast<std::shared_ptr<cppnodes::VarDecl>>(expr_type_decl->accept(*this));
+    std::shared_ptr<cppnodes::VarDecl> cpp_var_decl = std::static_pointer_cast<cppnodes::VarDecl>(expr_type_decl->accept(*this));
     cached_type_name_.clear();
 
-    delete expr_type_decl;
+    std::shared_ptr<cppnodes::Expr> cpp_expr = std::static_pointer_cast<cppnodes::Expr>(expr->accept(*this));
 
-    std::shared_ptr<cppnodes::Expr> cpp_expr = static_cast<std::shared_ptr<cppnodes::Expr>>(expr->accept(*this));
-
-    cppnodes::Assign* cpp_assign = new cppnodes::Assign(cpp_var_decl, cpp_expr);
-
-    return cpp_assign;
+    return std::make_shared<cppnodes::Assign>(cpp_var_decl, cpp_expr);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(IfStmt& if_stmt){
-    std::shared_ptr<Expr> cond = if_stmt->cond();
-    std::vector<std::shared_ptr<FuncStmt>> body = if_stmt->body();
+    std::shared_ptr<Expr> cond = if_stmt.cond();
+    std::vector<std::shared_ptr<FuncStmt>> body = if_stmt.body();
 
-    std::shared_ptr<cppnodes::Expr> cpp_cond = static_cast<std::shared_ptr<cppnodes::Expr>>(cond->accept(*this));
+    std::shared_ptr<cppnodes::Expr> cpp_cond = std::static_pointer_cast<cppnodes::Expr>(cond->accept(*this));
 
     std::vector<std::shared_ptr<parsing::Node>> cpp_body;
     for (std::shared_ptr<FuncStmt> stmt : body){
         std::shared_ptr<void> cpp_stmt = stmt->accept(*this);
-        cpp_body.push_back(static_cast<std::shared_ptr<parsing::Node>>(cpp_stmt));
+        cpp_body.push_back(std::static_pointer_cast<parsing::Node>(cpp_stmt));
     }
 
-    cppnodes::IfStmt* cpp_if_stmt = new cppnodes::IfStmt(cpp_cond, cpp_body);
-
-    return cpp_if_stmt;
+    return std::make_shared<cppnodes::IfStmt>(cpp_cond, cpp_body);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(ExprStmt& expr_stmt){
-    std::shared_ptr<Expr> expr = expr_stmt->expr();
+    std::shared_ptr<Expr> expr = expr_stmt.expr();
 
-    std::shared_ptr<cppnodes::Expr> cpp_expr = static_cast<std::shared_ptr<cppnodes::Expr>>(expr->accept(*this));
-    cppnodes::ExprStmt* cpp_expr_stmt = new cppnodes::ExprStmt(cpp_expr);
-
-    return cpp_expr_stmt;
+    std::shared_ptr<cppnodes::Expr> cpp_expr = std::static_pointer_cast<cppnodes::Expr>(expr->accept(*this));
+    return std::make_shared<cppnodes::ExprStmt>(cpp_expr);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Call& call){
-    std::shared_ptr<Expr> func = call->func();
-    std::shared_ptr<cppnodes::Expr> cpp_func = static_cast<std::shared_ptr<cppnodes::Expr>>(func->accept(*this));
+    std::shared_ptr<Expr> func = call.func();
+    std::shared_ptr<cppnodes::Expr> cpp_func = std::static_pointer_cast<cppnodes::Expr>(func->accept(*this));
 
-    std::vector<std::shared_ptr<Expr>> args = call->args();
+    std::vector<std::shared_ptr<Expr>> args = call.args();
     std::vector<std::shared_ptr<cppnodes::Expr>> cpp_args;
     for (std::shared_ptr<Expr> arg : args){
-        std::shared_ptr<cppnodes::Expr> cpp_arg = static_cast<std::shared_ptr<cppnodes::Expr>>(arg->accept(*this));
+        std::shared_ptr<cppnodes::Expr> cpp_arg = std::static_pointer_cast<cppnodes::Expr>(arg->accept(*this));
         cpp_args.push_back(cpp_arg);
     }
 
-    cppnodes::Call* cpp_call = new cppnodes::Call(cpp_func, cpp_args);
-    return cpp_call;
+    return std::make_shared<cppnodes::Call>(cpp_func, cpp_args);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(BinExpr& bin_expr){
-    std::shared_ptr<Expr> lhs = bin_expr->lhs();
-    BinOperator* op = bin_expr->op();
-    std::shared_ptr<Expr> rhs = bin_expr->rhs();
+    std::shared_ptr<Expr> lhs = bin_expr.lhs();
+    std::shared_ptr<BinOperator> op = bin_expr.op();
+    std::shared_ptr<Expr> rhs = bin_expr.rhs();
 
-    std::shared_ptr<cppnodes::Expr> cpp_lhs = static_cast<std::shared_ptr<cppnodes::Expr>>(lhs->accept(*this));
-    cppnodes::BinOperator* cpp_op = static_cast<cppnodes::BinOperator*>(op->accept(*this));
-    std::shared_ptr<cppnodes::Expr> cpp_rhs = static_cast<std::shared_ptr<cppnodes::Expr>>(rhs->accept(*this));
+    std::shared_ptr<cppnodes::Expr> cpp_lhs = std::static_pointer_cast<cppnodes::Expr>(lhs->accept(*this));
+    std::shared_ptr<cppnodes::BinOperator> cpp_op = std::static_pointer_cast<cppnodes::BinOperator>(op->accept(*this));
+    std::shared_ptr<cppnodes::Expr> cpp_rhs = std::static_pointer_cast<cppnodes::Expr>(rhs->accept(*this));
 
-    cppnodes::Binstd::shared_ptr<Expr> cpp_bin_expr = new cppnodes::BinExpr(cpp_lhs, cpp_op, cpp_rhs);
-
-    return cpp_bin_expr;
+    return std::make_shared<cppnodes::BinExpr>(cpp_lhs, cpp_op, cpp_rhs);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(String& str){
-    cppnodes::String* cpp_str = new cppnodes::String(str->value());
-    return cpp_str;
+    return std::make_shared<cppnodes::String>(str.value());
 }
 
 std::shared_ptr<void> lang::Compiler::visit(NameExpr& name){
-    current_scope().check_var_exists(name->name());
-    cppnodes::Name* cpp_name = new cppnodes::Name(name->name());
-    return cpp_name;
+    current_scope().check_var_exists(name.name());
+    return std::make_shared<cppnodes::Name>(name.name());
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Int& int_expr){
-    cppnodes::Int* cpp_int = new cppnodes::Int(int_expr->value());
-    return cpp_int;
+    return std::make_shared<cppnodes::Int>(int_expr.value());
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Add& op){
-    cppnodes::Add* cpp_op = new cppnodes::Add;
-    return cpp_op;
+    return std::make_shared<cppnodes::Add>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Sub& op){
-    cppnodes::Sub* cpp_op = new cppnodes::Sub;
-    return cpp_op;
+    return std::make_shared<cppnodes::Sub>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Mul& op){
-    cppnodes::Mul* cpp_op = new cppnodes::Mul;
-    return cpp_op;
+    return std::make_shared<cppnodes::Mul>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Div& op){
-    cppnodes::Div* cpp_op = new cppnodes::Div;
-    return cpp_op;
+    return std::make_shared<cppnodes::Div>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Eq& op){
-    cppnodes::Eq* cpp_op = new cppnodes::Eq;
-    return cpp_op;
+    return std::make_shared<cppnodes::Eq>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Ne& op){
-    cppnodes::Ne* cpp_op = new cppnodes::Ne;
-    return cpp_op;
+    return std::make_shared<cppnodes::Ne>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Lt& op){
-    cppnodes::Lt* cpp_op = new cppnodes::Lt;
-    return cpp_op;
+    return std::make_shared<cppnodes::Lt>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Gt& op){
-    cppnodes::Gt* cpp_op = new cppnodes::Gt;
-    return cpp_op;
+    return std::make_shared<cppnodes::Gt>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Lte& op){
-    cppnodes::Lte* cpp_op = new cppnodes::Lte;
-    return cpp_op;
+    return std::make_shared<cppnodes::Lte>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Gte& op){
-    cppnodes::Gte* cpp_op = new cppnodes::Gte;
-    return cpp_op;
+    return std::make_shared<cppnodes::Gte>();
 }
 
 std::shared_ptr<void> lang::Compiler::visit(NameTypeDecl& name_type_decl){
-    std::string type_name = name_type_decl->name();
+    std::string type_name = name_type_decl.name();
     assert(!cached_type_name_.empty());
 
-    cppnodes::Type* name_type = new cppnodes::Type(new cppnodes::Name(type_name));
+    std::shared_ptr<cppnodes::Name> name(new cppnodes::Name(type_name));
+    std::shared_ptr<cppnodes::Type> name_type(new cppnodes::Type(name));
 
-    cppnodes::RegVarDecl* cpp_var_decl = new cppnodes::RegVarDecl(cached_type_name_, name_type);
-    return cpp_var_decl;
+    return std::make_shared<cppnodes::RegVarDecl>(cached_type_name_, name_type);
 }
 
 /**
@@ -332,28 +308,28 @@ std::shared_ptr<void> lang::Compiler::visit(NameTypeDecl& name_type_decl){
 //    return cpp_tuple_type_decl;
 //}
 
-std::shared_ptr<lang::LangType> lang::Compiler::infer(Call* call){
-    std::shared_ptr<Expr> func = call->func();
-    std::shared_ptr<LangType> result = infer(func);
+std::shared_ptr<lang::LangType> lang::Compiler::infer(Call& call){
+    std::shared_ptr<Expr> func = call.func();
+    std::shared_ptr<LangType> result = infer(*func);
     std::shared_ptr<FuncType> func_type = std::static_pointer_cast<FuncType>(result);
     return func_type->return_type();
 }
 
-std::shared_ptr<lang::LangType> lang::Compiler::infer(Namestd::shared_ptr<Expr> name_expr){
-    return current_scope().var_type(name_expr->name());
+std::shared_ptr<lang::LangType> lang::Compiler::infer(NameExpr& name_expr){
+    return current_scope().var_type(name_expr.name());
 }
 
-std::shared_ptr<lang::LangType> lang::Compiler::infer(Tuple* tuple_expr){
+std::shared_ptr<lang::LangType> lang::Compiler::infer(Tuple& tuple_expr){
     std::vector<std::shared_ptr<LangType>> content_types;
 
-    for (std::shared_ptr<Expr> expr : tuple_expr->contents()){
-        content_types.push_back(infer(expr));
+    for (std::shared_ptr<Expr> expr : tuple_expr.contents()){
+        content_types.push_back(infer(*expr));
     }
 
     return std::make_shared<TupleType>(content_types);
 }
 
-std::shared_ptr<lang::LangType> lang::Compiler::infer(String* str_expr){
+std::shared_ptr<lang::LangType> lang::Compiler::infer(String& str_expr){
     return std::make_shared<StringType>();
 }
 
@@ -361,10 +337,8 @@ std::shared_ptr<lang::LangType> lang::Compiler::infer(String* str_expr){
 
 std::string compile_lang_str(const std::string& code){
     lang::Compiler compiler;
-    cppnodes::Module* module = compiler.compile(code);
+    std::shared_ptr<cppnodes::Module> module = compiler.compile(code);
     std::string cpp_code = module->str();
-
-    delete module;
 
     return cpp_code;
 }

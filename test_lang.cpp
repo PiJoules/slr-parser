@@ -43,17 +43,15 @@ def func():
     lang::LangLexer lexer(lang::LANG_TOKENS);
     parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
 
-    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+    std::shared_ptr<lang::Module> module_node = std::static_pointer_cast<lang::Module>(parser.parse(code));
     assert(lexer.empty());
 
     // Check the nodes
     assert(module_node->body().size() == 1);
-    lang::FuncDef* func_def = static_cast<lang::FuncDef*>(module_node->body()[0]);
+    std::shared_ptr<lang::FuncDef> func_def = std::static_pointer_cast<lang::FuncDef>(module_node->body()[0]);
     assert(func_def->suite().size() == 1);
 
     assert(module_node->str() == "def func() -> int:\n    x + y");
-
-    delete module_node;
 }
 
 void test_empty(){
@@ -61,12 +59,10 @@ void test_empty(){
 
     lang::LangLexer lexer(lang::LANG_TOKENS);
     parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
-    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+    std::shared_ptr<lang::Module> module_node = std::static_pointer_cast<lang::Module>(parser.parse(code));
 
     assert(module_node->body().empty());
     assert(module_node->str() == "");
-
-    delete module_node;
 }
 
 void test_fictitios_token(){
@@ -78,12 +74,10 @@ def func():
     lang::LangLexer lexer(lang::LANG_TOKENS);
     parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
 
-    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+    std::shared_ptr<lang::Module> module_node = std::static_pointer_cast<lang::Module>(parser.parse(code));
     assert(lexer.empty());
 
     assert(module_node->str() == "def func() -> int:\n    x + -y");
-
-    delete module_node;
 }
 
 void test_ending_on_func_suite(){
@@ -97,10 +91,8 @@ def main():
     lang::LangLexer lexer(lang::LANG_TOKENS);
     parsing::Parser parser(lexer, lang::LANG_GRAMMAR);
 
-    lang::Module* module_node = static_cast<lang::Module*>(parser.parse(code));
+    parser.parse(code);
     assert(lexer.empty());
-
-    delete module_node;
 }
 
 int main(){

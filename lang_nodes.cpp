@@ -7,7 +7,7 @@
  */ 
 std::vector<std::string> lang::Module::lines() const {
     std::vector<std::string> v;
-    for (const std::shared_ptr<Node> node : body_){
+    for (const std::shared_ptr<ModuleStmt> node : body_){
         for (const std::string line : node->lines()){
             v.push_back(line);
         }
@@ -44,15 +44,14 @@ std::string lang::FuncArgs::line() const {
 std::vector<std::string> lang::FuncDef::lines() const {
     std::vector<std::string> v;
 
-    std::ostringstream line1;
-    line1 << "def " << func_name_ << "(" << args_->line() << ") -> ";
+    std::string line1 = "def " + func_name_ + "(" + args_->line() + ") -> ";
 
     // Return type 
-    line1 << return_type_decl_->line();
+    line1 += return_type_decl_->line();
 
-    line1 << ":";
+    line1 += ":";
 
-    v.push_back(line1.str());
+    v.push_back(line1);
 
     for (const std::shared_ptr<Node> stmt : func_suite_){
         for (std::string& stmt_line : stmt->lines()){
@@ -81,7 +80,7 @@ std::string lang::Call::line() const {
  * BinExpr
  */ 
 std::string lang::BinExpr::line() const {
-    return lhs_->line() + op_->symbol() + rhs_->line();
+    return lhs_->line() + " " + op_->symbol() + " " + rhs_->line();
 }
 
 /**

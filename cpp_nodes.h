@@ -249,7 +249,7 @@ namespace cppnodes {
             std::string line() const override;
     };
 
-    class Assign: public SimpleStmt {
+    class Assign: public SimpleStmt, public parsing::Visitable<Assign> {
         private:
             std::shared_ptr<VarDecl> var_decl_;
             std::shared_ptr<Expr> expr_;

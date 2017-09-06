@@ -644,7 +644,7 @@ namespace lang {
         public:
             Module(std::vector<std::shared_ptr<ModuleStmt>>& body): body_(body){}
             const std::vector<std::shared_ptr<ModuleStmt>>& body() const { return body_; }
-            std::vector<std::string> lines() const;
+            std::vector<std::string> lines() const override;
     };
 }
 
