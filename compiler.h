@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
+#include <cctype>
 
 namespace lang {
     // Mapping variable name to library 
@@ -46,31 +47,45 @@ namespace lang {
                 }
             }
 
-            bool var_exists(const std::string& varname) const {
+            bool has_var(const std::string& varname) const {
                 return varnames_.find(varname) != varnames_.end();
             }
 
             void check_var_exists(const std::string& varname) const {
-                if (!var_exists(varname)){
+                if (!has_var(varname)){
                     throw std::runtime_error("Unknown variable '" + varname + "'");
                 }
             }
 
             std::shared_ptr<LangType> var_type(const std::string& varname) const { 
-                if (!var_exists(varname)){
+                if (!has_var(varname)){
                     throw std::runtime_error("Unknown variable '" + varname + "'");
                 }
                 else {
                     return varnames_.at(varname);
                 }
             }
-            //const std::unordered_map<std::string, std::shared_ptr<LangType>>& varnames () const { return varnames_; }
-            std::unordered_map<std::string, std::shared_ptr<LangType>> varnames () const { 
-                std::unordered_map<std::string, std::shared_ptr<LangType>> varnames_cpy;
-                for (auto it = varnames_.begin(); it != varnames_.end(); ++it){
-                    varnames_cpy[it->first] = it->second;
+
+            const std::unordered_map<std::string, std::shared_ptr<LangType>>& varnames () const { return varnames_; }
+
+            /**
+             * Create a random variable name that does not exist yet in this scope.
+             * Do this by adding an underscore to a random alpha numeric string whose 
+             * initial size is that of the largest known varname.
+             */
+            std::string rand_varname() const {
+                if (varnames_.empty()){
+                    return "tmp_variable";
                 }
-                return varnames_cpy; 
+
+                std::size_t max_varname_len = 0;
+
+                for (auto it = varnames_.cbegin(); it != varnames_.cend(); ++it){
+                    std::string& existing = it->first;
+                    max_varname_len = max(existing.size(), max_varname_len);
+                }
+
+                return "_" + rand_alphanum_str(max_varname_len);
             }
     };
 
@@ -82,12 +97,14 @@ namespace lang {
 
                     public parsing::Visitor<ExprStmt>,
                     public parsing::Visitor<IfStmt>,
+                    public parsing::Visitor<ForLoop>,
 
                     public parsing::Visitor<Call>,
                     public parsing::Visitor<BinExpr>,
                     public parsing::Visitor<String>,
                     public parsing::Visitor<NameExpr>,
                     public parsing::Visitor<Int>,
+                    public parsing::Visitor<Tuple>,
 
                     public parsing::Visitor<Add>, 
                     public parsing::Visitor<Sub>,
@@ -102,7 +119,8 @@ namespace lang {
                     public parsing::Visitor<Gte>,
 
                     public parsing::Visitor<NameTypeDecl>,
-                    //public parsing::Visitor<TupleTypeDecl>,
+                    public parsing::Visitor<TupleTypeDecl>,
+                    public parsing::Visitor<StringTypeDecl>,
 
                     // Inference 
                     public Inferer<Call>,
@@ -115,7 +133,6 @@ namespace lang {
             parsing::Parser parser_;
 
             std::unordered_map<std::string, LibData> include_libs_;
-            std::string cached_type_name_;
 
             void import_builtin_lib(const LibData& lib);  // Done to global scope 
 
@@ -149,9 +166,11 @@ namespace lang {
             // Compound stmts
             std::shared_ptr<void> visit(FuncDef&);
             std::shared_ptr<void> visit(IfStmt&);
+            std::shared_ptr<void> visit(ForLoop&);
 
             std::shared_ptr<void> visit(Call&);
             std::shared_ptr<void> visit(BinExpr&);
+            std::shared_ptr<void> visit(Tuple&);
 
             // Atoms
             std::shared_ptr<void> visit(String&);
@@ -172,7 +191,8 @@ namespace lang {
             std::shared_ptr<void> visit(Gte&);
 
             std::shared_ptr<void> visit(NameTypeDecl&);
-            //std::shared_ptr<void> visit(TupleTypeDecl&);
+            std::shared_ptr<void> visit(TupleTypeDecl&);
+            std::shared_ptr<void> visit(StringTypeDecl&);
 
             // Inference
             std::shared_ptr<LangType> infer(Call&);

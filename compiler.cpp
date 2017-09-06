@@ -7,9 +7,12 @@
 #include <unordered_set>
 
 
-#define NONE_TYPE std::shared_ptr<lang::LangType>(new lang::NameType("NoneType"))
-#define STR_TYPE std::shared_ptr<lang::LangType>(new lang::NameType("str"))
-#define STAR_ARGS_TYPE std::shared_ptr<lang::LangType>(new lang::StarArgsType)
+#define NONE_TYPE std::make_shared<lang::NameType>("NoneType")
+#define STR_TYPE std::make_shared<lang::NameType>("str")
+#define STAR_ARGS_TYPE std::make_shared<lang::StarArgsType>()
+
+static const std::string TUPLE_TYPE_NAME = "LangTuple";
+static const std::string STR_TYPE_NAME = "str";
 
 static const std::vector<std::string> LANG_SRCS = {
     "lang_include/lang_io.cpp",
@@ -153,17 +156,19 @@ std::shared_ptr<void> lang::Compiler::visit(ReturnStmt& returnstmt){
 }
 
 std::shared_ptr<void> lang::Compiler::visit(VarDecl& var_decl){
-    std::shared_ptr<TypeDecl> type_decl = var_decl.type();
-
-    cached_type_name_ = var_decl.name();
-    std::shared_ptr<cppnodes::VarDecl> cpp_var_decl = std::static_pointer_cast<cppnodes::VarDecl>(type_decl->accept(*this));
-    cached_type_name_.clear();
-
-    return cpp_var_decl;
+    auto cpp_type = std::static_pointer_cast<cppnodes::Type>(visit(*(var_decl.type())));
+    return std::make_shared<cppnodes::RegVarDecl>(var_decl.name(), cpp_type);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(Assign& assign){
     std::string varname = assign.varname();
+    //if (current_scope().has_var(varname)){
+    //    // Return cpp assign
+    //}
+    //else {
+    //    // Return var decl
+    //}
+
     std::shared_ptr<Expr> expr = assign.expr();
 
     std::shared_ptr<LangType> expr_type = infer(*expr);
@@ -171,9 +176,10 @@ std::shared_ptr<void> lang::Compiler::visit(Assign& assign){
 
     current_scope().add_var(varname, expr_type);
 
-    cached_type_name_ = varname;
-    std::shared_ptr<cppnodes::VarDecl> cpp_var_decl = std::static_pointer_cast<cppnodes::VarDecl>(expr_type_decl->accept(*this));
-    cached_type_name_.clear();
+    std::shared_ptr<cppnodes::RegVarDecl> cpp_var_decl(new cppnodes::RegVarDecl(
+                varname, 
+                std::static_pointer_cast<cppnodes::Type>(visit(*expr_type_decl))
+                ));
 
     std::shared_ptr<cppnodes::Expr> cpp_expr = std::static_pointer_cast<cppnodes::Expr>(expr->accept(*this));
 
@@ -195,6 +201,56 @@ std::shared_ptr<void> lang::Compiler::visit(IfStmt& if_stmt){
     return std::make_shared<cppnodes::IfStmt>(cpp_cond, cpp_body);
 }
 
+/**
+ * for target1, target2, ... in expr:
+ *     body 
+ *
+ * for (Type var : expr){
+ *     body
+ * }
+ *
+ * Handle the target list using std::tie 
+ * https://stackoverflow.com/a/21300447/2775471 
+ *
+ * Make the range_decl an auto&,
+ * immediately declare the variables in the loop body,
+ * then use std::tie to unpack.
+ */
+std::shared_ptr<void> lang::Compiler::visit(ForLoop& for_loop){
+    const auto& target_list = for_loop.target_list();
+
+    std::string rand_varname = current_scope().rand_varname();
+    std::shared_ptr<cppnodes::Name> auto_type(new cppnodes::Name("auto&"));
+    std::shared_ptr<cppnodes::Type> tmp_type(new cppnodes::Type(auto_type));
+    std::shared_ptr<cppnodes::VarDecl> range_decl(new cppnodes::RegVarDecl(rand_varname, tmp_type));
+
+    auto range_expr = std::static_pointer_cast<cppnodes::Expr>(visit(*(for_loop.container())));
+
+    std::vector<std::shared_ptr<cppnodes::Stmt>> body;
+    
+    // std::tie
+    std::shared_ptr<cppnodes::ScopeResolution> cpp_std_tie(
+            new cppnodes::ScopeResolution(std::make_shared<cppnodes::Name>("std"), "tie"));
+
+    std::vector<std::shared_ptr<cppnodes::Expr>> tie_args;
+    for (std::shared_ptr<lang::Expr> target : for_loop.target_list()){
+        tie_args.push_back(std::make_shared<cppnodes::Name>(target));
+    }
+
+    std::shared_ptr<cppnodes::Call> unpack(new cppnodes::Call(cpp_std_tie, ));
+
+    for (std::shared_ptr<FuncStmt> stmt : for_loop.body()){
+        auto cpp_stmt = std::static_pointer_cast<cppnodes::Stmt>(visit(*stmt));
+        body.push_back(cpp_stmt);
+    }
+
+    return std::make_shared<cppnodes::ForEachLoop>(
+        range_decl,
+        range_expr,
+        body
+    );
+}
+
 std::shared_ptr<void> lang::Compiler::visit(ExprStmt& expr_stmt){
     std::shared_ptr<Expr> expr = expr_stmt.expr();
 
@@ -204,7 +260,7 @@ std::shared_ptr<void> lang::Compiler::visit(ExprStmt& expr_stmt){
 
 std::shared_ptr<void> lang::Compiler::visit(Call& call){
     std::shared_ptr<Expr> func = call.func();
-    std::shared_ptr<cppnodes::Expr> cpp_func = std::static_pointer_cast<cppnodes::Expr>(func->accept(*this));
+    auto cpp_func = std::static_pointer_cast<cppnodes::Expr>(visit(*func));
 
     std::vector<std::shared_ptr<Expr>> args = call.args();
     std::vector<std::shared_ptr<cppnodes::Expr>> cpp_args;
@@ -226,6 +282,19 @@ std::shared_ptr<void> lang::Compiler::visit(BinExpr& bin_expr){
     std::shared_ptr<cppnodes::Expr> cpp_rhs = std::static_pointer_cast<cppnodes::Expr>(rhs->accept(*this));
 
     return std::make_shared<cppnodes::BinExpr>(cpp_lhs, cpp_op, cpp_rhs);
+}
+
+/**
+ * Creates a brace enclosed initializer list.
+ */
+std::shared_ptr<void> lang::Compiler::visit(Tuple& tuple_expr){
+    std::vector<std::shared_ptr<cppnodes::Expr>> cpp_tuple_members;
+    for (std::shared_ptr<lang::Expr> tuple_member : tuple_expr.contents()){
+        auto cpp_tuple_member = std::static_pointer_cast<cppnodes::Expr>(visit(*tuple_member));
+        cpp_tuple_members.push_back(cpp_tuple_member);
+    }
+
+    return std::make_shared<cppnodes::BraceEnclosedList>(cpp_tuple_members);
 }
 
 std::shared_ptr<void> lang::Compiler::visit(String& str){
@@ -283,25 +352,27 @@ std::shared_ptr<void> lang::Compiler::visit(Gte& op){
 
 std::shared_ptr<void> lang::Compiler::visit(NameTypeDecl& name_type_decl){
     std::string type_name = name_type_decl.name();
-    assert(!cached_type_name_.empty());
-
-    std::shared_ptr<cppnodes::Name> name(new cppnodes::Name(type_name));
-    std::shared_ptr<cppnodes::Type> name_type(new cppnodes::Type(name));
-
-    return std::make_shared<cppnodes::RegVarDecl>(cached_type_name_, name_type);
+    return std::make_shared<cppnodes::Type>(std::make_shared<cppnodes::Name>(type_name));
 }
 
 /**
  * LangTuple<type1, type2, ...>
  */
-//std::shared_ptr<void> lang::Compiler::visit(TupleTypeDecl& tuple_type_decl){
-//    assert(!cached_type_name_.empty());
-//
-//    cppnodes::RegVarDecl* cpp_tuple_type_decl = new cppnodes::RegVarDecl(
-//            cached_type_name_, new cppnodes::NameType("LangTuple"), );
-//
-//    return cpp_tuple_type_decl;
-//}
+std::shared_ptr<void> lang::Compiler::visit(TupleTypeDecl& tuple_type_decl){
+    std::shared_ptr<cppnodes::Name> base(new cppnodes::Name(TUPLE_TYPE_NAME));
+
+    std::vector<std::shared_ptr<parsing::Node>> template_args;
+    for (std::shared_ptr<TypeDecl> arg : tuple_type_decl.contents()){
+        auto cpp_arg = std::static_pointer_cast<parsing::Node>(visit(*arg));
+        template_args.push_back(cpp_arg);
+    }
+
+    return std::make_shared<cppnodes::Type>(base, template_args);
+}
+
+std::shared_ptr<void> lang::Compiler::visit(StringTypeDecl& string_type_decl){
+    return std::make_shared<cppnodes::Type>(std::make_shared<cppnodes::Name>(STR_TYPE_NAME));
+}
 
 std::shared_ptr<lang::LangType> lang::Compiler::infer(Call& call){
     std::shared_ptr<Expr> func = call.func();

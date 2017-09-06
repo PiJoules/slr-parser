@@ -242,7 +242,18 @@ namespace parsing {
             std::shared_ptr<void> accept(NodeVisitor& base_visitor){
                 try {
                     Visitor<DerivedNode>& visitor = dynamic_cast<Visitor<DerivedNode>&>(base_visitor);
-                    return visitor.visit(static_cast<DerivedNode&>(*this));
+
+#ifdef DEBUG
+                    std::cerr << "visiting " << typeid(DerivedNode).name() << std::endl;
+#endif 
+
+                    std::shared_ptr<void> result = visitor.visit(static_cast<DerivedNode&>(*this));
+
+#ifdef DEBUG
+                    std::cerr << "leaving " << typeid(DerivedNode).name() << std::endl;
+#endif 
+
+                    return result;
                 } catch (const std::bad_cast& e){
                     std::ostringstream err;
                     err << "Bad cast thrown for: " << typeid(DerivedNode).name() << std::endl;

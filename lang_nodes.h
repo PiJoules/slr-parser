@@ -109,6 +109,10 @@ namespace lang {
             const std::vector<std::shared_ptr<FuncStmt>> body() const { return body_; }
     };
 
+    class TargetList: public parsing::Visitable<TargetList> {
+    
+    };
+
     class ForLoop: public FuncStmt, public parsing::Visitable<ForLoop> {
         private:
             std::vector<std::shared_ptr<Expr>> target_list_;
@@ -123,6 +127,7 @@ namespace lang {
 
             const std::vector<std::shared_ptr<Expr>>& target_list() const { return target_list_; }
             std::shared_ptr<Expr> container() const { return container_; }
+            const std::vector<std::shared_ptr<FuncStmt>>& body() const { return body_; }
 
             std::vector<std::string> lines() const override {
                 std::vector<std::string> v;
@@ -179,7 +184,7 @@ namespace lang {
             }
     };
 
-    class Tuple: public VisitableExpr<Tuple>, public parsing::Visitable<Call> {
+    class Tuple: public VisitableExpr<Tuple>, public parsing::Visitable<Tuple> {
         private:
             std::vector<std::shared_ptr<Expr>> contents_;
 

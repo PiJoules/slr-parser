@@ -46,11 +46,31 @@ namespace cppnodes {
     // Variable declaration
     class VarDecl: public virtual parsing::SimpleNode {};
 
+    class ForEachLoop: public CompoundStmt, public parsing::Visitable<ForEachLoop> {
+        private:
+            std::shared_ptr<VarDecl> range_decl_;
+            std::shared_ptr<Expr> range_expr_;
+            std::vector<std::shared_ptr<Stmt>> body_;
+
+        public:
+            ForEachLoop(std::shared_ptr<VarDecl> range_decl, std::shared_ptr<Expr> range_expr,
+                        const std::vector<std::shared_ptr<Stmt>>& body):
+                range_decl_(range_decl), range_expr_(range_expr), body_(body){}
+
+            std::shared_ptr<VarDecl> range_decl() const { return range_decl_; }
+            std::shared_ptr<Expr> range_expr() const { return range_expr_; }
+            const std::vector<std::shared_ptr<Stmt>>& body() const { return body_; }
+
+            std::vector<std::string> lines() const override;
+    };
+
     /**
      * base<template args> varname;
      *
      * The template args will usually be a type(name) or variable.
-     */
+     */ 
+    // TODO: Abstract Type into its own class and add wrappers for modifiers 
+    // (const, reference, static, pointer, etc)
     class Type: public parsing::SimpleNode, public parsing::Visitable<Type> {
         private:
             std::shared_ptr<Node> base_;
@@ -165,6 +185,23 @@ namespace cppnodes {
             std::string line() const override;
     };
 
+    class BraceEnclosedList: public Expr, public parsing::Visitable<BraceEnclosedList> {
+        private:
+            std::vector<std::shared_ptr<Expr>> members_;
+
+        public:
+            BraceEnclosedList(const std::vector<std::shared_ptr<Expr>>& members): members_(members){}
+
+            const std::vector<std::shared_ptr<Expr>>& members() const { return members_; }
+            std::string line() const override {
+                std::vector<std::string> v;
+                for (std::shared_ptr<Expr> member : members_){
+                    v.push_back(member->line());
+                }
+                return "{" + join(v, ",") + "}";
+            }
+    };
+
     class BinOperator: public virtual parsing::SimpleNode {
         public:
             virtual std::string symbol() const = 0;
@@ -231,6 +268,31 @@ namespace cppnodes {
             std::shared_ptr<Expr> rhs() const { return rhs_; }
     };
 
+    class ScopeResolution: public Expr, public parsing::Visitable<ScopeResolution> {
+        private:
+            std::shared_ptr<Expr> lhs_;
+            std::string identifier_;
+
+        public:
+            ScopeResolution(std::shared_ptr<Expr> lhs, const std::string& identifier):
+                lhs_(lhs), identifier_(identifier){}
+            ScopeResolution(std::shared_ptr<Expr> lhs, const char* identifier):
+                lhs_(lhs), identifier_(identifier){}
+
+            std::shared_ptr<Expr> lhs() const { return lhs_; }
+            std::string identifier() const { return identifier_; }
+            bool has_lhs() const { return bool(lhs_); }
+
+            std::string line() const {
+                if (lhs_){
+                    return lhs_->line() + "::" + identifier_;
+                }
+                else {
+                    return "::" + identifier_;
+                }
+            }
+    };
+
     class ReturnStmt: public SimpleStmt, public parsing::Visitable<ReturnStmt> {
         private:
             std::shared_ptr<Expr> expr_;
@@ -262,6 +324,23 @@ namespace cppnodes {
             std::shared_ptr<Expr> expr() const { return expr_; }
             std::string line() const override { 
                 return var_decl_->line() + " = " + expr_->line() + ";";
+            }
+    };
+
+    // TODO: Merge this with Assign and replace the VarDecl var_decl_ with Node lhs_ 
+    class AltAssign: public SimpleStmt, public parsing::Visitable<AltAssign> {
+        private:
+            std::shared_ptr<Node> lhs_;
+            std::shared_ptr<Expr> rhs_;
+
+        public:
+            Assign(std::shared_ptr<Node> lhs, std::shared_ptr<Expr> rhs): 
+                lhs_(var_decl), rhs_(rhs){}
+
+            std::shared_ptr<Node> lhs() const { return lhs_; }
+            std::shared_ptr<Expr> rhs() const { return rhs_; }
+            std::string line() const override { 
+                return lhs_->str() + " = " + rhs_->line() + ";";
             }
     };
 

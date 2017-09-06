@@ -41,6 +41,26 @@ std::vector<std::string> cppnodes::IfStmt::lines() const {
 }
 
 /**
+ * Range based for loop
+ */ 
+std::vector<std::string> cppnodes::ForEachLoop::lines() const {
+    std::vector<std::string> v;
+
+    std::string line1 = "for (" + range_decl_->line() + " : " + range_expr_->line() + "){";
+    v.push_back(line1);
+
+    for (std::shared_ptr<Stmt> stmt : body_){
+        for (const std::string& line : stmt->lines()){
+            v.push_back(INDENT + line);
+        }
+    }
+
+    v.push_back("}");
+
+    return v;
+}
+
+/**
  * Function definition
  */ 
 cppnodes::FuncDef::FuncDef(const std::string& name,
