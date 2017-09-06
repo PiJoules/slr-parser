@@ -13,23 +13,23 @@ def func():
     lexer.input(code);
 
     // line 1
-    assert(lexer.token(nullptr).symbol == lang::tokens::NEWLINE);
+    assert(lexer.token().symbol == lang::tokens::NEWLINE);
 
     // line 2
-    assert(lexer.token(nullptr).symbol == "DEF");
-    assert(lexer.token(nullptr).symbol == "NAME");
-    assert(lexer.token(nullptr).symbol == "LPAR");
-    assert(lexer.token(nullptr).symbol == "RPAR");
-    assert(lexer.token(nullptr).symbol == "COLON");
-    assert(lexer.token(nullptr).symbol == lang::tokens::NEWLINE);
+    assert(lexer.token().symbol == "DEF");
+    assert(lexer.token().symbol == "NAME");
+    assert(lexer.token().symbol == "LPAR");
+    assert(lexer.token().symbol == "RPAR");
+    assert(lexer.token().symbol == "COLON");
+    assert(lexer.token().symbol == lang::tokens::NEWLINE);
 
     // line 3
-    assert(lexer.token(nullptr).symbol == lang::tokens::INDENT);
-    assert(lexer.token(nullptr).symbol == "NAME");
-    assert(lexer.token(nullptr).symbol == "ADD");
-    assert(lexer.token(nullptr).symbol == "NAME");
-    assert(lexer.token(nullptr).symbol == lang::tokens::NEWLINE);
-    assert(lexer.token(nullptr).symbol == lang::tokens::DEDENT);
+    assert(lexer.token().symbol == lang::tokens::INDENT);
+    assert(lexer.token().symbol == "NAME");
+    assert(lexer.token().symbol == "ADD");
+    assert(lexer.token().symbol == "NAME");
+    assert(lexer.token().symbol == lang::tokens::NEWLINE);
+    assert(lexer.token().symbol == lang::tokens::DEDENT);
 
     assert(lexer.empty());
 }

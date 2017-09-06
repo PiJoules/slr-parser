@@ -19,7 +19,7 @@ namespace parsing {
     }
 
     // The function called for handling symbols in a production when reducing by a rule
-    typedef std::shared_ptr<void> (*ParseCallback)(std::vector<std::shared_ptr<void>>& nodes, void* data);
+    typedef std::shared_ptr<void> (*ParseCallback)(std::vector<std::shared_ptr<void>>& nodes);
 
     // Individual entries created by the user containing the 
     // - Nonterminal rule to be reduced to 
@@ -258,7 +258,7 @@ namespace parsing {
             const Grammar grammar_;
 
             void reduce(const ParseRule&, std::vector<lexing::LexToken>&, std::vector<std::shared_ptr<void>>&,
-                        std::vector<std::size_t>&, void* data);
+                        std::vector<std::size_t>&);
             const ParseInstr& get_instr(std::size_t, const lexing::LexToken&);
 
         public:
@@ -266,7 +266,7 @@ namespace parsing {
             Parser(lexing::Lexer&, const std::vector<ParseRule>& parse_rules,
                    const PrecedenceList& precedence={{}});
 
-            std::shared_ptr<void> parse(const std::string&, void* data=nullptr);
+            std::shared_ptr<void> parse(const std::string&);
 
             // Getters
             const Grammar& grammar() const;

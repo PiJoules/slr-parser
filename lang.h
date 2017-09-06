@@ -45,7 +45,7 @@ namespace lang {
         public:
             LangLexer(const lexing::TokensMap&);
 
-            lexing::LexToken token(void* data) override;
+            lexing::LexToken token() override;
     };
 
     // Custom exceptions 

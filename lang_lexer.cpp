@@ -21,12 +21,12 @@ lexing::LexToken lang::LangLexer::make_dedent() const {
  *
  * Otherwise, return the next token.
  */
-lexing::LexToken lang::LangLexer::token(void* data){
+lexing::LexToken lang::LangLexer::token(){
     // Should not both be true at same time
     assert(!(found_dedent_ && found_indent_));
 
     if (!loaded_init_token_){
-        next_tok_ = lexing::Lexer::token(data);
+        next_tok_ = lexing::Lexer::token();
         loaded_init_token_ = true;
     }
 
@@ -46,7 +46,7 @@ lexing::LexToken lang::LangLexer::token(void* data){
     }
 
     lexing::LexToken tok = next_tok_;
-    next_tok_ = lexing::Lexer::token(data);
+    next_tok_ = lexing::Lexer::token();
 
     if (tok.symbol == lang::tokens::NEWLINE){
         // A NEWLINE token represents a series of lines separated by whitespace 
@@ -60,7 +60,7 @@ lexing::LexToken lang::LangLexer::token(void* data){
         // and the separate newlines are reprented as one NEWLINE by consuming all 
         // next_tokens that are also NEWLINEs.
         while (next_tok_.symbol == lang::tokens::NEWLINE){
-            next_tok_ = lexing::Lexer::token(data);
+            next_tok_ = lexing::Lexer::token();
         }
 
         int next_col = next_tok_.colno;

@@ -21,7 +21,7 @@ namespace lexing {
     };
 
     // Callback for handling a token found by the lexer.
-    typedef void (*TokenCallback)(LexToken& token, void* data);
+    typedef void (*TokenCallback)(LexToken& token);
 
     // A dict mapping a token to its regex and callback.
     typedef std::unordered_map<std::string, std::pair<std::regex, TokenCallback>> TokensMapRegex;
@@ -42,13 +42,13 @@ namespace lexing {
             void advance_pos(char);
             void advance_stream_and_pos(const std::string&);
             void advance_stream_and_pos(char);
-            bool find_match(LexToken&, void* data);
+            bool find_match(LexToken&);
 
         public:
             Lexer(const TokensMap&);
 
             void input(const std::string&);
-            virtual LexToken token(void* data);
+            virtual LexToken token();
             bool empty() const;
 
             // Getters

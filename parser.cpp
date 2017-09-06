@@ -127,7 +127,7 @@ std::string parsing::action_str(const ParseInstr::Action& action){
  */
 
 static std::shared_ptr<void> parse_prime(
-        std::vector<std::shared_ptr<void>>& args, void* data){
+        std::vector<std::shared_ptr<void>>& args){
     return args.front();
 }
 
@@ -782,8 +782,7 @@ void parsing::Parser::reduce(
         const ParseRule& parse_rule, 
         std::vector<lexing::LexToken>& symbol_stack,
         std::vector<std::shared_ptr<void>>& node_stack,
-        std::vector<std::size_t>& state_stack,
-        void* data){
+        std::vector<std::size_t>& state_stack){
     const std::string& rule = parse_rule.rule;
     const std::vector<std::string>& prod = parse_rule.production;
     const ParseCallback func = parse_rule.callback;
@@ -799,7 +798,7 @@ void parsing::Parser::reduce(
 
     if (func){
         std::vector<std::shared_ptr<void>> slice(start, node_stack.end());
-        result_node = func(slice, data);
+        result_node = func(slice);
     }
     else {
         // Otherwise, add the wrapper for the rule token
@@ -849,7 +848,7 @@ parsing::Parser::Parser(lexing::Lexer& lexer, const std::vector<ParseRule>& pars
 /**
  * The actual parsing.
  */
-std::shared_ptr<void> parsing::Parser::parse(const std::string& code, void* data){
+std::shared_ptr<void> parsing::Parser::parse(const std::string& code){
     // This language is defined such that all statements must end with a newline 
     std::string code_cpy = code + "\n";
 
@@ -864,7 +863,7 @@ std::shared_ptr<void> parsing::Parser::parse(const std::string& code, void* data
     std::vector<lexing::LexToken> symbol_stack;
     std::vector<std::shared_ptr<void>> node_stack;
 
-    lexing::LexToken lookahead = lexer_.token(data);
+    lexing::LexToken lookahead = lexer_.token();
     const std::vector<ParseRule>& parse_rules = grammar_.parse_rules();
 
     while (1){
@@ -895,7 +894,7 @@ std::shared_ptr<void> parsing::Parser::parse(const std::string& code, void* data
                 stack_token = std::make_shared<lexing::LexToken>(lookahead);
                 node_stack.push_back(stack_token);
 
-                lookahead = lexer_.token(data);
+                lookahead = lexer_.token();
                 break;
             case ParseInstr::REDUCE:
 #ifdef DEBUG
@@ -904,7 +903,7 @@ std::shared_ptr<void> parsing::Parser::parse(const std::string& code, void* data
 
                 // Pop from the states stack and replace the rules in the tokens stack 
                 // with the reduce rule
-                reduce(parse_rules[instr.value], symbol_stack, node_stack, state_stack, data);
+                reduce(parse_rules[instr.value], symbol_stack, node_stack, state_stack);
                 break;
             case ParseInstr::ACCEPT:
 #ifdef DEBUG

@@ -75,11 +75,10 @@ void lexing::Lexer::advance_stream_and_pos(char c){
  * Search the tokens map for a regex that matches the start of the stream.
  *
  * @param next_token The token that will contain the matched value for the regex found.
- * @param data Miscellanious data that the user implements and may edit on matching specific tokens.
  *
  * @return true if any of the regexs provided match the start of the lexcode_.
  */
-bool lexing::Lexer::find_match(LexToken& next_token, void* data){
+bool lexing::Lexer::find_match(LexToken& next_token){
     next_token.pos = pos_;
     next_token.lineno = lineno_;
     next_token.colno = colno_;
@@ -109,7 +108,7 @@ bool lexing::Lexer::find_match(LexToken& next_token, void* data){
 
             // Then run the callback after processing
             if (callback){
-                callback(next_token, data);
+                callback(next_token);
             }
 
             return true;
@@ -133,11 +132,11 @@ void lexing::Lexer::input(const std::string& code){
 /**
  * Return the next token and advance the stream.
  */ 
-lexing::LexToken lexing::Lexer::token(void* data){
+lexing::LexToken lexing::Lexer::token(){
     LexToken next_token;
 
     do {
-        bool found = find_match(next_token, data);
+        bool found = find_match(next_token);
 
         while (!found){
             // No matches
@@ -159,7 +158,7 @@ lexing::LexToken lexing::Lexer::token(void* data){
             }
 
             // Try again
-            found = find_match(next_token, data);
+            found = find_match(next_token);
         }
 
     // Ignore comments

@@ -12,17 +12,17 @@ std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"in", "IN"},
 };
 
-void reserved_name(lexing::LexToken& tok, void* data){
+void reserved_name(lexing::LexToken& tok){
     if (RESERVED_NAMES.find(tok.value) != RESERVED_NAMES.end()){
         tok.symbol = RESERVED_NAMES[tok.value];
     }
 }
 
-void comment(lexing::LexToken& tok, void* data){
+void comment(lexing::LexToken& tok){
     tok.symbol = lexing::tokens::COMMENT;
 }
 
-void trim_string_quotes(lexing::LexToken& tok, void* data){
+void trim_string_quotes(lexing::LexToken& tok){
     assert(tok.value.size() >= 2);
     tok.value = tok.value.substr(1, tok.value.size()-2);
 }
@@ -85,13 +85,13 @@ const lexing::TokensMap lang::LANG_TOKENS = {
 /********** Parser rules ***************/  
 
 // module : module_stmt_list
-std::shared_ptr<void> parse_module(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_module(std::vector<std::shared_ptr<void>>& args){
     auto module_stmt_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::ModuleStmt>>>(args[0]);
     return std::make_shared<lang::Module>(*module_stmt_list);
 }
 
 // module_stmt_list : func_def
-std::shared_ptr<void> parse_module_stmt_list(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_module_stmt_list(std::vector<std::shared_ptr<void>>& args){
     auto func_def = std::static_pointer_cast<lang::FuncDef>(args[0]);
     std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list(new std::vector<std::shared_ptr<parsing::Node>>);
     module_stmt_list->push_back(func_def);
@@ -100,17 +100,17 @@ std::shared_ptr<void> parse_module_stmt_list(std::vector<std::shared_ptr<void>>&
 }
 
 // module_stmt_list : NEWLINE
-std::shared_ptr<void> parse_module_stmt_list2(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_module_stmt_list2(std::vector<std::shared_ptr<void>>& args){
     return std::make_shared<std::vector<std::shared_ptr<parsing::Node>>>();
 }
 
 // module_stmt_list : module_stmt_list NEWLINE
-std::shared_ptr<void> parse_module_stmt_list3(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_module_stmt_list3(std::vector<std::shared_ptr<void>>& args){
     return args[0];
 }
 
 // module_stmt_list : module_stmt_list func_def
-std::shared_ptr<void> parse_module_stmt_list4(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_module_stmt_list4(std::vector<std::shared_ptr<void>>& args){
     auto module_stmt_list = std::static_pointer_cast<std::vector<std::shared_ptr<parsing::Node>>>(args[0]);
     auto func_def = std::static_pointer_cast<lang::FuncDef>(args[1]);
 
@@ -120,7 +120,7 @@ std::shared_ptr<void> parse_module_stmt_list4(std::vector<std::shared_ptr<void>>
 }
 
 // var_decl_list : var_decl 
-std::shared_ptr<void> parse_var_decl_list_one_arg(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_var_decl_list_one_arg(std::vector<std::shared_ptr<void>>& args){
     auto var_decl = std::static_pointer_cast<lang::VarDecl>(args[0]);
 
     std::shared_ptr<std::vector<std::shared_ptr<lang::VarDecl>>> var_decl_list(new std::vector<std::shared_ptr<lang::VarDecl>>);
@@ -130,7 +130,7 @@ std::shared_ptr<void> parse_var_decl_list_one_arg(std::vector<std::shared_ptr<vo
 }
 
 // var_decl_list : var_decl_list COMMA var_decl 
-std::shared_ptr<void> parse_var_decl_list(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_var_decl_list(std::vector<std::shared_ptr<void>>& args){
     auto var_decl_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::VarDecl>>>(args[0]);
     auto var_decl = std::static_pointer_cast<lang::VarDecl>(args[2]);
 
@@ -140,7 +140,7 @@ std::shared_ptr<void> parse_var_decl_list(std::vector<std::shared_ptr<void>>& ar
 }
 
 // var_decl : NAME COLON type_decl 
-std::shared_ptr<void> parse_var_decl(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_var_decl(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
     auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[2]);
 
@@ -150,7 +150,7 @@ std::shared_ptr<void> parse_var_decl(std::vector<std::shared_ptr<void>>& args, v
 }
 
 // var_assign_list : var_assign 
-std::shared_ptr<void> parse_var_assign_list_one_assign(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_var_assign_list_one_assign(std::vector<std::shared_ptr<void>>& args){
     auto var_assign = std::static_pointer_cast<lang::Assign>(args[0]);
     std::shared_ptr<std::vector<std::shared_ptr<lang::Assign>>> var_assign_list(new std::vector<std::shared_ptr<lang::Assign>>);
 
@@ -160,7 +160,7 @@ std::shared_ptr<void> parse_var_assign_list_one_assign(std::vector<std::shared_p
 }
 
 // var_assign_list : var_assign_list COMMA var_assign 
-std::shared_ptr<void> parse_var_assign_list(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_var_assign_list(std::vector<std::shared_ptr<void>>& args){
     auto var_assign_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Assign>>>(args[0]);
     auto var_assign = std::static_pointer_cast<lang::Assign>(args[2]);
 
@@ -170,7 +170,7 @@ std::shared_ptr<void> parse_var_assign_list(std::vector<std::shared_ptr<void>>& 
 }
 
 // var_assign : NAME ASSIGN expr
-std::shared_ptr<void> parse_var_assign(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_var_assign(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
     auto expr = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -178,13 +178,13 @@ std::shared_ptr<void> parse_var_assign(std::vector<std::shared_ptr<void>>& args,
 }
 
 // type_decl : NAME 
-std::shared_ptr<void> parse_type_decl_name(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_type_decl_name(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
     return std::make_shared<lang::NameTypeDecl>(name->value);
 }
 
 // func_def : DEF NAME LPAR RPAR COLON func_suite
-std::shared_ptr<void> parse_func_def(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_def(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[5]);
 
@@ -197,7 +197,7 @@ std::shared_ptr<void> parse_func_def(std::vector<std::shared_ptr<void>>& args, v
 }
 
 // func_def : DEF NAME LPAR RPAR ARROW type_decl COLON func_suite
-std::shared_ptr<void> parse_func_def_with_return(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_def_with_return(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
     auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[5]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[7]);
@@ -208,7 +208,7 @@ std::shared_ptr<void> parse_func_def_with_return(std::vector<std::shared_ptr<voi
 }
 
 // func_def : DEF NAME LPAR func_args RPAR COLON func_suite 
-std::shared_ptr<void> parse_func_def_with_args(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_def_with_args(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
     auto func_args = std::static_pointer_cast<lang::FuncArgs>(args[3]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[6]);
@@ -218,7 +218,7 @@ std::shared_ptr<void> parse_func_def_with_args(std::vector<std::shared_ptr<void>
 }
 
 // func_def : DEF NAME LPAR func_args RPAR ARROW type_decl COLON func_suite  
-std::shared_ptr<void> parse_func_def_with_args_with_return(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_def_with_args_with_return(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[1]);
     auto func_args = std::static_pointer_cast<lang::FuncArgs>(args[3]);
     auto type_decl = std::static_pointer_cast<lang::TypeDecl>(args[6]);
@@ -228,26 +228,26 @@ std::shared_ptr<void> parse_func_def_with_args_with_return(std::vector<std::shar
 }
 
 // func_args : var_decl_list 
-std::shared_ptr<void> parse_arg_list_only_var_decls(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_arg_list_only_var_decls(std::vector<std::shared_ptr<void>>& args){
     auto var_decl_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::VarDecl>>>(args[0]);
     std::vector<std::shared_ptr<lang::Assign>> kw_args;
     return std::make_shared<lang::FuncArgs>(*var_decl_list, kw_args, false);
 }
 
 // func_args : var_assign_list
-std::shared_ptr<void> parse_arg_list_only_kwarg_decls(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_arg_list_only_kwarg_decls(std::vector<std::shared_ptr<void>>& args){
     auto assign_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Assign>>>(args[0]);
     std::vector<std::shared_ptr<lang::VarDecl>> pos_args;
     return std::make_shared<lang::FuncArgs>(pos_args, *assign_list, false);
 }
 
 // func_suite : NEWLINE INDENT func_stmts DEDENT
-std::shared_ptr<void> parse_func_suite(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_suite(std::vector<std::shared_ptr<void>>& args){
     return args[2];
 }
 
 // func_stmts : func_stmt 
-std::shared_ptr<void> parse_func_stmts(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_stmts(std::vector<std::shared_ptr<void>>& args){
     auto func_stmt = std::static_pointer_cast<parsing::Node>(args[0]);
     std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> func_stmts(new std::vector<std::shared_ptr<parsing::Node>>);
     func_stmts->push_back(func_stmt);
@@ -256,7 +256,7 @@ std::shared_ptr<void> parse_func_stmts(std::vector<std::shared_ptr<void>>& args,
 }
 
 // func_stmts : func_stmts func_stmt 
-std::shared_ptr<void> parse_func_stmts2(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_stmts2(std::vector<std::shared_ptr<void>>& args){
     auto func_stmt = std::static_pointer_cast<parsing::Node>(args[1]);
     auto func_stmts = std::static_pointer_cast<std::vector<std::shared_ptr<parsing::Node>>>(args[0]);
     func_stmts->push_back(func_stmt);
@@ -265,7 +265,7 @@ std::shared_ptr<void> parse_func_stmts2(std::vector<std::shared_ptr<void>>& args
 }
 
 // func_stmts : func_stmts NEWLINE func_stmt 
-std::shared_ptr<void> parse_func_stmts3(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_stmts3(std::vector<std::shared_ptr<void>>& args){
     auto func_stmt = std::static_pointer_cast<parsing::Node>(args[2]);
     auto func_stmts = std::static_pointer_cast<std::vector<std::shared_ptr<parsing::Node>>>(args[0]);
     func_stmts->push_back(func_stmt);
@@ -274,42 +274,42 @@ std::shared_ptr<void> parse_func_stmts3(std::vector<std::shared_ptr<void>>& args
 }
 
 // func_stmt : simple_func_stmt NEWLINE
-std::shared_ptr<void> parse_func_stmt_simple(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_stmt_simple(std::vector<std::shared_ptr<void>>& args){
     return args[0];
 }
 
 // func_stmt : compound_func_stmt
-std::shared_ptr<void> parse_func_stmt_compound(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_stmt_compound(std::vector<std::shared_ptr<void>>& args){
     return args[0];
 }
 
 // simple_func_stmt : expr_stmt
 //                  | return_stmt
 //                  | var_assign
-std::shared_ptr<void> parse_simple_func_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_simple_func_stmt(std::vector<std::shared_ptr<void>>& args){
     return args[0];
 }
 
 // compound_func_stmt : if_stmt 
 //                    | for_loop
-std::shared_ptr<void> parse_compound_func_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_compound_func_stmt(std::vector<std::shared_ptr<void>>& args){
     return args[0];
 }
 
 // expr_stmt : expr 
-std::shared_ptr<void> parse_expr_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_expr_stmt(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
     return std::make_shared<lang::ExprStmt>(expr);
 }
 
 // return_stmt : RETURN expr  
-std::shared_ptr<void> parse_return_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_return_stmt(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[1]);
     return std::make_shared<lang::ReturnStmt>(expr);
 }
 
 // if_stmt : IF expr COLON func_suite 
-std::shared_ptr<void> parse_if_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_if_stmt(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[1]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[3]);
 
@@ -317,7 +317,7 @@ std::shared_ptr<void> parse_if_stmt(std::vector<std::shared_ptr<void>>& args, vo
 }
 
 // for_loop : FOR expr_list IN expr COLON func_suite 
-std::shared_ptr<void> parse_for_loop(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_for_loop(std::vector<std::shared_ptr<void>>& args){
     auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[1]);
     auto expr = std::static_pointer_cast<lang::Expr>(args[3]);
     auto func_suite = std::static_pointer_cast<std::vector<std::shared_ptr<lang::FuncStmt>>>(args[5]);
@@ -326,7 +326,7 @@ std::shared_ptr<void> parse_for_loop(std::vector<std::shared_ptr<void>>& args, v
 }
 
 // expr : expr DOT NAME
-std::shared_ptr<void> parse_member_access(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_member_access(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
     auto name = std::static_pointer_cast<lexing::LexToken>(args[2]);
 
@@ -334,29 +334,29 @@ std::shared_ptr<void> parse_member_access(std::vector<std::shared_ptr<void>>& ar
 }
 
 // expr : tuple 
-std::shared_ptr<void> parse_tuple_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_tuple_expr(std::vector<std::shared_ptr<void>>& args){
     return args[0];
 }
 
 // tuple : LBRACE RBRACE
-std::shared_ptr<void> parse_empty_tuple(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_empty_tuple(std::vector<std::shared_ptr<void>>& args){
     return std::make_shared<lang::Tuple>();
 }
 
 // tuple : LBRACE expr_list RBRACE
-std::shared_ptr<void> parse_tuple(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_tuple(std::vector<std::shared_ptr<void>>& args){
     auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[1]);
     return std::make_shared<lang::Tuple>(*expr_list);
 }
 
 // expr : expr LPAR RPAR 
-std::shared_ptr<void> parse_empty_func_call(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_empty_func_call(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
     return std::make_shared<lang::Call>(expr);
 }
 
 // expr : expr LPAR expr_list RPAR
-std::shared_ptr<void> parse_func_call(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_func_call(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[2]);
 
@@ -364,7 +364,7 @@ std::shared_ptr<void> parse_func_call(std::vector<std::shared_ptr<void>>& args, 
 }
 
 // expr_list : expr  
-std::shared_ptr<void> parse_call_one_arg(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_call_one_arg(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[0]);
 
     std::shared_ptr<std::vector<std::shared_ptr<lang::Expr>>> expr_list(new std::vector<std::shared_ptr<lang::Expr>>);
@@ -374,7 +374,7 @@ std::shared_ptr<void> parse_call_one_arg(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr_list : expr_list COMMA expr
-std::shared_ptr<void> parse_expr_list(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_expr_list(std::vector<std::shared_ptr<void>>& args){
     auto expr_list = std::static_pointer_cast<std::vector<std::shared_ptr<lang::Expr>>>(args[0]);
     auto expr = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -384,7 +384,7 @@ std::shared_ptr<void> parse_expr_list(std::vector<std::shared_ptr<void>>& args, 
 }
 
 // expr : expr SUB expr 
-std::shared_ptr<void> parse_bin_sub_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_sub_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -392,7 +392,7 @@ std::shared_ptr<void> parse_bin_sub_expr(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr : expr ADD expr 
-std::shared_ptr<void> parse_bin_add_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_add_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -400,7 +400,7 @@ std::shared_ptr<void> parse_bin_add_expr(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr : expr MUL expr 
-std::shared_ptr<void> parse_bin_mul_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_mul_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -408,7 +408,7 @@ std::shared_ptr<void> parse_bin_mul_expr(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr : expr DIV expr 
-std::shared_ptr<void> parse_bin_div_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_div_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -416,7 +416,7 @@ std::shared_ptr<void> parse_bin_div_expr(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr : expr EQ expr 
-std::shared_ptr<void> parse_bin_eq_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_eq_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -424,7 +424,7 @@ std::shared_ptr<void> parse_bin_eq_expr(std::vector<std::shared_ptr<void>>& args
 }
 
 // expr : expr NE expr 
-std::shared_ptr<void> parse_bin_ne_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_ne_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -432,7 +432,7 @@ std::shared_ptr<void> parse_bin_ne_expr(std::vector<std::shared_ptr<void>>& args
 }
 
 // expr : expr LT expr 
-std::shared_ptr<void> parse_bin_lt_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_lt_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -440,7 +440,7 @@ std::shared_ptr<void> parse_bin_lt_expr(std::vector<std::shared_ptr<void>>& args
 }
 
 // expr : expr GT expr 
-std::shared_ptr<void> parse_bin_gt_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_gt_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -448,7 +448,7 @@ std::shared_ptr<void> parse_bin_gt_expr(std::vector<std::shared_ptr<void>>& args
 }
 
 // expr : expr LTE expr 
-std::shared_ptr<void> parse_bin_lte_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_lte_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -456,7 +456,7 @@ std::shared_ptr<void> parse_bin_lte_expr(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr : expr GTE expr 
-std::shared_ptr<void> parse_bin_gte_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_bin_gte_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr1 = std::static_pointer_cast<lang::Expr>(args[0]);
     auto expr2 = std::static_pointer_cast<lang::Expr>(args[2]);
 
@@ -464,31 +464,31 @@ std::shared_ptr<void> parse_bin_gte_expr(std::vector<std::shared_ptr<void>>& arg
 }
 
 // expr : SUB expr %UMINUS
-std::shared_ptr<void> parse_un_sub_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_un_sub_expr(std::vector<std::shared_ptr<void>>& args){
     auto expr = std::static_pointer_cast<lang::Expr>(args[1]);
     return std::make_shared<lang::UnaryExpr>(expr, std::make_shared<lang::USub>());
 }
 
 // expr : NAME 
-std::shared_ptr<void> parse_name_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_name_expr(std::vector<std::shared_ptr<void>>& args){
     auto name = std::static_pointer_cast<lexing::LexToken>(args[0]);
     return std::make_shared<lang::NameExpr>(name->value);
 }
 
 // expr : INT
-std::shared_ptr<void> parse_int_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_int_expr(std::vector<std::shared_ptr<void>>& args){
     auto int_tok = std::static_pointer_cast<lexing::LexToken>(args[0]);
     return std::make_shared<lang::Int>(int_tok->value);
 }
 
 // expr : STRING
 // with the quotes trimmed off
-std::shared_ptr<void> parse_string_expr(std::vector<std::shared_ptr<void>>& args, void* data){
+std::shared_ptr<void> parse_string_expr(std::vector<std::shared_ptr<void>>& args){
     auto str = std::static_pointer_cast<lexing::LexToken>(args[0]);
     return std::make_shared<lang::String>(str->value);
 }
 
-//std::shared_ptr<void> parse_module_stmt_list_1(std::vector<std::shared_ptr<void>>& args, void* data){
+//std::shared_ptr<void> parse_module_stmt_list_1(std::vector<std::shared_ptr<void>>& args){
 //    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list;
 //
 //    parsing::Node* module_stmt = std::static_pointer_cast<parsing::Node*>(args[0]);
@@ -498,7 +498,7 @@ std::shared_ptr<void> parse_string_expr(std::vector<std::shared_ptr<void>>& args
 //    return module_stmt_list;
 //}
 //
-//std::shared_ptr<void> parse_module_stmt_list_2(std::vector<std::shared_ptr<void>>& args, void* data){
+//std::shared_ptr<void> parse_module_stmt_list_2(std::vector<std::shared_ptr<void>>& args){
 //    std::shared_ptr<std::vector<std::shared_ptr<parsing::Node>>> module_stmt_list = std::static_pointer_cast<std::vector<parsing::Node*>*>(args[0]);
 //    auto newline = std::static_pointer_cast<lexing::LexToken>(args[1]);
 //    parsing::Node* module_stmt = std::static_pointer_cast<parsing::Node*>(args[2]);
@@ -510,7 +510,7 @@ std::shared_ptr<void> parse_string_expr(std::vector<std::shared_ptr<void>>& args
 //    return module_stmt_list;
 //}
 //
-//std::shared_ptr<void> parse_func_def_module_stmt(std::vector<std::shared_ptr<void>>& args, void* data){
+//std::shared_ptr<void> parse_func_def_module_stmt(std::vector<std::shared_ptr<void>>& args){
 //    return args[0];
 //}
 

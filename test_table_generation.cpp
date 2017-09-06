@@ -217,7 +217,7 @@ static std::unordered_map<std::string, std::string> RESERVED_NAMES = {
     {"TOKEN", "TOKEN"},
 };
 
-static void reserved(lexing::LexToken& tok, void* data){
+static void reserved(lexing::LexToken& tok){
     if (RESERVED_NAMES.find(tok.value) != RESERVED_NAMES.end()){
         tok.symbol = RESERVED_NAMES[tok.value];
     }
