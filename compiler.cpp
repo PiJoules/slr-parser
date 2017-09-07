@@ -217,27 +217,28 @@ std::shared_ptr<void> lang::Compiler::visit(IfStmt& if_stmt){
  * then use std::tie to unpack.
  */
 std::shared_ptr<void> lang::Compiler::visit(ForLoop& for_loop){
-    const auto& target_list = for_loop.target_list();
-
     std::string rand_varname = current_scope().rand_varname();
     std::shared_ptr<cppnodes::Name> auto_type(new cppnodes::Name("auto&"));
     std::shared_ptr<cppnodes::Type> tmp_type(new cppnodes::Type(auto_type));
     std::shared_ptr<cppnodes::VarDecl> range_decl(new cppnodes::RegVarDecl(rand_varname, tmp_type));
 
     auto range_expr = std::static_pointer_cast<cppnodes::Expr>(visit(*(for_loop.container())));
-
-    std::vector<std::shared_ptr<cppnodes::Stmt>> body;
     
     // std::tie
     std::shared_ptr<cppnodes::ScopeResolution> cpp_std_tie(
             new cppnodes::ScopeResolution(std::make_shared<cppnodes::Name>("std"), "tie"));
 
     std::vector<std::shared_ptr<cppnodes::Expr>> tie_args;
-    for (std::shared_ptr<lang::Expr> target : for_loop.target_list()){
+    for (const std::string& target : for_loop.target_list()){
         tie_args.push_back(std::make_shared<cppnodes::Name>(target));
     }
 
-    std::shared_ptr<cppnodes::Call> unpack(new cppnodes::Call(cpp_std_tie, ));
+    std::shared_ptr<cppnodes::Call> tie_call(new cppnodes::Call(cpp_std_tie, tie_args));
+
+    std::shared_ptr<cppnodes::AltAssign> unpack(
+            new cppnodes::AltAssign(tie_call, std::make_shared<cppnodes::Name>(rand_varname)));
+
+    std::vector<std::shared_ptr<cppnodes::Stmt>> body = {unpack};
 
     for (std::shared_ptr<FuncStmt> stmt : for_loop.body()){
         auto cpp_stmt = std::static_pointer_cast<cppnodes::Stmt>(visit(*stmt));

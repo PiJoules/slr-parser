@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <memory>
 #include <cctype>
+#include <algorithm>
 
 namespace lang {
     // Mapping variable name to library 
@@ -81,8 +82,8 @@ namespace lang {
                 std::size_t max_varname_len = 0;
 
                 for (auto it = varnames_.cbegin(); it != varnames_.cend(); ++it){
-                    std::string& existing = it->first;
-                    max_varname_len = max(existing.size(), max_varname_len);
+                    const std::string& existing = it->first;
+                    max_varname_len = std::max(existing.size(), max_varname_len);
                 }
 
                 return "_" + rand_alphanum_str(max_varname_len);

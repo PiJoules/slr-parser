@@ -334,8 +334,8 @@ namespace cppnodes {
             std::shared_ptr<Expr> rhs_;
 
         public:
-            Assign(std::shared_ptr<Node> lhs, std::shared_ptr<Expr> rhs): 
-                lhs_(var_decl), rhs_(rhs){}
+            AltAssign(std::shared_ptr<Node> lhs, std::shared_ptr<Expr> rhs): 
+                lhs_(lhs), rhs_(rhs){}
 
             std::shared_ptr<Node> lhs() const { return lhs_; }
             std::shared_ptr<Expr> rhs() const { return rhs_; }

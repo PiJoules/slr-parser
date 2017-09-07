@@ -109,23 +109,21 @@ namespace lang {
             const std::vector<std::shared_ptr<FuncStmt>> body() const { return body_; }
     };
 
-    class TargetList: public parsing::Visitable<TargetList> {
-    
-    };
-
     class ForLoop: public FuncStmt, public parsing::Visitable<ForLoop> {
         private:
-            std::vector<std::shared_ptr<Expr>> target_list_;
+            // TODO: Make vector of assignment targets which can be names or 
+            // iterables containing names to handle unpacking of nested items
+            std::vector<std::string> target_list_;
             std::shared_ptr<Expr> container_;
             std::vector<std::shared_ptr<FuncStmt>> body_;
         
         public:
-            ForLoop(const std::vector<std::shared_ptr<Expr>>& target_list, 
+            ForLoop(const std::vector<std::string>& target_list, 
                     std::shared_ptr<Expr> container,
                     const std::vector<std::shared_ptr<FuncStmt>>& body):
                 target_list_(target_list), container_(container), body_(body){}
 
-            const std::vector<std::shared_ptr<Expr>>& target_list() const { return target_list_; }
+            const std::vector<std::string>& target_list() const { return target_list_; }
             std::shared_ptr<Expr> container() const { return container_; }
             const std::vector<std::shared_ptr<FuncStmt>>& body() const { return body_; }
 
@@ -133,8 +131,8 @@ namespace lang {
                 std::vector<std::string> v;
 
                 std::vector<std::string> arg_strs;
-                for (std::shared_ptr<Expr> target : target_list_){
-                    arg_strs.push_back(target->line());
+                for (const std::string& target : target_list_){
+                    arg_strs.push_back(target);
                 }
 
                 std::string line1 = "for " + join(arg_strs, ", ") + " in " + container_->line();
